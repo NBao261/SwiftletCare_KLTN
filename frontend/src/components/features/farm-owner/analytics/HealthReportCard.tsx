@@ -2,7 +2,7 @@ import { UserCircleIcon } from '@phosphor-icons/react';
 
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
+import StatStrip from '@/components/common/StatStrip';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { alertTypeDict } from '@/constants/enumLabels.i18n';

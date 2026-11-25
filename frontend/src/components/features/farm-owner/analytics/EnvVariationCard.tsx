@@ -5,7 +5,7 @@ import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/componen
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import LineChartPanel, { type LineSeries } from '@/components/features/farm-owner/analytics/LineChartPanel';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
-import StatStrip, { type StatItem } from '@/components/features/farm-owner/analytics/StatStrip';
+import StatStrip, { type StatItem } from '@/components/common/StatStrip';
 import { ANALYTICS_RANGES, SERIES_COLORS, labelForRange } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { alignOutdoorWeather, totalRainfall } from '@/components/features/farm-owner/analytics/analyticsMetrics';
 import { analyticsDict } from '@/constants/analytics.i18n';

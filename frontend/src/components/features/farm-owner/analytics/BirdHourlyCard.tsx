@@ -4,7 +4,7 @@ import type { ChartOptions } from 'chart.js';
 import { format, parseISO } from 'date-fns';
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
+import StatStrip from '@/components/common/StatStrip';
 import { BAR_MARK, CHART_FONT, CHART_LEGEND, SERIES_COLORS, X_AXIS_TICKS } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { groupBucketsByHour } from '@/components/features/farm-owner/analytics/analyticsMetrics';
 import { analyticsDict } from '@/constants/analytics.i18n';

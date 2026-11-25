@@ -6,7 +6,7 @@ import { WarningIcon } from '@phosphor-icons/react';
 
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
+import StatStrip from '@/components/common/StatStrip';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import { BIRD_WEEK_OPTIONS, LINE_LEGEND, SERIES_COLORS, X_AXIS_TICKS, axisTitle, type BirdWeekOption } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { summarizeWeeklyReturnRates } from '@/components/features/farm-owner/analytics/analyticsMetrics';

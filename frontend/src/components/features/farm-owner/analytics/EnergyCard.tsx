@@ -3,7 +3,7 @@ import { Bar } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
+import StatStrip from '@/components/common/StatStrip';
 import { BAR_MARK, CHART_FONT, CHART_LEGEND, SERIES_COLORS, axisTitle } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';

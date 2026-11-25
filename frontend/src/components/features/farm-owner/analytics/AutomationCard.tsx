@@ -6,7 +6,7 @@ import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import { useOpenZoneTuning } from '@/hooks/shared/useOpenZoneTuning';
 import LineChartPanel from '@/components/features/farm-owner/analytics/LineChartPanel';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
-import StatStrip from '@/components/features/farm-owner/analytics/StatStrip';
+import StatStrip from '@/components/common/StatStrip';
 import { ANALYTICS_RANGES, SERIES_COLORS, labelForRange } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
