@@ -265,13 +265,14 @@ describe('Work Order phòng ngừa và ghi bảo trì (OPS-FR-007, 008, BR-41)',
   }
 
   it('TC-F25-02 — thiếu checklist báo xong → 422; đủ checklist thì chờ duyệt; Farm Owner duyệt: bộ đếm 0, cảnh báo đóng, kế hoạch SCHEDULED', async () => {
-    const { owner, node, tech$, owner$, path, created, wo } = await due()
+    const { owner, node, tech, tech$, owner$, path, created, wo } = await due()
     await tech$.post(`${path}/done`, {}).expect(422)
     await tech$.put(`${path}/checklist`, { item_index: 5, result: 'OK' }).expect(400)
     await tech$.put(`${path}/checklist`, { item_index: 0, result: 'OK' }).expect(200)
     await tech$.put(`${path}/checklist`, { item_index: 1, result: 'OK', note: 'Đã thông béc' }).expect(200)
     const done = await tech$.post(`${path}/done`, { work_note: 'Thay màng bơm' }).expect(200)
     expect(done.body.data.status).toBe('AWAITING_APPROVAL')  // không qua kiểm dữ liệu phục hồi
+    expect(done.body.data.checklist.map((c: { by_name: string | null }) => c.by_name)).toEqual([tech.user.full_name, tech.user.full_name])
 
     // Chỉ duyệt Work Order mới là ghi bảo trì
     const ownerAck = await owner$.put(`/alerts/${wo.alert_id}/acknowledge`, { note: 'đã thấy' }).expect(200)
