@@ -25,7 +25,7 @@ export const EXPERT_ROLES: Role[] = ['DOMAIN_EXPERT']
 // Farm Owner cũng vào: ghi được khi farm chưa có chuyên gia (useExpertDecisionRights)
 export const EXPERT_DECISION_ROLES: Role[] = ['DOMAIN_EXPERT', 'FARM_OWNER']
 
-// Điều khiển tay relay (/dashboard/scada): Farm Owner, Kỹ thuật viên ở nhà được giao; Domain Expert không (Report 3 §2.4)
+// Điều khiển tay relay (/relay-control): Farm Owner, Kỹ thuật viên ở nhà được giao; Domain Expert không (Report 3 §2.4)
 export const RELAY_CONTROL_ROLES: Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN']
 
 // Màn vận hành của farm; Domain Expert chỉ đọc
@@ -76,7 +76,7 @@ export function getRoleHomePath(role: Role | undefined): string {
 // Menu của mọi role (components/layouts/menuCatalog.ts) lọc theo bảng này; không đọc từ menu vì sẽ import vòng. Path con đặt trước path cha
 export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/health',    roles: ADMIN_ONLY },
-  { path: '/dashboard/scada',  roles: RELAY_CONTROL_ROLES },
+  { path: '/relay-control',    roles: RELAY_CONTROL_ROLES },
   { path: '/dashboard',        roles: FARM_WORK_ROLES },
   { path: '/devices/detail',   roles: FARM_SIDE_ROLES },
   { path: '/devices/onboarding', roles: DEVICE_SETUP_ROLES },
@@ -124,6 +124,8 @@ export type ScopeLevel = 'none' | 'farm' | 'house' | 'zone'
 // level: bậc phải chọn (tự chọn khi có dữ liệu); depth: ô sâu nhất hiện trên thanh phạm vi, mặc định bằng level
 // (lịch sử, báo cáo cần trại nhưng lọc thêm theo nhà được)
 const SCOPE_LEVEL: { path: string; level: ScopeLevel; depth?: ScopeDepth }[] = [
+  // Tổng quan xem 1 Zone một lúc (camera của nhà chứa Zone đó)
+  { path: '/dashboard',                           level: 'zone' },
   { path: '/overview',                            level: 'farm' },
   { path: '/recommendations',                     level: 'farm' },
   { path: '/work-orders',                         level: 'farm' },

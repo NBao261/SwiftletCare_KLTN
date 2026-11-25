@@ -190,7 +190,7 @@ test('T8 — đánh giá ngày và thu hoạch của nhà được giao: không 
 
 test('T9 — theo dõi nhà được giao: tổng quan, điều khiển tay, đàn chim, vòng đếm, phân tích (G-33)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/dashboard');
-  for (const path of ['/dashboard', '/dashboard/scada', '/vision', '/domain-expert/counting-ring', '/analytics']) {
+  for (const path of ['/dashboard', '/relay-control', '/vision', '/domain-expert/counting-ring', '/analytics']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(new RegExp(`${path}$`));
   }

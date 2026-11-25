@@ -26,16 +26,19 @@ interface LiveCameraCardProps {
   action?: ReactNode
   // Trang Đàn chim đã có 3 thẻ số đếm bên cạnh: tắt để không lặp số trên cùng màn
   showTodayCounts?: boolean
+  // Tổng quan: chỉ trạng thái camera và hình, không số đếm, vòng đếm hay chú thích
+  compact?: boolean
 }
 
 // Xem trực tiếp camera của 1 nhà, kèm thông số và số đếm hôm nay
-export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action, showTodayCounts = true }: LiveCameraCardProps) {
+export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action, showTodayCounts = true, compact = false }: LiveCameraCardProps) {
   const { t, num, ago, date } = useTranslation(dashboardDict)
   const videoRef = useRef<HTMLVideoElement>(null)
   const { data: cameras, isLoading, isError, refetch } = useHouseCameras(houseId)
-  const { today } = useHousesBirdCountCurrent(houseId ? [houseId] : [])
+  const showCounts = showTodayCounts && !compact
+  const { today } = useHousesBirdCountCurrent(houseId && !compact ? [houseId] : [])
   // Số VÀO/RA hiện ở thẻ, không vẽ lên video: cập nhật ngay khi nút AI gửi số mới
-  useLiveBirdCount(showTodayCounts ? houseId : undefined)
+  useLiveBirdCount(showCounts ? houseId : undefined)
   const [pickedCameraId, setPickedCameraId] = useState('')
   const camera = cameras?.find(item => item._id === pickedCameraId) ?? cameras?.[0]
   const canStream = camera !== undefined && STREAMABLE_STATUSES.has(camera.status)
@@ -63,13 +66,13 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
   const params: Array<{ label: string; value: ReactNode }> = [
     { label: t('camera.paramStatus'), value: camera ? <StatusDot status={camera.status} /> : NO_VALUE },
     { label: t('camera.paramHeartbeat'), value: camera ? ago(camera.last_heartbeat) : NO_VALUE },
-    {
+    ...(compact ? [] : [{
       label: t('camera.paramRing'),
       value: !camera ? NO_VALUE : ringCount > 0
         ? t('camera.ringSet', { n: ringCount, date: ringUpdatedAt ? date(ringUpdatedAt) : NO_VALUE })
         : t('camera.ringDefault'),
-    },
-    ...(showTodayCounts ? [
+    }]),
+    ...(showCounts ? [
       { label: t('camera.paramExit'), value: hasToday ? num(today.morningExit) : NO_VALUE },
       { label: t('camera.paramEntry'), value: hasToday ? num(today.eveningEntry) : NO_VALUE },
       { label: t('camera.paramReturn'), value: hasToday && today.returnRate !== null ? `${num(today.returnRate, 1)}%` : NO_VALUE },
@@ -130,7 +133,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4">
+      <dl className={cn('grid grid-cols-2 gap-x-4 gap-y-2.5', !compact && 'sm:grid-cols-4')}>
         {params.map(param => (
           <div key={param.label} className="min-w-0">
             <dt className="truncate text-xs text-warmGray">{param.label}</dt>
@@ -138,7 +141,7 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
           </div>
         ))}
       </dl>
-      {isPlaying && <p className="text-xs text-warmGray">{t('camera.boxesHint')}</p>}
+      {isPlaying && !compact && <p className="text-xs text-warmGray">{t('camera.boxesHint')}</p>}
     </Card>
   )
 }

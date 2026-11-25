@@ -11,7 +11,7 @@ const ROLES: Role[] = [FO, DE, FT, ADMIN]
 // Ma trận quyền web theo và (backend f9d9522): path → role được vào
 const MATRIX: Record<string, Role[]> = {
   '/dashboard': [FO, DE, FT],
-  '/dashboard/scada': [FO, FT],          // điều khiển tay: thợ ở nhà được giao (G-33), chuyên gia không
+  '/relay-control': [FO, FT],          // điều khiển tay: thợ ở nhà được giao (G-33), chuyên gia không
   '/analytics': [FO, DE, FT],
   '/vision': [FO, DE, FT],
   '/health': [FO, DE, FT],

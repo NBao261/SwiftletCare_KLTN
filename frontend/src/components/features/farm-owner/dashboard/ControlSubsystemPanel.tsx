@@ -1,13 +1,13 @@
-import type { ReactNode } from 'react'
 import { DropIcon, SpeakerHighIcon, WindIcon } from '@phosphor-icons/react'
-import { Button, Card, RadialGauge } from '@/components/ui'
+import { Badge, Card, RadialGauge } from '@/components/ui'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict } from '@/constants/dashboard.i18n'
+import { NO_VALUE } from '@/constants/display'
 import { cn } from '@/lib/cn'
 import type { DashboardRelayStates } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import type { ControlMode, ControlOutput } from '@/types'
 
-// 3 relay: phun sương, loa, quạt (: không có relay sưởi)
+// 3 relay: phun sương, quạt, loa (không có relay sưởi)
 const RELAY_ITEMS = [
   { key: 'misting', labelKey: 'relay.misting', icon: DropIcon },
   { key: 'ventilation', labelKey: 'relay.ventilation', icon: WindIcon },
@@ -37,20 +37,14 @@ interface ControlSubsystemPanelProps {
   controlMode?: ControlMode
   controlOutput?: ControlOutput
   tooHot?: boolean
-  // Ô chọn Zone + nút đồng bộ đặt ở góc phải header
-  scopeControl?: ReactNode
-  // Đang đồng bộ Zone với khung Cảm biến: viền nổi để thấy 2 khung đang đi cùng nhau
-  isLinked?: boolean
-  // Mở trang chi tiết SCADA; không truyền (role không được điều khiển relay) thì ẩn nút
-  onOpenDetail?: () => void
 }
 
-// Trạng thái relay phân hệ điều khiển, phun sương/quạt hiện % công suất logic mờ khi có telemetry live
-export default function ControlSubsystemPanel({ zoneName, relayStates, controlMode, controlOutput, tooHot, scopeControl, isLinked = false, onOpenDetail }: ControlSubsystemPanelProps) {
+// Trạng thái 3 relay của Zone, chỉ xem; phun sương/quạt hiện % công suất logic mờ khi có telemetry live
+export default function ControlSubsystemPanel({ zoneName, relayStates, controlMode, controlOutput, tooHot }: ControlSubsystemPanelProps) {
   const { t } = useTranslation(dashboardDict)
 
   return (
-    <Card size="lg" className={cn('flex h-full flex-col gap-5 transition-shadow duration-300', isLinked && 'ring-2 ring-charcoal/25')}>
+    <Card size="lg" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-h2 text-charcoal">{t('control.title')}</h2>
@@ -58,23 +52,19 @@ export default function ControlSubsystemPanel({ zoneName, relayStates, controlMo
             {zoneName ? t('control.subtitleZone', { zone: zoneName }) : t('control.subtitle')}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {scopeControl}
-          {onOpenDetail && (
-            <Button variant="secondary" size="sm" onClick={onOpenDetail}>
-              {t('control.detail')}
-            </Button>
-          )}
-        </div>
+        {controlMode && (
+          <Badge tone={controlMode === 'AUTO' ? 'info' : 'warning'}>
+            {t(controlMode === 'AUTO' ? 'scada.modeAuto' : 'scada.modeManual')}
+          </Badge>
+        )}
       </div>
 
-      <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {RELAY_ITEMS.map(item => (
           <RelayTile
             key={item.key}
             item={item}
             relayStates={relayStates}
-            controlMode={controlMode}
             fuzzyPercent={item.key === 'misting' || item.key === 'ventilation' ? controlOutput?.[item.key] : undefined}
             isAnomaly={item.key === 'ventilation' && !!tooHot}
           />
@@ -87,20 +77,18 @@ export default function ControlSubsystemPanel({ zoneName, relayStates, controlMo
 interface RelayTileProps {
   item: RelayItem
   relayStates?: DashboardRelayStates
-  controlMode?: ControlMode
   fuzzyPercent?: number
   isAnomaly: boolean
 }
 
-// 1 ô relay: gauge BẬT/TẮT hoặc % logic mờ, dòng dưới là cảnh báo nhiệt hoặc chế độ chạy
-function RelayTile({ item, relayStates, controlMode, fuzzyPercent, isAnomaly }: RelayTileProps) {
+// 1 ô relay: vòng công suất bên trái, tên + BẬT/TẮT bên phải, dòng dưới là cảnh báo nhiệt hoặc công suất
+function RelayTile({ item, relayStates, fuzzyPercent, isAnomaly }: RelayTileProps) {
   const { t } = useTranslation(dashboardDict)
   const Icon = item.icon
   // Relay thiếu trong dữ liệu thì xem như chưa có dữ liệu, không báo TẮT sai
   const hasData = relayStates?.[item.key] !== undefined
   const isOn = relayStates?.[item.key] ?? false
   const hasFuzzy = hasData && fuzzyPercent !== undefined
-  const stateLabel = isOn ? t('relay.on') : t('relay.off')
 
   let tone: RelayTone = 'unknown'
   if (hasData) tone = isAnomaly ? 'anomaly' : isOn ? 'on' : 'off'
@@ -109,25 +97,23 @@ function RelayTile({ item, relayStates, controlMode, fuzzyPercent, isAnomaly }: 
   if (hasFuzzy) gaugePercent = fuzzyPercent
   else if (isOn) gaugePercent = 100
 
-  let gaugeLabel = '_'
-  if (hasFuzzy) gaugeLabel = `${fuzzyPercent}%`
-  else if (hasData) gaugeLabel = stateLabel
+  let stateText: string = NO_VALUE
+  if (hasData) stateText = isOn ? t('relay.on') : t('relay.off')
 
-  let footer = '_'
+  let footer = ''
   if (isAnomaly) footer = t('control.tooHot')
-  else if (hasFuzzy && controlMode === 'AUTO') footer = t('control.fuzzy', { state: stateLabel })
-  else if (controlMode) footer = t('control.mode', { mode: controlMode })
+  else if (hasFuzzy) footer = t('control.output', { percent: fuzzyPercent })
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-warmGray/15 p-4 text-center">
-      <RadialGauge percent={gaugePercent} size={88} strokeWidth={7} trackClassName="stroke-warmGray/10" className={GAUGE_CLASS[tone]}>
-        <div className="flex flex-col items-center gap-0.5">
-          <Icon width={18} height={18} className={ICON_CLASS[tone]} />
-          <span className="text-xs font-extrabold text-charcoal">{gaugeLabel}</span>
-        </div>
+    <div className="flex items-center gap-4 rounded-2xl border border-warmGray/15 p-4">
+      <RadialGauge percent={gaugePercent} size={60} strokeWidth={6} trackClassName="stroke-warmGray/10" className={GAUGE_CLASS[tone]}>
+        <Icon width={20} height={20} className={ICON_CLASS[tone]} />
       </RadialGauge>
-      <p className="label-caption leading-tight">{t(item.labelKey)}</p>
-      <p className={cn('text-xs font-semibold', isAnomaly ? 'text-climateOrange' : 'text-warmGray')}>{footer}</p>
+      <div className="min-w-0">
+        <p className="label-caption truncate">{t(item.labelKey)}</p>
+        <p className={cn('text-xl font-extrabold leading-tight', hasData ? 'text-charcoal' : 'text-warmGray')}>{stateText}</p>
+        {footer && <p className={cn('text-small font-medium', isAnomaly ? 'text-climateOrange' : 'text-warmGray')}>{footer}</p>}
+      </div>
     </div>
   )
 }

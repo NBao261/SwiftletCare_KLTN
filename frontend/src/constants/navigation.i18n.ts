@@ -49,7 +49,6 @@ const vi = {
   'Đếm chim': 'Đếm chim',
 
   'Theo dõi': 'Theo dõi',
-  'Tình trạng các nhà': 'Tình trạng các nhà',
   'So sánh nhà': 'So sánh nhà',
   'Điều khiển tay': 'Điều khiển tay',
   'Đàn chim': 'Đàn chim',
@@ -117,7 +116,6 @@ const en: Record<NavigationKey, string> = {
   'Đếm chim': 'Bird counting',
 
   'Theo dõi': 'Monitoring',
-  'Tình trạng các nhà': 'House status',
   'So sánh nhà': 'Compare houses',
   'Điều khiển tay': 'Manual override',
   'Đàn chim': 'Flock',

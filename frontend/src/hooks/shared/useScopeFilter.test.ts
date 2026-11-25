@@ -52,7 +52,7 @@ describe('scopeLevelOf', () => {
   it('trang con theo bậc của trang cha', () => {
     expect(scopeLevelOf('/overview')).toBe('farm')
     expect(scopeLevelOf('/domain-expert/tuning')).toBe('zone')
-    expect(scopeLevelOf('/dashboard')).toBe('none')
+    expect(scopeLevelOf('/dashboard')).toBe('zone')
   })
 })
 
@@ -64,5 +64,6 @@ describe('scopeDepthOf', () => {
     expect(scopeDepthOf('/domain-expert/counting-ring')).toBe('house')
     expect(scopeDepthOf('/domain-expert/tuning')).toBe('zone')
     expect(scopeDepthOf('/dashboard')).toBe('zone')
+    expect(scopeDepthOf('/relay-control')).toBe('zone')
   })
 })

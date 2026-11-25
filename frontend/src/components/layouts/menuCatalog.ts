@@ -1,7 +1,7 @@
 import {
   BasketIcon, BirdIcon, ChartBarIcon, ClipboardTextIcon, ClockCounterClockwiseIcon, CloudArrowUpIcon, CpuIcon, CrosshairIcon,
-  FileTextIcon, GaugeIcon, GearSixIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon, ScrollIcon,
-  ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, UsersIcon, WarningIcon, WrenchIcon,
+  FileTextIcon, GaugeIcon, GearSixIcon, HandPointingIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon, ScalesIcon,
+  ScrollIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, UsersIcon, WarningIcon, WrenchIcon,
 } from '@phosphor-icons/react'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import { canAccessPath } from '@/constants/roles'
@@ -20,22 +20,15 @@ const GROUP_TITLE: Record<MenuGroup, string> = {
 const CATALOG: Record<MenuGroup, MenuItem[]> = {
   monitor: [
     { label: 'Tổng quan hệ thống', path: '/system/health', icon: GaugeIcon },
-    {
-      label: 'Tổng quan',
-      path: '/dashboard',
-      icon: SquaresFourIcon,
-      tabs: [
-        { label: 'Tình trạng các nhà', path: '/dashboard' },
-        { label: 'So sánh nhà', path: '/overview' },
-        { label: 'Điều khiển tay', path: '/dashboard/scada' },
-      ],
-    },
+    { label: 'Tổng quan', path: '/dashboard', icon: SquaresFourIcon },
     { label: 'Cảnh báo', path: '/alerts', icon: WarningIcon },
     { label: 'Đàn chim', path: '/vision', icon: BirdIcon },
     { label: 'Sức khoẻ & báo cáo', path: '/health', icon: HeartbeatIcon },
     { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
+    { label: 'So sánh nhà', path: '/overview', icon: ScalesIcon },
   ],
   operations: [
+    { label: 'Điều khiển tay', path: '/relay-control', icon: HandPointingIcon },
     {
       label: 'Công việc',
       path: '/work-orders',

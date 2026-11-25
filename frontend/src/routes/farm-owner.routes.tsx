@@ -40,7 +40,7 @@ export const farmOwnerRoutes = (
       }
     />
     <Route
-      path="dashboard/scada"
+      path="relay-control"
       element={
         <RequireRole allow={RELAY_CONTROL_ROLES}>
           <FarmOwnerScadaPage />

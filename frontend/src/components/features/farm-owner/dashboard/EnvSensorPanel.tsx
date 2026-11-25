@@ -1,14 +1,13 @@
-import { useMemo, type ComponentType, type ReactNode, type SVGProps } from 'react'
-import { CloudIcon, DropIcon, FlaskIcon, SunIcon, ThermometerIcon, WaveformIcon } from '@phosphor-icons/react'
-import { useZonesEnvironment } from '@/hooks/farm-owner/useFarmOwnerDashboard'
+import type { ComponentType, SVGProps } from 'react'
+import { CloudIcon, DropIcon, FlaskIcon, SunIcon, ThermometerIcon, WarningIcon, WaveformIcon } from '@phosphor-icons/react'
+import { Card } from '@/components/ui'
+import type { useZonesEnvironment } from '@/hooks/farm-owner/useFarmOwnerDashboard'
 import type { AllZone } from '@/hooks/shared/useFarms'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { dashboardDict, type DashboardKey } from '@/constants/dashboard.i18n'
-import { getAnomalies, thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
+import { getAnomalies } from '@/components/features/farm-owner/dashboard/dashboardMetrics'
 import { NO_VALUE } from '@/constants/display'
 import { cn } from '@/lib/cn'
-
-const NO_ZONES: AllZone[] = []
 
 interface Reading {
   key: string
@@ -26,18 +25,15 @@ interface Reading {
 interface EnvSensorPanelProps {
   // Zone đang xem; số đo và ngưỡng luôn của đúng 1 Zone, không gộp nhiều Zone
   zone?: AllZone
-  // Ô chọn Zone + nút đồng bộ đặt ở góc phải header
-  scopeControl?: ReactNode
-  // Đang đồng bộ Zone với khung Điều khiển: viền nổi để thấy 2 khung đang đi cùng nhau
-  isLinked?: boolean
+  // Số đo của Zone đó, trang tải 1 lần để dùng chung với khung điều khiển
+  env: ReturnType<typeof useZonesEnvironment>
 }
 
-// Khung card chứa 6 chỉ số cảm biến môi trường của 1 Zone, đặt ngay dưới ảnh đầu trang
-export default function EnvSensorPanel({ zone, scopeControl, isLinked = false }: EnvSensorPanelProps) {
-  const { t, num, date } = useTranslation(dashboardDict)
+// 6 chỉ số cảm biến môi trường của 1 Zone
+export default function EnvSensorPanel({ zone, env: zoneEnv }: EnvSensorPanelProps) {
+  const { t, num } = useTranslation(dashboardDict)
   const format = (value: number) => num(value, Number.isInteger(value) ? 0 : 1)
-  const scopeZones = useMemo(() => (zone ? [zone] : NO_ZONES), [zone])
-  const { readings: env, thresholds, isActive, isLoading } = useZonesEnvironment(scopeZones)
+  const { readings: env, thresholds, isActive, isLoading } = zoneEnv
   const anomalies = thresholds ? getAnomalies(env, thresholds) : undefined
 
   const readings: Reading[] = [
@@ -49,73 +45,44 @@ export default function EnvSensorPanel({ zone, scopeControl, isLinked = false }:
     { key: 'sound', labelKey: 'env.sound', value: env.sound_db, unit: 'dB', decimals: 1, icon: WaveformIcon, range: '', isAlertOnly: false, isAnomaly: false },
   ]
 
-  // Ai đặt ngưỡng đang áp: đọc từ lịch sử ngưỡng backend trả về, không ghi cứng
-  const source = thresholdSource(zone?.threshold_history)
-  let sourceText = ''
-  if (zone && source.isDefault) sourceText = t('env.sourceDefault')
-  if (zone && !source.isDefault) {
-    const setter = source.role && ['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN', 'ADMIN'].includes(source.role)
-      ? t(`env.setter.${source.role as 'FARM_OWNER'}`)
-      : t('env.setter.other')
-    sourceText = t('env.sourceManual', { setter, date: source.changedAt ? date(source.changedAt) : NO_VALUE })
-  }
-
   return (
-    // Khung ngoài kính mờ (glass-panel, mẫu 5.2.1) để thấy ảnh đầu trang phía sau; 6 thẻ bên trong giữ nền trắng
-    <section
-      aria-label={t('env.title')}
-      className={cn(
-        'glass-panel flex flex-col gap-4 rounded-3xl border border-white/60 p-6 shadow-glass backdrop-blur-xl transition-shadow duration-300',
-        isLinked && 'ring-2 ring-charcoal/25',
-      )}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-h2 text-charcoal">{t('env.title')}</h2>
-          {/* Chưa có Zone: mỗi Zone có ngưỡng riêng nên không gộp số liệu, nhắc chọn 1 nhà ở bộ lọc trên header */}
-          <p className="mt-1 text-sm text-warmGray">{zone ? t('env.subtitleZone', { zone: zone.name }) : t('env.pickHouse')}</p>
-          {sourceText && <p className="mt-0.5 text-xs text-warmGray">{sourceText}</p>}
-        </div>
-        {scopeControl}
+    <Card size="lg" aria-label={t('env.title')} className="flex h-full flex-col gap-4">
+      <div className="min-w-0">
+        <h2 className="text-h2 text-charcoal">{t('env.title')}</h2>
+        <p className="mt-1 text-sm text-warmGray">{zone ? t('env.subtitleZone', { zone: zone.name }) : t('env.pickHouse')}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-3">
         {readings.map(reading => (
           <ReadingTile key={reading.key} reading={reading} isLoading={isLoading} isActive={isActive} />
         ))}
       </div>
-    </section>
+    </Card>
   )
 }
 
-const ICON_CLASS = { anomaly: 'bg-climateOrange text-white', safe: 'bg-warmGray/10 text-success', idle: 'bg-warmGray/10 text-charcoal' }
-
-// 1 ô cảm biến: cam khi vượt ngưỡng, icon xanh khi an toàn, xám khi chưa có thiết bị chạy
+// 1 ô cảm biến: cam kèm icon cảnh báo khi vượt ngưỡng, xám khi chưa có số
 function ReadingTile({ reading, isLoading, isActive }: { reading: Reading; isLoading: boolean; isActive: boolean }) {
   const { t, num } = useTranslation(dashboardDict)
   const { labelKey, value, unit, decimals, icon: Icon, range, isAlertOnly } = reading
   const hasValue = !isLoading && value !== undefined && !Number.isNaN(value)
   const isAnomaly = isActive && reading.isAnomaly
-  const isSafe = isActive && hasValue && !isAnomaly && range !== ''
-  const iconTone = isAnomaly ? 'anomaly' : isSafe ? 'safe' : 'idle'
 
   return (
-    <div className={cn('rounded-2xl border p-4 transition-shadow', isAnomaly ? 'border-climateOrange/40 bg-climateOrange/[0.06]' : 'border-warmGray/15 bg-white')}>
-      <div className="mb-2 flex items-start justify-between gap-2">
+    <div className={cn('flex flex-col justify-between gap-2 rounded-2xl border p-4', isAnomaly ? 'border-climateOrange/40 bg-climateOrange/[0.06]' : 'border-warmGray/15 bg-white')}>
+      <div className="flex items-center gap-2 text-warmGray">
+        <Icon width={16} height={16} className={cn(isAnomaly && 'text-climateOrange')} />
         <span className="label-caption">{t(labelKey)}</span>
-        <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', ICON_CLASS[iconTone])}>
-          <Icon width={14} height={14} />
-        </span>
       </div>
 
-      <div className={cn('text-2xl font-extrabold leading-none tracking-tight', !hasValue ? 'text-warmGray' : isAnomaly ? 'text-climateOrange' : 'text-charcoal')}>
+      <div className={cn('text-2xl font-extrabold leading-none tracking-tight tabular-nums', !hasValue ? 'text-warmGray' : isAnomaly ? 'text-climateOrange' : 'text-charcoal')}>
         {hasValue ? num(value, decimals) : NO_VALUE}
         <span className="ml-1 text-xs font-medium text-warmGray">{unit}</span>
       </div>
 
-      <p className="mt-1.5 h-4 text-small font-medium text-warmGray">
-        {isAnomaly && t(isAlertOnly ? 'env.overAlert' : 'env.outOfRange')}
-        {!isAnomaly && range && t(isAlertOnly ? 'env.alertAbove' : 'env.safe', { range })}
+      <p className={cn('flex min-h-4 items-center gap-1 text-small font-medium', isAnomaly ? 'text-climateOrange' : 'text-warmGray')}>
+        {isAnomaly && <WarningIcon size={14} weight="bold" aria-hidden />}
+        {isAnomaly ? t(isAlertOnly ? 'env.overAlert' : 'env.outOfRange') : range && t(isAlertOnly ? 'env.alertAbove' : 'env.safe', { range })}
       </p>
     </div>
   )
