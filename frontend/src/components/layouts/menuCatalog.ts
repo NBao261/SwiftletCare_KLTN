@@ -22,7 +22,7 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
     { label: 'Tổng quan hệ thống', path: '/system/health', icon: GaugeIcon },
     { label: 'Tổng quan', path: '/dashboard', icon: SquaresFourIcon },
     { label: 'Cảnh báo', path: '/alerts', icon: WarningIcon },
-    { label: 'Đàn chim', path: '/vision', icon: BirdIcon },
+    { label: 'Chim ra vào', path: '/vision', icon: BirdIcon },
     { label: 'Sức khoẻ & báo cáo', path: '/health', icon: HeartbeatIcon },
     { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
     { label: 'So sánh nhà', path: '/overview', icon: ScalesIcon },

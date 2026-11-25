@@ -8,7 +8,7 @@ import type { ScopeFilterState } from '@/hooks/shared/useScopeFilter';
 
 interface ScopeFilterProps {
   scope: ScopeFilterState;
-  // Trang chỉ tính theo nhà (VD Giám sát đàn chim): ô Zone luôn khoá xám ở "Tất cả Zone"
+  // Trang chỉ tính theo nhà (VD Chim ra vào): ô Zone luôn khoá xám ở "Tất cả Zone"
   lockZone?: boolean;
   // Trang chỉ tính theo trang trại (VD Tổng quan trại): ô Nhà và ô Zone luôn khoá
   lockHouse?: boolean;

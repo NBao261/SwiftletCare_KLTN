@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import BirdStatsCards from '@/components/features/farm-owner/vision/BirdStatsCards';
-import BirdTrendChart from '@/components/features/farm-owner/vision/BirdTrendChart';
+import BirdDailyCharts from '@/components/features/farm-owner/vision/BirdDailyCharts';
+import BirdTodayCard from '@/components/features/farm-owner/vision/BirdTodayCard';
 import LiveCameraCard from '@/components/features/farm-owner/vision/LiveCameraCard';
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import { dashboardDict } from '@/constants/dashboard.i18n';
@@ -11,13 +11,13 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { cn } from '@/lib/cn';
 
-// Giám sát đàn chim —; camera và số đếm chim tính theo nhà yến
+// Chim ra vào: camera cửa, số chim ra buổi sáng và về buổi chiều hôm nay, diễn biến theo ngày; tính theo nhà yến
 export default function FarmOwnerVisionPage(): JSX.Element {
   const { t } = useTranslation(dashboardDict);
   // Khung lọc lưu ở store chung, giữ nguyên khi chuyển trang; trang này chỉ lọc theo nhà nên ô Zone khoá
   const scope = useScopeFilter();
   const { houses, houseId, houseName, isLoading, isError, refetch } = scope;
-  // Phóng to camera: khung video full chiều ngang, 3 thẻ số đếm chuyển xuống hàng ngang bên dưới
+  // Phóng to camera: khung video full chiều ngang, thẻ số đếm chuyển xuống dưới, 3 số xếp ngang
   const [isCameraExpanded, setIsCameraExpanded] = useState(false);
   // Đếm chim theo nhà: 1 nhà đang lọc, hoặc cộng mọi nhà của farm
   const houseIds = useMemo(() => (houseId ? [houseId] : houses.map(house => house._id)), [houseId, houses]);
@@ -47,7 +47,7 @@ export default function FarmOwnerVisionPage(): JSX.Element {
   if (houseIds.length > 0) {
     body = (
       <>
-        <div className={cn('grid grid-cols-1 gap-5', houseId && !isCameraExpanded && 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')}>
+        <div className={cn('grid grid-cols-1 gap-5', houseId && !isCameraExpanded && 'xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')}>
           {houseId && (
             <LiveCameraCard
               houseId={houseId}
@@ -57,10 +57,10 @@ export default function FarmOwnerVisionPage(): JSX.Element {
               showTodayCounts={false}
             />
           )}
-          <BirdStatsCards houseIds={houseIds} horizontal={isStatsHorizontal} />
+          <BirdTodayCard houseIds={houseIds} houseName={houseName} horizontal={isStatsHorizontal} />
         </div>
 
-        <BirdTrendChart houseIds={houseIds} />
+        <BirdDailyCharts houseIds={houseIds} />
       </>
     );
   }

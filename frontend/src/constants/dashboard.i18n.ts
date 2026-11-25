@@ -124,7 +124,6 @@ const vi = {
   'camera.expand': 'Phóng to khung camera',
   'camera.collapse': 'Thu nhỏ khung camera',
   'camera.boxesHint': 'Khung xanh quanh chim do máy đếm vẽ sẵn',
-  'camera.viewVision': 'Xem giám sát đàn chim ↗',
 
 
   'log.retry': 'Thử lại',
@@ -261,7 +260,6 @@ const en: Record<DashboardKey, string> = {
   'camera.expand': 'Enlarge the camera',
   'camera.collapse': 'Shrink the camera',
   'camera.boxesHint': 'The green boxes around birds are drawn by the AI in the picture',
-  'camera.viewVision': 'Open bird monitoring ↗',
 
 
   'log.retry': 'Retry',
