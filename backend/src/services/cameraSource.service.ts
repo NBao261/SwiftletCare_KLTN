@@ -18,7 +18,7 @@ function sourceKey(): Buffer {
 }
 
 async function findCameraOrThrow(cameraId: string) {
-  const camera = await CameraNode.findOne({ _id: cameraId, ...IN_SERVICE }).select('+camera_source.password_encrypted')
+  const camera = await CameraNode.findOne({ _id: cameraId, ...IN_SERVICE }).select('+camera_source +camera_source.password_encrypted')
   if (!camera) throw NotFoundError('Không tìm thấy camera')
   return camera
 }
@@ -78,7 +78,7 @@ export async function readSourceForDevice(authorization: unknown) {
   if (!credentials || !(await verifyBrokerCredential(credentials.deviceId, credentials.secret))) {
     throw UnauthorizedError('Sai tài khoản thiết bị')
   }
-  const camera = await CameraNode.findOne({ device_id: credentials.deviceId, ...IN_SERVICE }).select('+camera_source.password_encrypted').lean()
+  const camera = await CameraNode.findOne({ device_id: credentials.deviceId, ...IN_SERVICE }).select('+camera_source +camera_source.password_encrypted').lean()
   if (!camera) throw NotFoundError('Nút AI chưa được gắn vào nhà yến nào')
   const source = camera.camera_source
   if (!source) return { version: 0, rtsp_url: null }
@@ -86,9 +86,9 @@ export async function readSourceForDevice(authorization: unknown) {
   return { version: source.version, rtsp_url: buildRtspUrl(source, password) }
 }
 
-// migrate:camera-source — URL chữ thường cũ (rtsp_url) → camera_source mã hoá, rồi xoá trường cũ. Chạy lại an toàn
+// migrate:camera-source — URL cũ lưu không mã hoá (rtsp_url, giữ nguyên hoa thường) → camera_source mã hoá, rồi xoá trường cũ. Chạy lại an toàn
 export async function migrateLegacyRtspUrls(): Promise<{ moved: number; skipped: number }> {
-  const cameras = await CameraNode.find({ rtsp_url: { $exists: true } }).select('+rtsp_url +camera_source.password_encrypted')
+  const cameras = await CameraNode.find({ rtsp_url: { $exists: true } }).select('+rtsp_url +camera_source +camera_source.password_encrypted')
   let moved = 0
   let skipped = 0
   for (const camera of cameras) {

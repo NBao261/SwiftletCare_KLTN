@@ -1,4 +1,4 @@
-// rtsp_url chữ thường cũ của camera → camera_source mã hoá (cần CAMERA_SOURCE_KEY), rồi xoá trường cũ. Chạy lại an toàn
+// rtsp_url cũ lưu không mã hoá của camera → camera_source mã hoá (cần CAMERA_SOURCE_KEY), rồi xoá trường cũ. Chạy lại an toàn
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { connectDB } from '@/config/db.config'

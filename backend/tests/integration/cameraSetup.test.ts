@@ -17,7 +17,7 @@ import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { User } from '@/models/user.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
 import { migrateLegacyRtspUrls } from '@/services/cameraSource.service'
-import { recordHeartbeat } from '@/services/device.service'
+import { markStaleDevicesOffline, recordHeartbeat } from '@/services/device.service'
 import { createProvisionedDevice, SETUP_CODE_TTL_MS } from '@/services/provisionedDevice.service'
 import type { HeartbeatPayload } from '@/types'
 
@@ -67,7 +67,7 @@ async function seed() {
     name: 'F', address: 'x', owner_id: owner._id,
     members: [{ user_id: owner._id, is_primary: true }, { user_id: expert._id, role: 'DOMAIN_EXPERT' }, { user_id: technician._id, role: 'FARM_TECHNICIAN' }],
   })
-  const house = await House.create({ farm_id: farm._id, name: 'H', technicians: [{ user_id: technician._id, is_primary: true }] })
+  const house = await House.create({ farm_id: farm._id, name: 'H', technicians: [{ user_id: technician._id, primary: true }] })
   await Zone.create({ house_id: house._id, farm_id: farm._id, name: 'Z' })
   const stock = await createProvisionedDevice(String(admin._id), { device_id: 'cam-h1-01', kind: 'CAMERA' })
   const camera = await CameraNode.create({ device_id: 'cam-h1-01', house_id: house._id, status: 'ONLINE' })
@@ -132,7 +132,7 @@ describe('cài đặt camera đếm chim từ web (FARM-FR-004b, FARM-FR-010)', 
     const saved = (await put(tokens.owner, SOURCE).expect(200)).body.data
     expect(saved.source).toMatchObject({ host: '203.0.113.7', port: 18554, username: 'admin', path: '/stream1', has_password: true, version: 1 })
     expect(JSON.stringify(saved)).not.toContain('p@ss')
-    const stored = await CameraNode.findById(camera._id).select('+camera_source.password_encrypted').lean()
+    const stored = await CameraNode.findById(camera._id).select('+camera_source +camera_source.password_encrypted').lean()
     expect(stored!.camera_source!.password_encrypted).not.toContain('p@ss')
     expect(publishDeviceConfig).toHaveBeenLastCalledWith('cam-h1-01', expect.objectContaining({ camera_source_version: 1 }))
     expect(JSON.stringify((publishDeviceConfig as jest.Mock).mock.calls)).not.toContain('p@ss')
@@ -187,7 +187,7 @@ describe('cài đặt camera đếm chim từ web (FARM-FR-004b, FARM-FR-010)', 
     await auth({ ...own, action: 'publish', path: 'cam-cam-h1-01' }).expect(401)
   })
 
-  it('migrate:camera-source chuyển URL chữ thường cũ sang dạng mã hoá; chạy lại không đổi gì', async () => {
+  it('migrate:camera-source chuyển URL cũ lưu không mã hoá sang dạng mã hoá; chạy lại không đổi gì', async () => {
     const { camera, stock } = await seed()
     await CameraNode.collection.updateOne({ _id: camera._id }, { $set: { rtsp_url: 'rtsp://admin:old%40pw@192.168.1.163:554/stream1' } })
     expect(await migrateLegacyRtspUrls()).toEqual({ moved: 1, skipped: 0 })
@@ -198,4 +198,34 @@ describe('cài đặt camera đếm chim từ web (FARM-FR-004b, FARM-FR-010)', 
     expect(agent.body.data).toEqual({ version: 1, rtsp_url: 'rtsp://admin:old%40pw@192.168.1.163:554/stream1' })
     expect(await migrateLegacyRtspUrls()).toEqual({ moved: 0, skipped: 0 })
   })
+
+  it('địa chỉ camera không lộ cho Kỹ thuật viên, Chuyên gia, Administrator qua danh sách, tổng quan hệ thống, vòng đếm', async () => {
+    const { camera, tokens } = await seed()
+    await request(app).put(`/devices/camera-nodes/${camera._id}/source`).set('Authorization', `Bearer ${tokens.owner}`).send(SOURCE).expect(200)
+    const leaks = (body: unknown) => /203\.0\.113\.7|camera_source|password_encrypted/.test(JSON.stringify(body))
+
+    for (const token of [tokens.technician, tokens.expert]) {
+      const list = await request(app).get(`/devices/camera-nodes?houseId=${camera.house_id}`).set('Authorization', `Bearer ${token}`).expect(200)
+      expect(list.body.data).toHaveLength(1)
+      expect(leaks(list.body)).toBe(false)
+    }
+    const system = await request(app).get('/devices/system-status').set('Authorization', `Bearer ${tokens.admin}`).expect(200)
+    expect(leaks(system.body)).toBe(false)
+    const ring = await request(app).put(`/devices/camera-nodes/${camera._id}/counting-ring`).set('Authorization', `Bearer ${tokens.expert}`)
+      .send({ rings: [] }).expect(200)
+    expect(leaks(ring.body)).toBe(false)
+    // Config gửi khi đổi vòng vẫn mang đúng phiên bản địa chỉ (đọc riêng vì camera_source không được chọn mặc định)
+    expect(publishDeviceConfig).toHaveBeenLastCalledWith('cam-h1-01', expect.objectContaining({ camera_source_version: 1 }))
+  })
+
+  it('nút AI im quá lâu thì tình trạng camera cũ bị xoá, web hiện "chưa báo" thay vì "Đang nhận hình"', async () => {
+    const { camera } = await seed()
+    await recordHeartbeat({ deviceId: 'cam-h1-01', fps: 20, cameraStatus: 'OK' } as unknown as HeartbeatPayload)
+    await CameraNode.updateOne({ _id: camera._id }, { last_heartbeat: new Date(Date.now() - 10 * 60 * 1000) })
+    await markStaleDevicesOffline()
+    const offline = (await CameraNode.findById(camera._id).lean())!
+    expect(offline.status).toBe('OFFLINE')
+    expect(offline.camera_status).toBeUndefined()
+  })
 })
+

@@ -87,7 +87,7 @@ export interface ICameraNode extends Document {
   _id: Types.ObjectId
   device_id: string
   house_id: Types.ObjectId
-  // Cũ: URL chữ thường lúc đăng ký, nút AI không đọc; migrate:camera-source chuyển sang camera_source rồi xoá
+  // Cũ: URL lưu không mã hoá lúc đăng ký, nút AI không đọc; migrate:camera-source chuyển sang camera_source rồi xoá
   rtsp_url?: string
   camera_source?: ICameraSource
   camera_status?: CameraStatus
@@ -230,6 +230,9 @@ const cameraNodeSchema = new Schema<ICameraNode>(
         updated_at:         { type: Date, required: true },
         updated_by:         { type: Schema.Types.ObjectId, ref: 'User' },
       }, { _id: false }),
+      // Cả khối (IP công cộng, tài khoản camera) chỉ Farm Owner và chính nút AI được đọc: cameraSource.service chọn
+      // '+camera_source'; danh sách camera, tổng quan hệ thống, vòng đếm không bao giờ có nó
+      select: false,
     },
     camera_status:    { type: String, enum: CAMERA_STATUSES },
     camera_status_at: { type: Date },

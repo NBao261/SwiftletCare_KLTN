@@ -553,9 +553,10 @@ async function markStaleCamerasOffline(): Promise<void> {
 
   await Promise.all(stale.map(async camera => {
     // Như SensorNode
+    // Tình trạng camera cũ không còn đúng khi nút AI im: web hiện "chưa báo" thay vì "Đang nhận hình"
     const { modifiedCount } = await CameraNode.updateOne(
       { _id: camera._id, status: 'ONLINE', last_heartbeat: { $lt: staleBefore } },
-      { status: 'OFFLINE' },
+      { status: 'OFFLINE', $unset: { camera_status: '', camera_status_at: '' } },
     )
     if (modifiedCount === 0) return
 
@@ -886,20 +887,22 @@ export function ringsOf(camera: Pick<ICameraNode, 'counting_ring' | 'counting_ri
   return camera.counting_ring ? [ringOf(camera.counting_ring)] : []
 }
 
-const CAMERA_CONFIG_FIELDS = 'device_id house_id counting_ring counting_rings camera_source.version'
+const CAMERA_CONFIG_FIELDS = 'device_id house_id counting_ring counting_rings'
 
 // Luôn gửi counting_rings: [] để nút AI biết vòng đã xoá. false khi broker chưa kết nối, nút AI nhận lại khi kết nối
-// camera_source_version: nút AI thấy đổi thì lấy lại địa chỉ camera qua /agent/camera-source; tin này không chứa mật khẩu
-export async function pushCameraConfig(
-  camera: Pick<ICameraNode, 'device_id' | 'house_id' | 'counting_ring' | 'counting_rings'> & { camera_source?: { version?: number } },
-  now = new Date(),
-): Promise<boolean> {
-  const house = await House.findById(camera.house_id).select('counting_schedule_history').lean()
+// camera_source_version: nút AI thấy đổi thì lấy lại địa chỉ camera qua /agent/camera-source; tin này không chứa mật khẩu.
+// camera_source không được chọn mặc định (select: false) nên đọc số phiên bản ở đây, không tin chỗ gọi đã nạp
+export async function pushCameraConfig(camera: Pick<ICameraNode, 'device_id' | 'house_id' | 'counting_ring' | 'counting_rings'>,
+  now = new Date()): Promise<boolean> {
+  const [house, withSource] = await Promise.all([
+    House.findById(camera.house_id).select('counting_schedule_history').lean(),
+    CameraNode.findOne({ device_id: camera.device_id }).select('+camera_source').lean(),
+  ])
   return publishDeviceConfig(camera.device_id, {
     deviceId: camera.device_id,
     counting_rings: ringsOf(camera),
     session_windows: sessionWindowsAhead(house?.counting_schedule_history, vnDateOf(now)),
-    camera_source_version: camera.camera_source?.version ?? 0,
+    camera_source_version: withSource?.camera_source?.version ?? 0,
   })
 }
 

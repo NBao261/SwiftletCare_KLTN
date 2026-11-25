@@ -20,7 +20,7 @@ export function buildRtspUrl(fields: CameraSourceFields, password: string | null
   return `rtsp://${credentials}${fields.host}:${fields.port}${fields.path}`
 }
 
-// URL cũ lưu chữ thường (rtsp_url) → các ô + mật khẩu; null khi không phải RTSP
+// URL cũ lưu không mã hoá (rtsp_url) → các ô + mật khẩu; null khi không phải RTSP
 export function parseRtspUrl(url: string): (CameraSourceFields & { password: string | null }) | null {
   let parsed: URL
   try {
