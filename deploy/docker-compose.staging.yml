@@ -59,7 +59,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/swiftletcare?authSource=admin
+      # Đặt MONGODB_URI (mongodb+srv://… của Atlas) trong deploy/.env.staging để dùng cụm Atlas; trống thì dùng container mongodb
+      MONGODB_URI: ${MONGODB_URI:-mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/swiftletcare?authSource=admin}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       # Backend nối EMQX trong mạng Docker, không qua TLS; tên phải là backend-service như deploy/emqx/acl.conf
