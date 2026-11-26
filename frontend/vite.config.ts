@@ -13,12 +13,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['icons/icon-32.png', 'icons/icon-180.png'],
       manifest: {
         name: 'SwiftletCare',
         short_name: 'SwiftletCare',
         description: 'Automated Swiftlet Farm Management System',
-        theme_color: '#0f766e',
+        theme_color: '#27231F',
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'portrait',

@@ -2,7 +2,7 @@
   "name": "SwiftletCare",
   "short_name": "SwiftletCare",
   "description": "Automated Swiftlet Farm Management System",
-  "theme_color": "#0f766e",
+  "theme_color": "#27231F",
   "background_color": "#0f172a",
   "display": "standalone",
   "orientation": "portrait",

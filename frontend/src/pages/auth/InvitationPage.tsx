@@ -9,11 +9,14 @@ import { useToastStore } from '@/stores/toastStore'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { INVITE_ROLE_LABEL } from '@/constants/roles'
 import { getRoleHomePath } from '@/constants/roles'
+import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
+import { t } from '@/i18n'
 
 // Khớp spec create-account: full_name ≥ 1 ký tự, password ≥ 8
 const PASSWORD_MIN = 8
 
 export default function InvitationPage() {
+  useDocumentTitle(t('Lời mời tham gia trang trại'))
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
   const push = useToastStore(s => s.push)

@@ -4,9 +4,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { getApiErrorMessage } from '@/lib/helpers';
+import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
+import { t } from '@/i18n'
 
 // ?email= điền sẵn khi vừa tạo tài khoản ở trang lời mời
 export default function LoginPage(): JSX.Element {
+  useDocumentTitle(t('Đăng nhập'))
   const { login } = useAuth();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo') ?? undefined;

@@ -6,9 +6,12 @@ import { useAuth } from '@/hooks/auth/useAuth';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useAuthStore } from '@/stores/authStore';
 import { validatePasswordChange } from '@/validations/common/passwordChange.validation';
+import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
+import { t } from '@/i18n'
 
 // Đổi mật khẩu tạm: tài khoản do Admin tạo phải đổi trước khi vào hệ thống; khung ở AuthLayout
 export default function ChangePasswordPage(): JSX.Element {
+  useDocumentTitle(t('Đổi mật khẩu'))
   const { changePassword, logout } = useAuth();
   const apiErrorMessage = useApiErrorMessage();
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
