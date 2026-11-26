@@ -8,8 +8,8 @@ const CALENDAR_DAILY = '0 0 7 * * *'
 
 function run(calendar: boolean): void {
   checkDuePlans(new Date(), { calendar })
-    .then(({ opened, overdue }) => {
-      if (opened + overdue > 0) logger.info('Kế hoạch bảo trì đến hạn (OPS-FR-006)', { calendar, opened, overdue })
+    .then(({ opened, overdue, reminded }) => {
+      if (opened + overdue + reminded > 0) logger.info('Kế hoạch bảo trì đến hạn (OPS-FR-006)', { calendar, opened, overdue, reminded })
     })
     .catch((err: Error) => logger.error('maintenanceDue.job failed', { calendar, err }))
 }

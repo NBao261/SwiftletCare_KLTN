@@ -50,6 +50,11 @@ async function account(role: Role) {
   const user = await User.create({ email: `mt${seq}@test.vn`, password_hash: 'password123', full_name: `${role}${seq}`, role })
   return { user, token: jwt.sign({ sub: String(user._id), role }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' }) }
 }
+const JPEG = { filename: 'a.jpg', contentType: 'image/jpeg' }
+// Báo xong bảo trì phải kèm ít nhất một ảnh bằng chứng
+const doneWithPhoto = (token: string, path: string) =>
+  request(app).post(`${path}/done`).set('Authorization', `Bearer ${token}`).attach('photos', Buffer.from('jpeg'), JPEG)
+
 const as = (token: string) => ({
   get: (path: string) => request(app).get(path).set('Authorization', `Bearer ${token}`),
   post: (path: string, body: object = {}) => request(app).post(path).set('Authorization', `Bearer ${token}`).send(body),
@@ -274,7 +279,10 @@ describe('Work Order phòng ngừa và ghi bảo trì (OPS-FR-007, 008, BR-41)',
     await tech$.put(`${path}/checklist`, { item_index: 5, result: 'OK' }).expect(400)
     await tech$.put(`${path}/checklist`, { item_index: 0, result: 'OK' }).expect(200)
     await tech$.put(`${path}/checklist`, { item_index: 1, result: 'OK', note: 'Đã thông béc' }).expect(200)
-    const done = await tech$.post(`${path}/done`, { work_note: 'Thay màng bơm' }).expect(200)
+    // Đủ checklist mà chưa có ảnh nào: vẫn 422
+    const noPhoto = await tech$.post(`${path}/done`, { work_note: 'Thay màng bơm' }).expect(422)
+    expect(noPhoto.body.error.message).toContain('ít nhất một ảnh')
+    const done = await doneWithPhoto(tech.token, path).field('work_note', 'Thay màng bơm').expect(200)
     expect(done.body.data.status).toBe('AWAITING_APPROVAL')  // không qua kiểm dữ liệu phục hồi
     expect(done.body.data.checklist.map((c: { by_name: string | null }) => c.by_name)).toEqual([tech.user.full_name, tech.user.full_name])
 
@@ -294,13 +302,13 @@ describe('Work Order phòng ngừa và ghi bảo trì (OPS-FR-007, 008, BR-41)',
   })
 
   it('kế hoạch theo lịch: duyệt tính hạn kế = lúc ghi + khoảng; hiệu chuẩn ghi là CALIBRATION', async () => {
-    const { plan, tech$, owner$ } = await seed()
+    const { plan, tech, tech$, owner$ } = await seed()
     const created = (await plan({ equipment: 'CALIBRATION', basis: 'CALENDAR', interval: 90 }).expect(201)).body.data
     await checkDuePlans(new Date(Date.now() + 91 * DAY), { calendar: true })
     const wo = (await WorkOrder.findOne())!
     await tech$.post(`/work-orders/${wo._id}/start`).expect(200)
     for (const i of [0, 1]) await tech$.put(`/work-orders/${wo._id}/checklist`, { item_index: i, result: 'OK' }).expect(200)
-    await tech$.post(`/work-orders/${wo._id}/done`, {}).expect(200)
+    await doneWithPhoto(tech.token, `/work-orders/${wo._id}`).expect(200)
     const before = Date.now()
     await owner$.post(`/work-orders/${wo._id}/approve`).expect(200)
     const after = (await MaintenancePlan.findById(created._id).lean())!
@@ -381,5 +389,102 @@ describe('danh sách đến hạn và tỷ lệ bảo trì đúng hạn (OPS-FR-
     // Hai ngày sau khi mở: cái còn mở chưa trễ, không vào mẫu số
     expect(await onTimeMaintenanceRate([house._id], ...range, new Date(t0.getTime() + 2 * DAY))).toBe(50)
     expect(await onTimeMaintenanceRate([house._id], new Date('2026-01-01'), new Date('2026-02-01'))).toBeNull()
+  })
+})
+
+describe('ảnh bằng chứng khi báo xong bảo trì (OPS-FR-008)', () => {
+  async function started() {
+    const ctx = await seed()
+    await ctx.plan().expect(201)
+    await ctx.setPumpHours(520)
+    await checkDuePlans()
+    const wo = (await WorkOrder.findOne())!
+    const path = `/work-orders/${wo._id}`
+    await ctx.tech$.post(`${path}/start`).expect(200)
+    for (const i of [0, 1]) await ctx.tech$.put(`${path}/checklist`, { item_index: i, result: 'OK' }).expect(200)
+    return { ...ctx, path }
+  }
+
+  it('không ảnh nào thì 422 và phiếu vẫn IN_PROGRESS; ảnh của phiếu hoặc của một mục checklist đều được tính', async () => {
+    const { tech, tech$, path } = await started()
+    await tech$.post(`${path}/done`, {}).expect(422)
+    expect((await WorkOrder.findOne().lean())!.status).toBe('IN_PROGRESS')
+
+    // Ảnh gắn vào một mục checklist cũng là bằng chứng
+    await request(app).put(`${path}/checklist`).set('Authorization', `Bearer ${tech.token}`)
+      .field('item_index', '0').field('result', 'OK').attach('photo', Buffer.from('jpeg'), JPEG).expect(200)
+    await tech$.post(`${path}/done`, {}).expect(200)
+  })
+
+  it('phiếu sửa chữa vẫn báo xong được mà không cần ảnh', async () => {
+    const ctx = await seedOwnerFarm()
+    const house = (await House.findOne({ farm_id: ctx.farm._id }))!
+    const tech = await account('FARM_TECHNICIAN')
+    ctx.farm.members.push({ user_id: tech.user._id, role: 'FARM_TECHNICIAN' } as never)
+    await ctx.farm.save()
+    house.technicians = [{ user_id: tech.user._id, primary: true }] as never
+    await house.save()
+    const created = await as(ctx.token).post('/work-orders', { house_id: String(house._id), title: 'Kiểm tra và sửa béc phun' }).expect(201)
+    const path = `/work-orders/${created.body.data._id}`
+    await as(tech.token).post(`${path}/start`).expect(200)
+    await as(tech.token).post(`${path}/done`, {}).expect(200)
+  })
+})
+
+describe('nhắc hằng ngày khi bảo trì đến hạn hoặc quá hạn (OPS-FR-006)', () => {
+  // 08:00 giờ VN; các lượt 07:00 sau đó cách nhau đúng ngày
+  const T0 = new Date('2026-12-01T01:00:00Z')
+  const at = (days: number, hour = 0) => new Date(T0.getTime() + days * DAY + hour * 3600_000 - 1 * 3600_000)
+  const reminders = () => (notifyUser as jest.Mock).mock.calls
+    .filter(([, message]) => String(message.title).startsWith('Nhắc bảo trì'))
+    .map(([userId]) => String(userId))
+
+  async function dueAt() {
+    const ctx = await seed()
+    await ctx.plan().expect(201)
+    await ctx.setPumpHours(520)
+    await checkDuePlans(T0)
+    ;(notifyUser as jest.Mock).mockClear()
+    return ctx
+  }
+
+  it('ngày đến hạn chưa nhắc lại; từ hôm sau nhắc kỹ thuật viên giữ phiếu mỗi ngày một lần', async () => {
+    const { tech } = await dueAt()
+    await checkDuePlans(at(0, 1), { calendar: true })
+    expect(reminders()).toEqual([])
+
+    await checkDuePlans(at(1), { calendar: true })
+    expect(reminders()).toEqual([String(tech.user._id)])
+    // Chạy lại trong cùng ngày không nhắc lần nữa
+    await checkDuePlans(at(1, 1), { calendar: true })
+    expect(reminders()).toHaveLength(1)
+
+    await checkDuePlans(at(2), { calendar: true })
+    expect(reminders()).toHaveLength(2)
+  })
+
+  it('quá hạn: Farm Owner được báo ngay một lần, rồi nhắc mỗi ngày cùng với kỹ thuật viên', async () => {
+    const { tech, owner } = await dueAt()
+    await checkDuePlans(at(7, 2), { calendar: true })
+    expect(String((await MaintenancePlan.findOne().lean())!.state)).toBe('OVERDUE')
+    expect((notifyUser as jest.Mock).mock.calls.some(([id, message]) => String(id) === String(owner._id) && String(message.title).startsWith('Quá hạn bảo trì'))).toBe(true)
+    ;(notifyUser as jest.Mock).mockClear()
+
+    await checkDuePlans(at(8), { calendar: true })
+    expect(reminders().sort()).toEqual([String(owner._id), String(tech.user._id)].sort())
+  })
+
+  it('ghi bảo trì xong thì hết nhắc', async () => {
+    const { tech, tech$, owner$ } = await dueAt()
+    const wo = (await WorkOrder.findOne())!
+    const path = `/work-orders/${wo._id}`
+    await tech$.post(`${path}/start`).expect(200)
+    for (const i of [0, 1]) await tech$.put(`${path}/checklist`, { item_index: i, result: 'OK' }).expect(200)
+    await doneWithPhoto(tech.token, path).expect(200)
+    await owner$.post(`${path}/approve`).expect(200)
+    ;(notifyUser as jest.Mock).mockClear()
+
+    await checkDuePlans(at(3), { calendar: true })
+    expect(reminders()).toEqual([])
   })
 })
