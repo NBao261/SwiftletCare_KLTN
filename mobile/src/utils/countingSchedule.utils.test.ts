@@ -9,6 +9,7 @@ import {
   formatMonthDay,
   formatMonthDayRange,
   formatTimeWindow,
+  getSessionLimitError,
   isValidDate,
   isValidTime,
   validateCountingSchedule,
@@ -106,5 +107,32 @@ describe('định dạng khung và ngày', () => {
 
   it('hai khung trên một dòng ngăn bằng dấu "·"', () => {
     expect(plain(formatDayWindowsInline(WINDOWS))).toBe('Sáng 05:30–07:00 · Chiều 17:30–19:00')
+  })
+})
+
+describe('validateCountingSchedule với khung mặc định của nhà', () => {
+  it('khung mặc định sai thì báo lỗi; không đặt hoặc null thì bỏ qua', () => {
+    const wrong = { morning: { start: '06:00', end: '18:00' }, evening: { start: '17:30', end: '19:00' } }
+    expect(validateCountingSchedule({ default_windows: wrong, profiles: [], temporary: [] })).toBe(
+      'Khung mặc định: Khung sáng phải kết thúc trước khi khung chiều bắt đầu',
+    )
+    expect(validateCountingSchedule({ default_windows: null, profiles: [], temporary: [] })).toBeNull()
+    expect(validateCountingSchedule({ profiles: [], temporary: [] })).toBeNull()
+  })
+})
+
+describe('khoảng của phiên: sáng 05:00–07:00, chiều 17:00–19:00', () => {
+  it('giờ ngoài khoảng của phiên thì báo, đúng mốc hai đầu thì hợp lệ', () => {
+    expect(getSessionLimitError('04:59', 'morning')).toBe('Khung sáng trong khoảng 05:00–07:00')
+    expect(getSessionLimitError('07:30', 'morning')).toBe('Khung sáng trong khoảng 05:00–07:00')
+    expect(getSessionLimitError('05:00', 'morning')).toBeNull()
+    expect(getSessionLimitError('19:00', 'evening')).toBeNull()
+    expect(getSessionLimitError('16:45', 'evening')).toBe('Khung chiều trong khoảng 17:00–19:00')
+  })
+
+  it('chưa gõ xong thì chưa báo; validateDayWindows chặn khung ngoài khoảng', () => {
+    expect(getSessionLimitError('04', 'morning')).toBeNull()
+    const lateEvening = { morning: { start: '05:30', end: '07:00' }, evening: { start: '18:00', end: '20:00' } }
+    expect(validateDayWindows(lateEvening)).toBe('Khung chiều trong khoảng 17:00–19:00')
   })
 })
