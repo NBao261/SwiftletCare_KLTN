@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.32 (Review 2, final scope) |
+| Document version | 2.2.33 (Review 2, final scope) |
 | Date | 26/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.26 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -161,7 +161,7 @@ Redis is started by `docker-compose.yml` but no module uses it yet (reserved); i
 | Roboflow | Annotation of the training images: draft labels from motion tracks are uploaded and corrected by hand | Frames extracted from the team's own entrance clips (masked, no people, no personal data) |
 | Google Colab | Training the detection model (Ultralytics) and exporting it to ONNX | The labelled dataset |
 
-Self-hosted components (no data leaves the installation's servers): EMQX, MongoDB, MinIO, MediaMTX. Staging is the one exception: MinIO images are no longer published, so uploaded files (audio tracks, Work Order and harvest photos, firmware images) are kept in a private Cloudflare R2 bucket reached through the same S3 client (Section 3.4).
+Self-hosted components (no data leaves the installation's servers): EMQX, MongoDB, MinIO, MediaMTX. Staging is the one exception: MinIO images are no longer published, so uploaded files (audio tracks, Work Order and harvest photos, firmware images) are kept in a private Cloudflare R2 bucket reached through the same S3 client, and the database is a MongoDB Atlas cluster (AWS Singapore, daily snapshots, access list limited to the VPS address, one user with `readWrite` on the application database) instead of a container (Section 3.4).
 
 ### 3.2 Development Technologies
 
@@ -194,7 +194,7 @@ Self-hosted components (no data leaves the installation's servers): EMQX, MongoD
 | Environment | Where | How it is deployed | Rollback |
 | --- | --- | --- | --- |
 | Development | Each member's machine | `docker compose up -d` (MongoDB, EMQX, MinIO, MediaMTX), `npm run dev` for backend and web, Expo for mobile, ESP32 flashed over USB or LAN OTA. Development aid only: `npm run mdns` announces the laptop broker as `swiftletcare-broker.local` and a development build of the firmware finds it by mDNS, so a changed laptop IP needs no reflash; staging and production firmware use the broker domain set at flashing (FARM-FR-003c) | — |
-| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain name: the web at `/`, the API at `/api`, Socket.io at `/socket.io`, WHEP at `/stream`, MQTT over TLS on port 8883 and the RTSPS publish on port 8322 of the same name. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging up -d --build` (backend and web built into images by `backend/Dockerfile` and `deploy/nginx/Dockerfile`, Nginx with a Let's Encrypt certificate obtained by `deploy/staging-cert.sh` and renewed by Certbot, serving HTTPS and the TLS ports of MQTT and the video publish, EMQX, MongoDB, MediaMTX; files are kept in a private Cloudflare R2 bucket, S3-compatible, `STORAGE_DRIVER=s3` and the `MINIO_*` variables, because the MinIO images are no longer published; with `STORAGE_DRIVER` empty they stay on a volume of the backend); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
+| Staging | One rented VPS (2 vCPU, 4 GB RAM, ≥ 60 GB SSD, Ubuntu 24.04 LTS) in Singapore or Vietnam, with one domain name: the web at `/`, the API at `/api`, Socket.io at `/socket.io`, WHEP at `/stream`, MQTT over TLS on port 8883 and the RTSPS publish on port 8322 of the same name. The AI node is the team's spare PC at a member's home, reading the camera over the Internet (Section 11) | From the tag being demonstrated: `docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging up -d --build` (backend and web built into images by `backend/Dockerfile` and `deploy/nginx/Dockerfile`, Nginx with a Let's Encrypt certificate obtained by `deploy/staging-cert.sh` and renewed by Certbot, serving HTTPS and the TLS ports of MQTT and the video publish, EMQX, MongoDB, MediaMTX; files are kept in a private Cloudflare R2 bucket, S3-compatible, `STORAGE_DRIVER=s3` and the `MINIO_*` variables, because the MinIO images are no longer published; with `STORAGE_DRIVER` empty they stay on a volume of the backend; the backend connects to a MongoDB Atlas cluster when `MONGODB_URI` is set, else to the MongoDB container); pending `npm run migrate:*` scripts run once; demo data loaded by the seed script. Procedure: `docs/deploy/staging.md` | Re-deploy the previous tag with the same command; restore the `mongodump` taken just before the deployment |
 | Production | Not operated commercially (Report 3, Section 8) | Same procedure as staging from `main` | Same as staging. Controller firmware rolls back by itself when a new image does not reach the broker within 10 min (FARM-FR-013) |
 
 Defense 1.1 demonstrations run on staging with seeded data (guideline §9.2).
@@ -1908,7 +1908,8 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 2.2.32 | 26/11/2026 | The Farm Technician sets up, moves and removes devices of the assigned houses (Report 3 4.2.26, BM03 row 21): DF-9, D14, §5.4 technician client, the `/devices` route table, device lifecycle, AD-10 and AD-11 follow |
+| 2.2.33 | 26/11/2026 | The Farm Technician sets up, moves and removes devices of the assigned houses (Report 3 4.2.26, BM03 row 21): DF-9, D14, §5.4 technician client, the `/devices` route table, device lifecycle, AD-10 and AD-11 follow |
+| 2.2.32 | 26/11/2026 | Staging database on MongoDB Atlas instead of the MongoDB container: `MONGODB_URI` in the staging compose, Atlas snapshots plus a logical dump by the backup script (Sections 3.1, 3.4, 11) |
 | 2.2.31 | 26/11/2026 | Staging files in a Cloudflare R2 bucket through the S3 client instead of a backend volume: signed URLs that expire, files outside the VPS, `STORAGE_DRIVER=s3` and `MINIO_*` in the staging compose (Sections 3.1, 3.4, 11) |
 | 2.2.30 | 25/11/2026 | D22: IP camera address entered on the web and fetched by the AI node, AI node setup codes, video publishing with the node's own login; D5 and §6 follow; header baseline SRS 4.2.25 |
 | 2.2.29 | 24/11/2026 | D21: firmware rollout from the catalog, test controllers first, offline controllers updated at their next heartbeat, per-controller download link, pause at the first failure; SM-15, AD-11, §5.4 and §6 (`firmwarerollouts`) follow, the firmware catalog uploaded from the rollout page too; header baseline SRS 4.2.24 |
