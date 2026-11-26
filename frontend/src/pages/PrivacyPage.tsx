@@ -5,9 +5,12 @@ import PrivacyPolicy from '@/components/common/PrivacyPolicy';
 import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/authStore';
 import { useLanguageStore, type Lang } from '@/stores/languageStore';
+import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
+import { t } from '@/i18n'
 
 // Bản công khai; đã đăng nhập thì chuyển sang /settings/privacy
 export default function PrivacyPage(): JSX.Element | null {
+  useDocumentTitle(t('Chính sách quyền riêng tư'))
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   const hasHydrated = useAuthStore(s => s.hasHydrated);
   const lang = useLanguageStore(s => s.lang);
