@@ -11,6 +11,7 @@ import {
   sortAlerts,
   uniqueById,
 } from '@/utils/alertList.utils'
+import { SEVERITY_LEVELS } from '@/utils/severity.utils'
 
 // Không có sự kiện socket khi cảnh báo đổi trạng thái nên phần "Đang hiệu lực" tải lại định kỳ khi tab đang hiện
 const ACTIVE_REFRESH_INTERVAL_MS = 30 * 1000
@@ -71,7 +72,7 @@ export function useAlertsListData(scope: AlertsScope, isFocused: boolean) {
   const activeCounts = isHouseMode
     ? countBySeverityLevel(filterAlerts(activeQuery.data ?? [], baseFilter))
     : activeCountsQuery.data
-  const activeTotal = activeCounts ? activeCounts.P1 + activeCounts.P2 + activeCounts.P3 : null
+  const activeTotal = activeCounts ? SEVERITY_LEVELS.reduce((total, level) => total + activeCounts[level], 0) : null
   // Không tải được danh sách farm thì query cảnh báo không bao giờ chạy: báo lỗi, không quay khung xương mãi
   const isListLoading =
     !scope.isFarmsError && (!scope.isReady || (isHouseMode ? houseQuery.isLoading : pagedQuery.isLoading))

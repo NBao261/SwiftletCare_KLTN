@@ -31,12 +31,16 @@ export const Colors = {
     tabIconDefault: "#0B0B0C8C",  // Ink mờ 55% — tab chưa chọn, trên thanh trắng (đổi theo yêu cầu)
     tabIconSelected: "#0B0B0C",   // Ink — icon và chữ tab đang chọn (đổi theo yêu cầu)
 
-    // 3 Mức độ cảnh báo (Severities) — nền + chữ badge, cùng web (frontend/src/constants/severity.ts)
-    severityP1: "#FF7426",      // Khẩn cấp (Safety Orange)
+    // Mức độ cảnh báo — nền + chữ badge, cùng web (frontend/src/constants/severity.ts). 4 cấp (G-32 Q-07): Khẩn cấp =
+    // severityCritical, Cao = severityP1, Trung bình = severityP2, Thấp = severityP3. Ba token P1–P3 giữ giá trị cũ vì các màn
+    // KPI, ngày sức khỏe, chuyên gia dùng chúng làm màu cảnh báo cam đặc / cam nhạt / xám
+    severityCritical: "#D53F35",     // Khẩn cấp (Alert Red, cùng deviceError) — thêm theo yêu cầu 2026-11-26
+    severityCriticalText: "#FFFFFF", // Chữ trắng
+    severityP1: "#FF7426",      // Cao (Safety Orange)
     severityP1Text: "#FFFFFF",  // Chữ trắng
-    severityP2: "#FAE1D1",      // Cao (Orange 100)
+    severityP2: "#FAE1D1",      // Trung bình (Orange 100)
     severityP2Text: "#8B400E",  // Chữ cam đậm (Orange 800)
-    severityP3: "#87838026",    // Thường (Warm Gray mờ 15%)
+    severityP3: "#87838026",    // Thấp, việc đã kết thúc (Warm Gray mờ 15%)
     severityP3Text: "#878380",  // Chữ xám ấm (Warm Gray)
 
     // 3 Loại yến thu hoạch (Harvest Types)

@@ -23,7 +23,7 @@ const CHANNELS: { key: keyof ChannelChoice; label: string }[] = [
 ]
 const CHANNEL_CELL_WIDTH = 72
 
-// Bảng kênh ngoài app theo mức cảnh báo (ALERT-FR-005): mỗi mức Khẩn cấp · Cao · Thường bật/tắt Push và Telegram, lưu ngay
+// Bảng kênh ngoài app theo mức cảnh báo (ALERT-FR-005): mỗi mức Khẩn cấp · Cao · Trung bình · Thấp bật/tắt Push và Telegram, lưu ngay
 // (by_severity, cùng web). Mức Khẩn cấp phải còn ít nhất một kênh ngoài app; Telegram chỉ bật được khi đã liên kết bot.
 // Tắt kênh thì cảnh báo vẫn có trong tab Cảnh báo
 export function SeverityChannelTable() {

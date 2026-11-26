@@ -268,7 +268,7 @@ function OwnerProfileContent({ language, isSwitching, onSwitchLanguage, bottomPa
             <ProfileRow
               icon={SlidersHorizontalIcon}
               label={t('Kênh theo mức cảnh báo')}
-              caption={t('Push, Telegram cho từng mức Khẩn cấp, Cao, Thường')}
+              caption={t('Push, Telegram cho từng mức Khẩn cấp, Cao, Trung bình, Thấp')}
               onPress={() => router.push('/(tabs)/profile/notification-channels')}
               hasDivider
             />

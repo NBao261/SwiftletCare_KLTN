@@ -7,7 +7,7 @@ import {
   urgentHasOutsideChannel,
 } from '@/utils/notificationChannel.utils'
 
-// Cài đặt mẫu: push chung bật, Telegram chung tắt, mức Thường tắt push
+// Cài đặt mẫu: push chung bật, Telegram chung tắt, mức Thấp tắt push
 const PREFERENCES: NotificationPreferences = {
   push: true,
   telegram: false,
@@ -19,8 +19,8 @@ describe('getLevelChannels', () => {
   it('cấp không ghi đè thì theo kênh chung, cấp có ghi đè thì theo ghi đè', () => {
     const levels = getLevelChannels(PREFERENCES)
     expect(levels.P1).toEqual({ push: true, telegram: false })
-    expect(levels.P2).toEqual({ push: true, telegram: false })
-    expect(levels.P3).toEqual({ push: false, telegram: false })
+    expect(levels.P3).toEqual({ push: true, telegram: false })
+    expect(levels.P4).toEqual({ push: false, telegram: false })
   })
 
   it('chưa có cài đặt thì push và Telegram đều bật như mặc định backend', () => {
@@ -29,12 +29,12 @@ describe('getLevelChannels', () => {
 })
 
 describe('buildBySeverityPayload', () => {
-  it('mức giống kênh chung gửi null, mức khác gửi ghi đè; Khẩn cấp gồm CRITICAL và HIGH', () => {
+  it('mức giống kênh chung gửi null, mức khác gửi ghi đè; mỗi cấp chỉ đổi một mức backend', () => {
     const levels = getLevelChannels(PREFERENCES)
     levels.P1 = { push: true, telegram: true }
     const payload = buildBySeverityPayload(levels, { push: true, telegram: false })
     expect(payload.CRITICAL).toEqual({ push: true, telegram: true })
-    expect(payload.HIGH).toEqual({ push: true, telegram: true })
+    expect(payload.HIGH).toBeNull()
     expect(payload.MEDIUM).toBeNull()
     expect(payload.LOW).toEqual({ push: false, telegram: false })
   })
@@ -44,7 +44,7 @@ describe('applyGeneralPush / urgentHasOutsideChannel', () => {
   it('đổi push chung thì mọi cấp đổi theo', () => {
     const levels = applyGeneralPush(getLevelChannels(PREFERENCES), false)
     expect(levels.P1.push).toBe(false)
-    expect(levels.P3.push).toBe(false)
+    expect(levels.P4.push).toBe(false)
   })
 
   it('Khẩn cấp cần push, hoặc Telegram đã liên kết', () => {
