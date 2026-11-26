@@ -1,6 +1,7 @@
 import { Types } from 'mongoose'
 import { baselineAfter, stageOn } from '@/utils/houseStage.util'
 import { Alert, type IAlert } from '@/models/alert.model'
+import { CameraNode } from '@/models/device.model'
 import { HouseHealthDay, type HealthIndicators, type IDayWeather, type IHouseHealthDay } from '@/models/houseHealthDay.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
@@ -105,6 +106,16 @@ export function isFlockDayComplete(
   day: Pick<HouseDayCounts, 'has_morning' | 'has_evening' | 'return_rate' | 'incomplete'> | undefined,
 ): boolean {
   return !!day && day.has_morning && day.has_evening && day.return_rate !== null && !day.incomplete
+}
+
+// Theo ngày đang tính, không theo hiện tại: tính lại ngày cũ của camera đã gỡ vẫn ra đúng
+async function hadCameraOn(houseId: string, start: Date, end: Date): Promise<boolean> {
+  const camera = await CameraNode.exists({
+    house_id: houseId,
+    registered_at: { $lt: end },
+    $or: [{ decommissioned_at: null }, { decommissioned_at: { $gt: start } }],
+  })
+  return camera !== null
 }
 
 interface DayWeather { summary: IDayWeather | null; rainHours: Interval[] }
@@ -218,7 +229,9 @@ export async function computeHouseDay(houseId: string, date: string, now = new D
       }
     }
   } else {
-    const missing = !today?.has_morning ? 'MORNING' : !today.has_evening ? 'EVENING' : today.incomplete ? 'INCOMPLETE' : 'NO_DEPARTURES'
+    // Ngày không có số đếm nào: nhà chưa có camera thì nói thẳng, đừng báo thiếu phiên sáng
+    const missing = !today && !(await hadCameraOn(houseId, start, end)) ? 'NO_CAMERA'
+      : !today?.has_morning ? 'MORNING' : !today.has_evening ? 'EVENING' : today.incomplete ? 'INCOMPLETE' : 'NO_DEPARTURES'
     missingReasons.push(reason('MISSING_DATA', 'flock', { missing }))
   }
   indicators.flock = {

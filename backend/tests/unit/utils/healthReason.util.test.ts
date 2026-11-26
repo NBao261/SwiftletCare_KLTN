@@ -24,6 +24,8 @@ describe('formatReason', () => {
 
   it('cùng mã khác nguồn: thiếu dữ liệu đàn chim / môi trường, chưa đánh giá không khí / tiếng ồn', () => {
     expect(formatReason(r('MISSING_DATA', 'flock', { missing: 'EVENING' }))).toBe('Thiếu dữ liệu đàn chim: thiếu phiên chiều')
+    expect(formatReason(r('MISSING_DATA', 'flock', { missing: 'NO_CAMERA' }))).toBe('Thiếu dữ liệu đàn chim: nhà chưa có Camera đếm chim')
+    expect(formatReason(r('MISSING_DATA', 'flock', { missing: 'NO_CAMERA' }), 'en')).toBe('Missing flock data: the house has no bird-counting camera')
     expect(formatReason(r('MISSING_DATA', 'environment', { no_zones: true }), 'en')).toBe('Missing environment data: the house has no zone')
     expect(formatReason(r('MISSING_DATA', 'environment', { min_pct: 80, zones: [{ zone_name: 'Tầng 1', valid_pct: 70 }] })))
       .toBe('Thiếu dữ liệu môi trường: mẫu nhiệt độ, độ ẩm hợp lệ dưới 80 % (Tầng 1 70 %)')

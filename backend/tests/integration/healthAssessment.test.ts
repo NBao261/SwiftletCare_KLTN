@@ -5,6 +5,7 @@ import { Farm } from '@/models/farm.model'
 import { House } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { Alert } from '@/models/alert.model'
+import { CameraNode } from '@/models/device.model'
 import { vnDate } from '@/services/birdCount.service'
 import { addDays, assessAllHouses, assessHouseDay, computeHouseDay, recomputeForAlert, vnDayStart } from '@/services/healthAssessment.service'
 import { notifyUser } from '@/services/notification.service'
@@ -29,7 +30,7 @@ afterAll(async () => {
 })
 afterEach(async () => {
   jest.clearAllMocks()
-  await Promise.all(HEALTH_MODELS.map(m => (m as typeof House).deleteMany({})))
+  await Promise.all([...HEALTH_MODELS, CameraNode].map(m => (m as typeof House).deleteMany({})))
 })
 
 const DATE = '2026-10-20'
@@ -128,6 +129,34 @@ describe('TC-F20-03 — thiếu dữ liệu (DS-22)', () => {
     expect(a?.current_status).toBe('INSUFFICIENT_DATA')
     expect(a?.completeness.flock).toBe(false)
     expect(a?.current_reasons[0]).toEqual({ code: 'MISSING_DATA', source: 'flock', level: null, values: { missing: 'EVENING' } })
+  })
+
+  it('nhà chưa có camera → lý do nói nhà chưa có camera, không phải thiếu phiên sáng', async () => {
+    const seeded = await seedHouse()
+    await seedTelemetry(seeded.zone, DATE)
+    const a = await compute(seeded.house._id)
+    expect(a?.current_status).toBe('INSUFFICIENT_DATA')
+    expect(a?.current_reasons[0]).toEqual({ code: 'MISSING_DATA', source: 'flock', level: null, values: { missing: 'NO_CAMERA' } })
+  })
+
+  it('camera gỡ trước ngày đó hoặc lắp sau ngày đó cũng là chưa có camera', async () => {
+    const seeded = await seedHouse()
+    await seedTelemetry(seeded.zone, DATE)
+    await CameraNode.create({
+      device_id: 'cam-removed', house_id: seeded.house._id, status: 'OFFLINE',
+      registered_at: vnDayStart(addDays(DATE, -10)), decommissioned_at: vnDayStart(addDays(DATE, -2)),
+    })
+    await CameraNode.create({ device_id: 'cam-later', house_id: seeded.house._id, status: 'ONLINE', registered_at: NOW })
+    const a = await compute(seeded.house._id)
+    expect(a?.current_reasons[0]).toEqual(reasonOf('MISSING_DATA', { source: 'flock', values: { missing: 'NO_CAMERA' } }))
+  })
+
+  it('có camera trong ngày nhưng không có số đếm → vẫn báo thiếu phiên sáng', async () => {
+    const seeded = await seedHouse()
+    await seedTelemetry(seeded.zone, DATE)
+    await CameraNode.create({ device_id: 'cam-silent', house_id: seeded.house._id, status: 'OFFLINE', registered_at: vnDayStart(addDays(DATE, -5)) })
+    const a = await compute(seeded.house._id)
+    expect(a?.current_reasons[0]).toEqual(reasonOf('MISSING_DATA', { source: 'flock', values: { missing: 'MORNING' } }))
   })
 
   it('mẫu nhiệt độ, độ ẩm hợp lệ dưới 80 % → INSUFFICIENT_DATA', async () => {

@@ -7874,7 +7874,7 @@ components:
         Ảnh chụp lúc chấm lưu cùng dạng. `values` theo mã:
         - `ALL_NORMAL`: {} — mọi chỉ số đã đánh giá đều bình thường (ngày GOOD)
         - `MISSING_DATA` (environment): `{ no_zones: true }` hoặc `{ min_pct, zones: [{ zone_name, valid_pct }] }`
-        - `MISSING_DATA` (flock): `{ missing: MORNING | EVENING | NO_DEPARTURES | INCOMPLETE }` (INCOMPLETE: nút AI mất kết nối trong khung phiên, VISION-FR-020)
+        - `MISSING_DATA` (flock): `{ missing: MORNING | EVENING | NO_DEPARTURES | INCOMPLETE | NO_CAMERA }` (INCOMPLETE: nút AI mất kết nối trong khung phiên, VISION-FR-020; NO_CAMERA: ngày không có số đếm và nhà không có camera nào trong ngày đó)
         - `NOT_ASSESSED` (air, noise): {} — thiếu mẫu, nguồn không đánh giá
         - `ENV_IN_RANGE`: `{ zone_name, in_range_pct }`
         - `AIR_OVER_LIMIT`: `{ zone_name, hours }`
