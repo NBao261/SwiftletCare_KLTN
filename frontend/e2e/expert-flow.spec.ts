@@ -299,7 +299,7 @@ test('B9 — báo cáo & kết luận mở được, đổi sang tab Ngày lệc
 
 test('B10 — lịch sử quyết định ghi lại các việc vừa làm (EXPERT-FR-009)', async ({ page }) => {
   const crashes = await openAsExpert(page, '/domain-expert/history', { farmId });
-  await expect(page.getByRole('heading', { name: 'Nhật ký quyết định' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lịch sử quyết định' })).toBeVisible();
   // Kết luận cảnh báo của B2 và các lần sửa ngưỡng của B3, B4 phải nằm trong nhật ký
   await expect(page.getByText('Không có dữ liệu', { exact: false })).toHaveCount(0);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
