@@ -156,10 +156,13 @@ test('T6 — trang của vai trò khác bị chặn (Report 3 §2.4)', async ({ 
   const crashes = await openAsTechnician(page, '/overview');
   await expect(page).toHaveURL(/\/403$/);
 
-  for (const path of ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/devices/onboarding']) {
+  for (const path of ['/domain-expert/queue', '/domain-expert/alert-verdicts']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/403$/);
   }
+  // thiết lập thiết bị mở cho thợ ở nhà được giao (G-34)
+  await page.goto('/devices/onboarding');
+  await expect(page).toHaveURL(/\/devices\/onboarding$/);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 

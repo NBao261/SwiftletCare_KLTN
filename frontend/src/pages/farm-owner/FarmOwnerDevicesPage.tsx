@@ -10,6 +10,8 @@ import { DEVICE_DETAIL_PATH, type DeviceDetailState } from '@/components/feature
 import RemovedDevicesSection from '@/components/features/farm-owner/devices/RemovedDevicesSection';
 import { Button, EmptyState, LoadingSkeleton, SectionCard } from '@/components/ui';
 import { devicesDict } from '@/constants/devices.i18n';
+import { DEVICE_SETUP_ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
@@ -23,6 +25,8 @@ type StatusTab = (typeof STATUS_TABS)[number];
 export default function FarmOwnerDevicesPage(): JSX.Element {
   const { t } = useTranslation(devicesDict);
   const navigate = useNavigate();
+  // Farm Owner thiết lập thiết bị; chuyên gia chỉ xem trang này
+  const canSetUp = usePermission(...DEVICE_SETUP_ROLES);
   const scope = useScopeFilter();
   const { houses, houseId, zones, zone, isLoading: isLoadingScope } = scope;
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
@@ -76,6 +80,7 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
       {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
         <ScopeFilter scope={scope} />
+        {canSetUp && <Button size="sm" onClick={() => navigate('/devices/onboarding')}>{t('list.setup')}</Button>}
       </HeaderActions>
 
       <SectionCard description={t('list.short')} help={t('list.help')}>

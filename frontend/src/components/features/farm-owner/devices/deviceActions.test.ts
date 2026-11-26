@@ -15,9 +15,11 @@ describe('nút thao tác thiết bị của Farm Owner (todo-audit-1118 W-04, W-
     expect(canRestartController('DOMAIN_EXPERT', { type: 'sensor', status: 'ONLINE' })).toBe(false)
   })
 
-  it('chỉ Farm Owner dời, thay, gỡ bộ điều khiển; camera và role khác thì không (FARM-FR-007b, 008)', () => {
+  it('Farm Owner và Farm Technician dời, thay, gỡ bộ điều khiển; camera, chuyên gia và Admin thì không (FARM-FR-007b, 008)', () => {
     expect(canManageController('FARM_OWNER', { type: 'sensor' })).toBe(true)
     expect(canManageController('FARM_OWNER', { type: 'camera' })).toBe(false)
-    for (const role of ['DOMAIN_EXPERT', 'FARM_TECHNICIAN', 'ADMIN'] as const) expect(canManageController(role, { type: 'sensor' })).toBe(false)
+    expect(canManageController('FARM_TECHNICIAN', { type: 'sensor' })).toBe(true)
+    expect(canManageController('FARM_TECHNICIAN', { type: 'camera' })).toBe(false)
+    for (const role of ['DOMAIN_EXPERT', 'ADMIN'] as const) expect(canManageController(role, { type: 'sensor' })).toBe(false)
   })
 })

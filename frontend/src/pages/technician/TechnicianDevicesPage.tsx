@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
 import { useScopeFilter } from "@/hooks/shared/useScopeFilter";
 import { Button, Card } from "@/components/ui";
@@ -11,12 +12,21 @@ import DeviceFilterToolbar, { type DeviceSortKey } from "@/components/features/t
 import type { SortDirection } from "@/types";
 import DeviceListRow from "@/components/features/technician/devices/DeviceListRow";
 import LullabyTracksModal from "@/components/features/farm-owner/devices/LullabyTracksModal";
+import MoveControllerModal from "@/components/features/farm-owner/devices/MoveControllerModal";
+import ReplaceControllerModal from "@/components/features/farm-owner/devices/ReplaceControllerModal";
+import RemoveControllerModal from "@/components/features/farm-owner/devices/RemoveControllerModal";
+import RemovedDevicesSection from "@/components/features/farm-owner/devices/RemovedDevicesSection";
+import { sensorItem, type DeviceItem } from "@/components/features/farm-owner/devices/deviceInventory";
+import { devicesDict } from "@/constants/devices.i18n";
+import { useTranslation } from "@/hooks/common/useTranslation";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
 
 // Thiết bị của Farm Technician: thiết bị các nhà được giao, chẩn đoán, khởi động lại, danh sách bài loa chỉ xem
 export default function TechnicianDevicesPage() {
+  const { t } = useTranslation(devicesDict);
+  const navigate = useNavigate();
   // Chung store phạm vi với các trang khác
   const scope = useScopeFilter();
   const zoneId = scope.zone?._id;
@@ -43,6 +53,10 @@ export default function TechnicianDevicesPage() {
   const sendCommand = useSendNodeCommand();
   const push = useToastStore((s) => s.push);
   const [rebootNodeId, setRebootNodeId] = useState<string | null>(null);
+  // Dời, thay, gỡ bộ điều khiển của nhà được giao (FARM-FR-007b, 008)
+  const [moveDevice, setMoveDevice] = useState<DeviceItem>();
+  const [replaceDevice, setReplaceDevice] = useState<DeviceItem>();
+  const [removeDevice, setRemoveDevice] = useState<DeviceItem>();
 
   const hasActiveFilters = !!searchQuery || statusFilter !== "ALL" || sortBy !== "last_heartbeat" || sortDir !== "desc";
   function clearFilters() {
@@ -117,12 +131,14 @@ export default function TechnicianDevicesPage() {
     <div className="flex flex-col gap-6">
       {/* Khung lọc nằm trên header từ sm trở lên như các trang Farm Owner; mobile header chật nên đặt đầu trang */}
       <HeaderActions>
-        <div className="hidden sm:block">
+        <div className="hidden items-center gap-2 sm:flex">
           <ScopeFilter scope={scope} />
+          <Button size="sm" onClick={() => navigate("/devices/onboarding")}>{t("list.setup")}</Button>
         </div>
       </HeaderActions>
-      <div className="sm:hidden">
+      <div className="flex flex-wrap items-center gap-2 sm:hidden">
         <ScopeFilter scope={scope} />
+        <Button size="sm" onClick={() => navigate("/devices/onboarding")}>{t("list.setup")}</Button>
       </div>
 
       <Card size="lg" className="pb-10 flex flex-col gap-5">
@@ -174,6 +190,11 @@ export default function TechnicianDevicesPage() {
                   onOpenAudio={() => setAudioNodeId(node._id)}
                   rebootUnsupported={rebootUnsupportedIds.has(node._id)}
                   onReboot={() => setRebootNodeId(node._id)}
+                  moreActions={zone ? [
+                    { label: t("action.move"), onClick: () => setMoveDevice(sensorItem(node, zone.house_id)) },
+                    { label: t("action.replace"), onClick: () => setReplaceDevice(sensorItem(node, zone.house_id)) },
+                    { label: t("action.remove"), onClick: () => setRemoveDevice(sensorItem(node, zone.house_id)), danger: true },
+                  ] : undefined}
                 />
               );
             })}
@@ -192,6 +213,10 @@ export default function TechnicianDevicesPage() {
           />
         )}
 
+        {moveDevice && <MoveControllerModal device={moveDevice} onClose={() => setMoveDevice(undefined)} />}
+        {replaceDevice && <ReplaceControllerModal device={replaceDevice} onClose={() => setReplaceDevice(undefined)} />}
+        {removeDevice && <RemoveControllerModal device={removeDevice} onClose={() => setRemoveDevice(undefined)} />}
+
         <ConfirmModal
           open={rebootNode !== null}
           title="Khởi động lại thiết bị?"
@@ -204,6 +229,8 @@ export default function TechnicianDevicesPage() {
         />
 
       </Card>
+      {/* thiết bị gỡ nhầm khôi phục được trong 24 giờ */}
+      <RemovedDevicesSection />
     </div>
   );
 }

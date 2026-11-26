@@ -6,9 +6,9 @@ export function canManageLullabyTracks(role: Role | undefined): boolean {
   return role === 'FARM_OWNER'
 }
 
-// chỉ Farm Owner dời, thay, gỡ bộ điều khiển; camera gắn cả nhà nên không dời Zone
+// Farm Owner và Farm Technician (nhà được giao) dời, thay, gỡ bộ điều khiển; camera gắn cả nhà nên không dời Zone
 export function canManageController(role: Role | undefined, device: Pick<DeviceItem, 'type'>): boolean {
-  return role === 'FARM_OWNER' && device.type === 'sensor'
+  return (role === 'FARM_OWNER' || role === 'FARM_TECHNICIAN') && device.type === 'sensor'
 }
 
 // Địa chỉ camera IP là việc thiết lập thiết bị của Farm Owner (SF-01)

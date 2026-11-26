@@ -54,7 +54,7 @@ interface InventoryInput {
   zoneId?: string;
 }
 
-function sensorItem(sensor: SensorNode, houseId: string): DeviceItem {
+export function sensorItem(sensor: SensorNode, houseId: string): DeviceItem {
   return {
     id: sensor._id, deviceId: sensor.device_id, type: 'sensor', status: sensor.status, houseId, zoneId: sensor.zone_id,
     rssi: sensor.rssi, version: sensor.firmware_version, lastHeartbeat: sensor.last_heartbeat, registeredAt: sensor.registered_at,
