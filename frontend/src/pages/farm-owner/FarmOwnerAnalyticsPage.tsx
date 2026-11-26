@@ -1,21 +1,17 @@
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import '@/lib/chartTheme';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import AutomationCard from '@/components/features/farm-owner/analytics/AutomationCard';
-import BirdHourlyCard from '@/components/features/farm-owner/analytics/BirdHourlyCard';
-import BirdWeeklyCard from '@/components/features/farm-owner/analytics/BirdWeeklyCard';
 import CompareZonesCard from '@/components/features/farm-owner/analytics/CompareZonesCard';
 import CorrelationCard from '@/components/features/farm-owner/analytics/CorrelationCard';
 import EnergyCard from '@/components/features/farm-owner/analytics/EnergyCard';
 import EnvVariationCard from '@/components/features/farm-owner/analytics/EnvVariationCard';
-import FlockTrendCard from '@/components/features/farm-owner/analytics/FlockTrendCard';
 import ForecastCard from '@/components/features/farm-owner/analytics/ForecastCard';
 import HealthReportCard from '@/components/features/farm-owner/analytics/HealthReportCard';
 import HouseComparisonSection from '@/components/features/farm-owner/analytics/HouseComparisonSection';
-import RelayOverrideHistoryCard from '@/components/features/farm-owner/analytics/RelayOverrideHistoryCard';
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { FARM_SIDE_ROLES } from '@/constants/roles';
@@ -25,33 +21,18 @@ import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useZone } from '@/hooks/shared/useFarms';
 import { cn } from '@/lib/cn';
 
-const TABS = ['env', 'birds', 'ops', 'houses'] as const;
+const TABS = ['env', 'ops', 'houses'] as const;
 type AnalyticsTab = typeof TABS[number];
-
-// 2 khung cạnh nhau trên màn rộng; thiếu 1 khung thì khung còn lại chiếm cả hàng
-function pair(left: ReactNode, right: ReactNode): ReactNode {
-  if (!right) return left;
-  return (
-    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-      {left}
-      {right}
-    </div>
-  );
-}
 
 // Trang Phân tích của Farm Owner: /008..011
 export default function FarmOwnerAnalyticsPage(): JSX.Element {
   const { t } = useTranslation(analyticsDict);
   // Khung lọc Nhà + Zone lưu ở store chung, giữ nguyên khi chuyển trang
   const scope = useScopeFilter();
-  const { farms, houses, houseId, houseName, zones, zone, isLoading, isError, refetch } = scope;
-  // Phạm vi đếm chim (theo nhà) và Zone đang tính: theo khung lọc, chưa lọc thì gồm tất cả
-  const houseIds = useMemo(() => (houseId ? [houseId] : houses.map(house => house._id)), [houseId, houses]);
-  const scopedZoneIds = useMemo(() => (zone ? [zone._id] : zones.map(item => item._id)), [zone, zones]);
-  const scopeLabel = houseName || t('common.allHouses');
+  const { farms, houseId, houseName, zones, zone, isLoading, isError, refetch } = scope;
   // Ngưỡng lấy từ chi tiết Zone (luôn mới), danh sách Zone được giữ cache lâu hơn
   const { data: zoneDetail } = useZone(zone?._id);
-  // Tab nằm trên URL (?tab=birds) để quay lại đúng nhóm, mặc định Môi trường
+  // Tab nằm trên URL (?tab=ops) để quay lại đúng nhóm, mặc định Môi trường
   const [searchParams, setSearchParams] = useSearchParams();
   // So sánh nhà là của Chủ nhà yến và Chuyên gia (kỹ thuật viên không đọc tổng quan trang trại)
   const canCompare = usePermission(...FARM_SIDE_ROLES);
@@ -111,10 +92,6 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   if (tab === 'houses') {
     body = <HouseComparisonSection farmId={comparisonFarmId} />;
   } else if (zones.length > 0) {
-    // Đếm chim là của cả nhà yến chứa Zone
-    const birdHouseIds = zone ? [zone.house_id] : houseIds;
-    const birdLabel = zone ? zone.houseName : scopeLabel;
-    const flockTrend = houseId ? <FlockTrendCard houseId={houseId} houseName={houseName} /> : null;
     const energy = houseId ? <EnergyCard houseId={houseId} houseName={houseName} /> : null;
     // biểu đồ theo thời gian là của một Zone: chưa chọn Zone thì nói rõ chỗ chọn, không để trống
     const pickZoneHint = zone ? null : (
@@ -135,27 +112,19 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
             </>
           )}
           <CompareZonesCard zones={zones} />
+          {/* Môi trường ảnh hưởng tới tỷ lệ chim về: phân tích sâu nên đứng sau cùng */}
+          {zone && <CorrelationCard zoneId={zone._id} />}
           {pickZoneHint}
         </>
       );
-    } else if (tab === 'birds') {
-      body = (
-        <>
-          <BirdHourlyCard houseIds={birdHouseIds} scopeLabel={birdLabel} />
-          {/* Tỷ lệ về và quy mô đàn trước, tương quan (phân tích sâu) sau cùng */}
-          {pair(<BirdWeeklyCard houseIds={birdHouseIds} scopeLabel={birdLabel} />, flockTrend)}
-          {zone && <CorrelationCard zoneId={zone._id} />}
-        </>
-      );
     } else {
-      // Vận hành: mỗi khung 1 hàng đủ rộng; tóm tắt và kết luận trước, nhật ký chi tiết sau cùng
+      // Vận hành tự động: tóm tắt và kết luận, điện năng; lịch sử điều khiển tay nằm ở trang Điều khiển tay
       body = (
         <>
           {zone && <HealthReportCard houseId={zone.house_id} zoneId={zone._id} />}
           {zone && <AutomationCard zoneId={zone._id} />}
           {pickZoneHint}
           {energy}
-          <RelayOverrideHistoryCard zoneIds={scopedZoneIds} />
         </>
       );
     }

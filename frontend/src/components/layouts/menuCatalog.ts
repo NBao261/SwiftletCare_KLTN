@@ -8,11 +8,12 @@ import { canAccessPath } from '@/constants/roles'
 import type { Role } from '@/types'
 
 // Một danh mục cho mọi vai trò: cùng trang thì cùng tên, icon, nhóm tab; mỗi vai trò chỉ thấy phần MENU_ACCESS cho phép
-type MenuGroup = 'monitor' | 'operations' | 'expertise' | 'system'
+type MenuGroup = 'monitor' | 'operations' | 'manage' | 'expertise' | 'system'
 
 const GROUP_TITLE: Record<MenuGroup, string> = {
   monitor: 'Theo dõi',
   operations: 'Vận hành',
+  manage: 'Quản lý',
   expertise: 'Chuyên môn',
   system: 'Hệ thống',
 }
@@ -26,8 +27,8 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
     { label: 'Sức khoẻ & báo cáo', path: '/health', icon: HeartbeatIcon },
     { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
   ],
+  // Việc làm hằng ngày: phiếu và bảo trì, bật tắt tay, ghi thu hoạch
   operations: [
-    { label: 'Điều khiển tay', path: '/relay-control', icon: HandPointingIcon },
     {
       label: 'Công việc',
       path: '/work-orders',
@@ -38,11 +39,15 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
         { label: 'Khuyến nghị', path: '/recommendations' },
       ],
     },
+    { label: 'Điều khiển tay', path: '/relay-control', icon: HandPointingIcon },
+    { label: 'Thu hoạch', path: '/harvests', icon: BasketIcon },
+  ],
+  // Tài sản và cấu trúc, thiết lập một lần rồi ít đụng tới
+  manage: [
     { label: 'Thiết bị', path: '/devices', icon: CpuIcon },
     { label: 'Kho thiết bị', path: '/system/device-stock', icon: PackageIcon },
     { label: 'Cập nhật firmware', path: '/ota', icon: CloudArrowUpIcon },
     { label: 'Trang trại', path: '/farms', icon: HouseIcon },
-    { label: 'Thu hoạch', path: '/harvests', icon: BasketIcon },
   ],
   expertise: [
     { label: 'Hàng đợi việc', path: '/domain-expert/queue', icon: ClipboardTextIcon },
@@ -96,21 +101,21 @@ interface SectionPlan {
 // Nhóm việc chính của vai trò đứng đầu; dock điện thoại là 4 trang vai trò đó dùng nhiều nhất
 const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[] }> = {
   ADMIN: {
-    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'system' }],
+    sections: [{ group: 'monitor' }, { group: 'manage' }, { group: 'system' }],
     dock: ['/system/health', '/devices', '/alerts', '/users'],
   },
   FARM_OWNER: {
     // Chuyên môn ít dùng hằng ngày (farm có chuyên gia thì chỉ xem, nhắc) nên thu gọn được
-    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'expertise', collapsible: true }],
+    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise', collapsible: true }],
     dock: ['/dashboard', '/alerts', '/vision', '/health'],
   },
   FARM_TECHNICIAN: {
     // Vòng đếm thợ vẽ được nên nhóm Chuyên môn không ghi "chỉ đọc", chỉ thu gọn
-    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'expertise', collapsible: true }],
+    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise', collapsible: true }],
     dock: ['/alerts', '/work-orders', '/dashboard', '/health'],
   },
   DOMAIN_EXPERT: {
-    sections: [{ group: 'expertise' }, { group: 'monitor', readOnly: true }, { group: 'operations', readOnly: true }],
+    sections: [{ group: 'expertise' }, { group: 'monitor', readOnly: true }, { group: 'operations', readOnly: true }, { group: 'manage', readOnly: true }],
     dock: ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/domain-expert/tuning', '/domain-expert/counting-schedule'],
   },
 }
