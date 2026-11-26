@@ -32,6 +32,7 @@ const vi = {
   'cell.wholeHouse': 'Cả nhà',
   'cell.neverSeen': 'Chưa có tín hiệu',
   // Thiết bị gỡ trong 24 giờ còn khôi phục được
+  'list.setup': 'Thiết lập thiết bị',
   'removed.title': 'Đã gỡ trong 24 giờ',
   'removed.subtitle': 'Gỡ nhầm thì khôi phục được trong 24 giờ; sau đó phải đăng ký lại như thiết bị mới.',
   'removed.removedAt': 'Gỡ lúc {time} · {reason}',
@@ -328,6 +329,7 @@ const en: Record<DevicesKey, string> = {
   'cell.cameraKind': 'Bird counting camera',
   'cell.wholeHouse': 'Whole house',
   'cell.neverSeen': 'No signal yet',
+  'list.setup': 'Set up a device',
   'removed.title': 'Removed in the last 24 hours',
   'removed.subtitle': 'A device removed by mistake can be restored within 24 hours; after that it must be registered again.',
   'removed.removedAt': 'Removed at {time} · {reason}',

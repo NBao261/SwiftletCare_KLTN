@@ -44,7 +44,7 @@ export const HARVEST_ROLES: Role[] = FARM_WORK_ROLES
 export const DEVICE_LIST_ROLES: Role[] = ['ADMIN', ...FARM_STRUCTURE_ROLES]
 
 // Lắp thiết bị: chỉ Farm Owner (: FARM_TECHNICIAN và ADMIN gọi API này nhận 403).
-export const DEVICE_SETUP_ROLES: Role[] = ['FARM_OWNER']
+export const DEVICE_SETUP_ROLES: Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN']
 
 // Domain Expert dùng hàng đợi kiểm chứng thay cho trang này
 export const ALERT_ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN']

@@ -1,14 +1,13 @@
-// Bước 2: xác thực mã thiết bị và mã kích hoạt; lỗi theo mã HTTP
+// Bước 2: xác thực mã thiết bị và mã kích hoạt; lỗi nói đúng lý do theo mã lỗi của backend
 import { useState } from 'react'
 import { deviceApi } from '@/apis/shared/devices.api'
 import { Button } from '@/components/ui'
 import { canValidateDevice, cameraRegisterInput, sensorRegisterInput } from '@/components/features/farm-owner/onboarding/onboarding.utils'
-import { getApiErrorMessage } from '@/lib/helpers'
+import { describeRegistrationFailure, type RegistrationFailure } from '@/components/features/farm-owner/onboarding/registrationFailure'
 import { parseDeviceLabelCode } from '@/lib/qrCode'
 import { Thermometer, Camera, QrCode, CheckCircle2, X, AlertTriangle, XCircle, ArrowLeft, ArrowRight } from 'lucide-react'
 import type { OnboardingState } from './onboardingTypes'
 
-type ValidateError  = 'DEVICE_ALREADY_REGISTERED' | 'INVALID_DEVICE' | 'FORBIDDEN' | 'UNKNOWN' | null
 type ValidateStatus = 'idle' | 'loading' | 'success' | 'error'
 
 interface Props {
@@ -23,8 +22,7 @@ const DEVICE_LABEL = { SENSOR_NODE: 'Bộ điều khiển', CAMERA_NODE: 'Camera
 
 export function Step2Validate({ data, patch, onNext, onBack }: Props) {
   const [status, setStatus] = useState<ValidateStatus>(data.deviceDbId ? 'success' : 'idle')
-  const [error, setError] = useState<ValidateError>(null)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [failure, setFailure] = useState<RegistrationFailure | null>(null)
   const [validatedModel, setValidatedModel] = useState(
     data.deviceDbId ? `${DEVICE_LABEL[data.deviceType]} (Đã xác thực)` : '',
   )
@@ -50,8 +48,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
   async function handleValidate() {
     if (!canSubmit) return
     setStatus('loading')
-    setError(null)
-    setErrorMessage('')
+    setFailure(null)
     try {
       // Camera gắn nhà (house_id), bộ điều khiển gắn Zone
       const res = data.deviceType === 'CAMERA_NODE'
@@ -65,17 +62,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
 
       setStatus('success')
     } catch (err: unknown) {
-      const httpStatus = (err as { response?: { status?: number } })?.response?.status
-      setErrorMessage(getApiErrorMessage(err, ''))
-      if (httpStatus === 409) {
-        setError('DEVICE_ALREADY_REGISTERED')
-      } else if (httpStatus === 400 || httpStatus === 404) {
-        setError('INVALID_DEVICE')
-      } else if (httpStatus === 403) {
-        setError('FORBIDDEN')
-      } else {
-        setError('UNKNOWN')
-      }
+      setFailure(describeRegistrationFailure(err))
       setStatus('error')
     }
   }
@@ -108,7 +95,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             onChange={e => { patch({ deviceId: e.target.value }); setStatus('idle') }}
             placeholder="VD: ESP32-A7F3-001"
             className={`input flex-1 tabular-nums ${
-              error === 'DEVICE_ALREADY_REGISTERED' ? 'border-2 border-climateOrange focus:border-climateOrange' : ''
+              failure?.tone === 'warning' ? 'border-2 border-climateOrange focus:border-climateOrange' : ''
             }`}
           />
           <button
@@ -122,12 +109,6 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             {showQrInput ? <X className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
           </button>
         </div>
-        {error === 'DEVICE_ALREADY_REGISTERED' && (
-          <p className="flex items-center gap-1.5 text-sm text-climateOrange">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>{errorMessage || 'Thiết bị đã được đăng ký'}</span>
-          </p>
-        )}
       </div>
 
       {/* QR URI paste panel */}
@@ -183,51 +164,22 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
         </div>
       )}
 
-      {error === 'DEVICE_ALREADY_REGISTERED' && (
-        <div className="rounded-xl border border-l-4 border-climateOrange/30 border-l-climateOrange bg-climateOrange/[0.08] px-4 py-3">
-          <p className="flex items-center gap-1.5 font-semibold text-climateOrange">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>Thiết bị đã tồn tại trên hệ thống</span>
+      {failure && (
+        <div
+          role="alert"
+          className={`rounded-xl border border-l-4 px-4 py-3 ${
+            failure.tone === 'warning'
+              ? 'border-climateOrange/30 border-l-climateOrange bg-climateOrange/[0.08]'
+              : failure.tone === 'error'
+                ? 'border-alertRed/30 border-l-alertRed bg-alertRed/5'
+                : 'border-graphite/30 border-l-graphite bg-graphite/5'
+          }`}
+        >
+          <p className={`flex items-center gap-1.5 font-semibold ${failure.tone === 'warning' ? 'text-climateOrange' : failure.tone === 'error' ? 'text-alertRed' : 'text-charcoal'}`}>
+            {failure.tone === 'warning' ? <AlertTriangle className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
+            <span>{failure.title}</span>
           </p>
-          <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-sm text-climateOrange/80">
-            <li>Thiết bị đang thuộc một trang trại khác</li>
-            <li>Có thể mã thiết bị bị nhập sai chữ hoa/thường</li>
-          </ul>
-          <p className="mt-2 text-sm text-climateOrange/70">Liên hệ Quản trị viên để gỡ thiết bị khỏi trang trại đó.</p>
-        </div>
-      )}
-
-      {error === 'INVALID_DEVICE' && (
-        <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
-          <p className="flex items-center gap-1.5 font-semibold text-alertRed">
-            <XCircle className="h-4 w-4 shrink-0" />
-            <span>Mã thiết bị hoặc mã kích hoạt không đúng</span>
-          </p>
-          <p className="mt-1 text-sm text-alertRed/80">
-            {errorMessage || 'Kiểm tra lại mã thiết bị và mã kích hoạt trên nhãn dán mặt sau thiết bị.'}
-          </p>
-        </div>
-      )}
-
-      {error === 'FORBIDDEN' && (
-        <div className="rounded-xl border border-l-4 border-alertRed/30 border-l-alertRed bg-alertRed/5 px-4 py-3">
-          <p className="flex items-center gap-1.5 font-semibold text-alertRed">
-            <XCircle className="h-4 w-4 shrink-0" />
-            <span>Bạn không có quyền với trang trại này</span>
-          </p>
-          <p className="mt-1 text-sm text-alertRed/80">
-            {errorMessage || 'Tài khoản này không được đăng ký thiết bị vào trang trại đã chọn. Quay lại bước 1 chọn vị trí khác.'}
-          </p>
-        </div>
-      )}
-
-      {error === 'UNKNOWN' && (
-        <div className="rounded-xl border border-l-4 border-graphite/30 border-l-graphite bg-graphite/5 px-4 py-3">
-          <p className="flex items-center gap-1.5 font-semibold text-charcoal">
-            <XCircle className="h-4 w-4 shrink-0" />
-            <span>Lỗi kết nối</span>
-          </p>
-          <p className="mt-1 text-sm text-warmGray">Không thể kết nối đến máy chủ. Kiểm tra mạng và thử lại.</p>
+          <p className="mt-1 text-sm text-warmGray">{failure.detail}</p>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { SlidersHorizontalIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { PlusIcon, SlidersHorizontalIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
@@ -27,18 +27,22 @@ import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/shared/useScopeFilter'
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
+import { DEVICE_SETUP_PATH, type DeviceSetupState } from '@/components/features/farm-owner/onboarding/deviceSetupState'
+import { DEVICE_SETUP_ROLES } from '@/constants/roles'
 import { printQrLabels, zoneCode } from '@/lib/qrCode'
 
 // Chi tiết 1 Zone: số đo realtime so ngưỡng
 export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t, ago } = useTranslation(farmDict)
   useScrollToTop(zoneId)
   const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
   const node = zoneId ? structure.zoneById.get(zoneId) : undefined
   const live = useTelemetry(zoneId)
   const isFarmOwner = usePermission('FARM_OWNER')
+  const canSetUpDevice = usePermission(...DEVICE_SETUP_ROLES)
   const setScopePath = useZoneStore(state => state.setScopePath)
   // Khung lọc khớp Zone đang xem; đổi lựa chọn thì sang trang đúng cấp
   const scope = useScopeFilter()
@@ -166,7 +170,17 @@ export default function FarmOwnerFarmZoneDetailPage() {
       {/* tham số phát hiện chuyên gia đặt cho Zone, chủ nhà yến chỉ xem */}
       <DetectionTuningCard tuning={zone.detection_tuning} />
 
-      <FarmFrame title={t('zone.devicesTitle', { n: node.devices.length })} help={t('zone.devicesDesc')}>
+      <FarmFrame
+        title={t('zone.devicesTitle', { n: node.devices.length })}
+        help={t('zone.devicesDesc')}
+        action={canSetUpDevice && farmId && houseId && zoneId && (
+          // Mở thiết lập với vị trí của Zone này đã chọn sẵn
+          <Button size="sm" onClick={() => navigate(DEVICE_SETUP_PATH, { state: { location: { farmId, houseId, zoneId }, returnTo: location.pathname } satisfies DeviceSetupState })}>
+            <PlusIcon size={14} weight="bold" />
+            {t('zone.setupDevice')}
+          </Button>
+        )}
+      >
         <DeviceListTable devices={node.devices} onSelect={setSelected} />
       </FarmFrame>
 

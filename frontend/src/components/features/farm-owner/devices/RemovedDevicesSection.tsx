@@ -5,6 +5,7 @@ import NoteActionModal from '@/components/ui/NoteActionModal';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import { hoursLeftToRestore } from '@/components/features/farm-owner/devices/removedDevices';
 import { NO_VALUE } from '@/constants/display';
+import { DEVICE_SETUP_ROLES } from '@/constants/roles';
 import { devicesDict } from '@/constants/devices.i18n';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -12,17 +13,17 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useRemovedDevices, useRestoreDevice, type RemovedDeviceRow } from '@/hooks/farm-owner/useRemovedDevices';
 import { useToastStore } from '@/stores/toastStore';
 
-// thiết bị Farm Owner gỡ trong 24 giờ, khôi phục kèm lý do; không có thiết bị nào thì không hiện khung
+// thiết bị gỡ trong 24 giờ (Farm Owner, hoặc Farm Technician ở nhà được giao), khôi phục kèm lý do; không có thiết bị nào thì không hiện khung
 export default function RemovedDevicesSection(): JSX.Element | null {
   const { t, dateTime } = useTranslation(devicesDict);
-  const isFarmOwner = usePermission('FARM_OWNER');
-  const { data: rows, isError, error, refetch } = useRemovedDevices(isFarmOwner);
+  const canRestoreDevices = usePermission(...DEVICE_SETUP_ROLES);
+  const { data: rows, isError, error, refetch } = useRemovedDevices(canRestoreDevices);
   const restore = useRestoreDevice();
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
   const [target, setTarget] = useState<RemovedDeviceRow | null>(null);
 
-  if (!isFarmOwner) return null;
+  if (!canRestoreDevices) return null;
   // Tải lỗi: vẫn hiện khung kèm câu lỗi và nút thử lại, không giả như chưa gỡ thiết bị nào (FE_Design 13.5)
   if (isError) {
     return (

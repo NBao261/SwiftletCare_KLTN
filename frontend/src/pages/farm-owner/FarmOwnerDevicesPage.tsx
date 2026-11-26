@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { PlusIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
@@ -10,6 +11,8 @@ import { DEVICE_DETAIL_PATH, type DeviceDetailState } from '@/components/feature
 import RemovedDevicesSection from '@/components/features/farm-owner/devices/RemovedDevicesSection';
 import { Button, EmptyState, LoadingSkeleton, SectionCard } from '@/components/ui';
 import { devicesDict } from '@/constants/devices.i18n';
+import { DEVICE_SETUP_ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
@@ -23,6 +26,8 @@ type StatusTab = (typeof STATUS_TABS)[number];
 export default function FarmOwnerDevicesPage(): JSX.Element {
   const { t } = useTranslation(devicesDict);
   const navigate = useNavigate();
+  // Farm Owner thiết lập thiết bị; chuyên gia chỉ xem trang này
+  const canSetUp = usePermission(...DEVICE_SETUP_ROLES);
   const scope = useScopeFilter();
   const { houses, houseId, zones, zone, isLoading: isLoadingScope } = scope;
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
@@ -78,7 +83,16 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
         <ScopeFilter scope={scope} />
       </HeaderActions>
 
-      <SectionCard description={t('list.short')} help={t('list.help')}>
+      <SectionCard
+        description={t('list.short')}
+        help={t('list.help')}
+        action={canSetUp && (
+          <Button size="sm" onClick={() => navigate('/devices/onboarding')}>
+            <PlusIcon size={14} weight="bold" />
+            {t('list.setup')}
+          </Button>
+        )}
+      >
         {body}
       </SectionCard>
       {/* thiết bị gỡ nhầm khôi phục được trong 24 giờ */}

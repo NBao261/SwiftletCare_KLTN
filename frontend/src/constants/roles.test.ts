@@ -23,7 +23,7 @@ const MATRIX: Record<string, Role[]> = {
   '/farms/f1/houses/h1/zones/z1': [FO, DE, FT],
   '/devices': [ADMIN, FO, DE, FT],      // ADMIN có nhóm Thiết bị qua /devices
   '/devices/detail': [FO, DE],
-  '/devices/onboarding': [FO],          // chỉ FARM_OWNER (FARM_TECHNICIAN/ADMIN gọi API → 403)
+  '/devices/onboarding': [FO, FT],      // Farm Owner và Farm Technician (nhà được giao, G-34); Admin gọi API → 403
   '/ota': [ADMIN],                      // OTA chỉ ADMIN (route /ota ở web là phần của Tuấn)
   '/alerts': [ADMIN, FO, FT],           // ADMIN xem cảnh báo thiết bị mọi farm
   '/system/health': [ADMIN],
