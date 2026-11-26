@@ -1,6 +1,6 @@
 # Kế hoạch G-34 — Kỹ thuật viên thiết lập, dời và gỡ thiết bị (26/11/2026)
 
-Quyết định của nhóm ngày 26/11/2026 (BM03 dòng 21, Report 3 4.2.26, Report 4 2.2.32): ngoài Chủ nhà yến, **Kỹ thuật viên của nhà** cũng đăng ký, dời và gỡ thiết bị ở **các nhà được giao**, bằng cùng hai lần quét QR. Phần tài liệu đã sửa (PR này); phần code làm theo các bước dưới đây.
+Quyết định của nhóm ngày 26/11/2026 (BM03 dòng 21, Report 3 4.2.26, Report 4 2.2.33): ngoài Chủ nhà yến, **Kỹ thuật viên của nhà** cũng đăng ký, dời và gỡ thiết bị ở **các nhà được giao**, bằng cùng hai lần quét QR. Phần tài liệu đã sửa (PR này); phần code làm theo các bước dưới đây.
 
 Không đổi: nhập địa chỉ camera (FARM-FR-004b), in mã QR tầng (FARM-FR-011), tạo/sửa/xoá nhà và tầng (FARM-FR-002) vẫn chỉ của Chủ nhà yến; Quản trị viên vẫn gửi lệnh từ xa và OTA.
 
