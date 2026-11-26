@@ -90,7 +90,7 @@ Vì sao mật khẩu không nằm trong `config` retained: broker lưu tin retai
 | A-3 | AI pipeline | `cameraStatus` trong heartbeat, phân loại lỗi bằng `ffprobe`; pytest cho ghi `.env`, dựng địa chỉ, phân loại lỗi |
 | W-1 | Web (Admin, Nhi duyệt) | Màn Kho thiết bị: thao tác "Mã cài đặt nút AI" ở mục loại camera, cửa sổ hiện mã, thời gian còn lại, lệnh chạy |
 | W-2 | Web (Farm Owner, Nhi duyệt) | Thẻ camera của nhà: nút "Cài đặt camera" (form, dán địa chỉ RTSP để tách ô) và nhãn tình trạng camera; bỏ `rtsp_url` khỏi kiểu đăng ký |
-| M-1 | Mobile (Len) | Cùng form và nhãn tình trạng ở màn cài đặt nhà, sau khi spec merge |
+| M-1 | Mobile (Len) | Cùng form và nhãn tình trạng ở màn cài đặt nhà, sau khi spec merge. **Đã làm (Len, 26/11, `fix/mobile-farmowner-audit`):** hàng camera ở Cài đặt nhà ghi tình trạng camera IP (cam khi sai mật khẩu, không kết nối được, không có hình); menu của camera có "Cài đặt camera" mở `CameraSourceSheet`: tình trạng, ô dán địa chỉ RTSP để tách ô, địa chỉ, cổng, tài khoản, mật khẩu ("Để trống để giữ mật khẩu đã lưu"), chip đường dẫn theo hãng, câu bảo mật; 503 báo máy chủ chưa sẵn sàng. `utils/cameraSource.utils.ts` có test. Kiểm API đầu cuối (lưu 200, `has_password`, kỹ thuật viên 403); chưa chạy được trên emulator. |
 
 **Thứ tự:** D-1 → B-1…B-5 → A-1…A-3 → W-1, W-2, trên một nhánh `feat/camera-setup-from-web`. PR mở sau khi #247 vào `develop` (nhánh này dựa trên #247 vì cùng sửa kho thiết bị và số phiên bản Report). M-1 là PR riêng của Len.
 
