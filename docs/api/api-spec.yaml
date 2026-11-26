@@ -8679,6 +8679,7 @@ components:
               from: { allOf: [{ $ref: "#/components/schemas/WorkOrderStatus" }], nullable: true }
               to: { $ref: "#/components/schemas/WorkOrderStatus" }
               by: { type: string, nullable: true, description: "null = hệ thống" }
+              by_name: { type: string, nullable: true, description: "Tên người thao tác; null = hệ thống hoặc tài khoản không còn. Thợ không đọc được thành viên farm nên tên đi kèm phiếu" }
               note: { type: string, nullable: true }
               at: { type: string, format: date-time }
 
@@ -8690,6 +8691,7 @@ components:
         note: { type: string, nullable: true }
         photo_url: { type: string, nullable: true, description: "URL tạm (1 giờ)" }
         by: { type: string, nullable: true }
+        by_name: { type: string, nullable: true, description: "Tên người ghi mục; null khi chưa ghi" }
         at: { type: string, format: date-time, nullable: true }
         repair_work_order_id: { type: string, nullable: true, description: "Work Order sửa chữa mở từ mục DEFECT" }
 

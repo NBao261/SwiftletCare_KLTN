@@ -4,8 +4,10 @@ import { Alert, IAlert, OPEN_ALERT_STATUSES } from '@/models/alert.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
+import { User } from '@/models/user.model'
 import {
-  ChecklistItem, IWorkOrder, OPEN_WORK_ORDER_STATUSES, SiteCause, WorkOrder, WorkOrderOrigin, WorkOrderStatus,
+  ChecklistItem, IWorkOrder, OPEN_WORK_ORDER_STATUSES, SiteCause, WorkOrder, WorkOrderHistoryEntry, WorkOrderOrigin,
+  WorkOrderStatus,
 } from '@/models/workOrder.model'
 import { findAlertHouse, ESCALATION_MS } from '@/services/alertRouting.service'
 import { logAction } from '@/services/auditLog.service'
@@ -276,15 +278,29 @@ async function findWorkOrderWithAccess(id: string, user: CurrentUser): Promise<I
   return wo
 }
 
+// Tên người thao tác đi kèm phiếu: Kỹ thuật viên không đọc được danh sách thành viên trang trại để tra tên
+async function actorNames(wo: IWorkOrder): Promise<Map<string, string>> {
+  const ids = new Set<string>()
+  for (const entry of [...wo.history, ...(wo.checklist ?? [])]) if (entry.by) ids.add(String(entry.by))
+  if (ids.size === 0) return new Map()
+  const users = await User.find({ _id: { $in: [...ids] } }).select('full_name').lean()
+  return new Map(users.map(u => [String(u._id), u.full_name]))
+}
+
 export async function presentWorkOrder(wo: IWorkOrder, withPhotos: boolean) {
-  await wo.populate([{ path: 'assignee_id', select: 'full_name' }, { path: 'opened_by', select: 'full_name' }])
-  const { assignee_id: assignee, opened_by: openedBy, photos, checklist, ...rest } = wo.toObject()
+  const [names] = await Promise.all([
+    actorNames(wo),
+    wo.populate([{ path: 'assignee_id', select: 'full_name' }, { path: 'opened_by', select: 'full_name' }]),
+  ])
+  const nameOf = (by?: Types.ObjectId) => (by && names.get(String(by))) ?? null
+  const { assignee_id: assignee, opened_by: openedBy, photos, checklist, history, ...rest } = wo.toObject()
   return {
     ...rest,
     assignee: assignee ?? null,
     opened_by: openedBy ?? null,
+    history: (history ?? []).map((entry: WorkOrderHistoryEntry) => ({ ...entry, by_name: nameOf(entry.by) })),
     checklist: await Promise.all((checklist ?? []).map(async ({ photo, ...item }: ChecklistItem) => ({
-      ...item, photo_url: withPhotos && photo ? await presignedGetUrl(photo) : null,
+      ...item, by_name: nameOf(item.by), photo_url: withPhotos && photo ? await presignedGetUrl(photo) : null,
     }))),
     ...(withPhotos && { photo_urls: await photoUrls(photos) }),
   }

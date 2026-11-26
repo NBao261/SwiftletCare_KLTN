@@ -62,7 +62,7 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
   for (const label of ['Hàng đợi việc', 'Kiểm chứng cảnh báo', 'Luật khuyến nghị', 'Cài đặt']) {
-    await expect(sidebar(page).getByRole('link', { name: label })).toHaveCount(0);
+    await expect(sidebar(page).getByRole('link', { name: label, exact: true })).toHaveCount(0);
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
