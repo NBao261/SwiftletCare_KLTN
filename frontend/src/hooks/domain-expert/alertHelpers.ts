@@ -6,8 +6,8 @@ import { translated } from '@/i18n'
 export const ALERT_TYPE_LABELS: Record<string, string> = translated({
   NOISE_ANOMALY: 'Tiếng ồn bất thường',
   SENSOR_ANOMALY: 'Cảm biến bất thường',
-  FORECAST_BREACH: 'Dự báo vượt ngưỡng độ ẩm',
-  LOW_RETURN_RATE: 'Giảm tỷ lệ chim về tổ',
+  FORECAST_BREACH: 'Sắp vượt ngưỡng',
+  LOW_RETURN_RATE: 'Tỷ lệ chim về thấp',
 })
 
 // Verdict stats text summary

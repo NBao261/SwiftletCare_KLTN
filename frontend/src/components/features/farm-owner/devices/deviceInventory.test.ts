@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildDeviceInventory, queryInventory, tallyDevices, uptimeParts } from '@/components/features/farm-owner/devices/deviceInventory';
+import { buildDeviceInventory, listDeviceRows, tallyDevices, uptimeParts } from '@/components/features/farm-owner/devices/deviceInventory';
 import type { CameraNode, DeviceStatus, House, SensorNode, Zone } from '@/types';
 
 const limits = { temp_min: 26, temp_max: 31, humidity_min: 75, humidity_max: 95, light_max: 0.2, nh3_max: 25, co2_max: 1500 };
@@ -96,29 +96,18 @@ describe('uptimeParts', () => {
   });
 });
 
-describe('queryInventory', () => {
-  const houses = [house('b'), house('a'), house('c')];
-  const zones = [zone('za', 'a'), zone('zb', 'b')];
-  const sensors = [sensor('node_a1', 'za', 'ONLINE'), sensor('node_b1', 'zb', 'OFFLINE'), sensor('node_b2', 'zb', 'ONLINE')];
-  const inventory = buildDeviceInventory({ houses, zones, sensors, cameras: [] });
-  const base = { keyword: '', health: '' as const, sortKey: 'name' as const, sortDirection: 'asc' as const };
-
-  it('sorts by name, device count or faulty count', () => {
-    expect(queryInventory(inventory, base).items.map(item => item.house._id)).toEqual(['a', 'b', 'c']);
-    expect(queryInventory(inventory, { ...base, sortKey: 'devices', sortDirection: 'desc' }).items.map(item => item.house._id)).toEqual(['b', 'a', 'c']);
-    expect(queryInventory(inventory, { ...base, sortKey: 'faulty', sortDirection: 'desc' }).items[0].house._id).toBe('b');
-  });
-
-  it('filters by health', () => {
-    expect(queryInventory(inventory, { ...base, health: 'fault' }).items.map(item => item.house._id)).toEqual(['b']);
-    expect(queryInventory(inventory, { ...base, health: 'empty' }).items.map(item => item.house._id)).toEqual(['c']);
-  });
-
-  it('finds a house by its name, a zone or a device id and marks inner matches to expand', () => {
-    expect(queryInventory(inventory, { ...base, keyword: 'nhà a' }).items.map(item => item.house._id)).toEqual(['a']);
-    const byDevice = queryInventory(inventory, { ...base, keyword: 'NODE_B2' });
-    expect(byDevice.items.map(item => item.house._id)).toEqual(['b']);
-    expect([...byDevice.matchedInside]).toEqual(['b']);
-    expect(queryInventory(inventory, { ...base, keyword: 'zone za' }).items.map(item => item.house._id)).toEqual(['a']);
+describe('listDeviceRows', () => {
+  it('flattens houses, zones then cameras in order', () => {
+    const inventory = buildDeviceInventory({
+      houses: [house('a'), house('b')],
+      zones: [zone('za', 'a'), zone('zb', 'b')],
+      sensors: [sensor('node_a1', 'za', 'ONLINE'), sensor('node_b1', 'zb', 'OFFLINE')],
+      cameras: [camera('c1', 'ONLINE', { house_id: 'a' })],
+    });
+    const rows = listDeviceRows(inventory);
+    expect(rows.map(row => row.device.deviceId)).toEqual(['node_a1', 'c1', 'node_b1']);
+    expect(rows.map(row => row.house._id)).toEqual(['a', 'a', 'b']);
+    expect(rows[0].zone?._id).toBe('za');
+    expect(rows[1].zone).toBeUndefined();
   });
 });

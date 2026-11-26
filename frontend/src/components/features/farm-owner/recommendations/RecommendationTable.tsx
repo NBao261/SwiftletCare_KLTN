@@ -30,17 +30,17 @@ export default function RecommendationTable({
   const text = useRecommendationText();
 
   const columns = useMemo<DataTableColumn<Recommendation>[]>(() => [
-    {
-      key: 'house',
-      header: t('col.house'),
-      className: 'w-[16%]',
-      render: row => <span className="block truncate text-small text-charcoal">{houseNames.get(row.house_id) ?? NO_VALUE}</span>,
-    },
+    // Luật ở dòng trên, nhà ở dòng dưới
     {
       key: 'rule',
       header: t('col.rule'),
-      className: 'w-[22%]',
-      render: row => <span className="block truncate text-small font-semibold text-charcoal">{ruleOf(row)?.name ?? NO_VALUE}</span>,
+      className: 'w-[26%]',
+      render: row => (
+        <div className="flex min-w-0 flex-col">
+          <span className="block truncate text-small font-semibold text-charcoal">{ruleOf(row)?.name ?? NO_VALUE}</span>
+          <span className="block truncate text-xs text-warmGray">{houseNames.get(row.house_id) ?? NO_VALUE}</span>
+        </div>
+      ),
     },
     { key: 'raisedFor', header: t('col.raisedFor'), className: 'w-[12%] whitespace-nowrap', render: row => <span className="text-small text-charcoal">{date(row.raised_for)}</span> },
     {

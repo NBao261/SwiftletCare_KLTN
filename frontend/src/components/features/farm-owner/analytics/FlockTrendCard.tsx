@@ -1,17 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
-import { BirdIcon, TrendUpIcon } from '@phosphor-icons/react';
-
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/common/KpiTile';
+import StatStrip from '@/components/common/StatStrip';
+import { BAR_MARK, SERIES_COLORS, X_AXIS_TICKS } from '@/components/features/farm-owner/analytics/analytics.constants';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics';
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
+import { baseChartOptions } from '@/lib/chartTheme';
 import type { FlockPeriod } from '@/types';
 
 type Granularity = 'weekly' | 'monthly';
@@ -38,15 +37,17 @@ export default function FlockTrendCard({ houseId, houseName }: { houseId: string
     datasets: [{
       label: t('flock.chartLabel'),
       data: periods.map(item => Math.round(item.mean_morning_exit)),
-      backgroundColor: CHART_COLORS.accentGreen,
-      borderRadius: 6,
-      maxBarThickness: 28,
+      backgroundColor: SERIES_COLORS.exit,
+      ...BAR_MARK,
     }],
   }), [periods, granularity, t]);
 
   const chartOptions = useMemo(() => ({
     ...baseChartOptions,
-    scales: { x: baseChartOptions.scales.x, y: { ...baseChartOptions.scales.y, min: 0 } },
+    scales: {
+      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
+      y: { ...baseChartOptions.scales.y, min: 0 },
+    },
   } as ChartOptions<'bar'>), []);
 
   let body = <LoadingSkeleton className="h-72 w-full" />;
@@ -67,21 +68,12 @@ export default function FlockTrendCard({ houseId, houseName }: { houseId: string
     if (change !== null) changeText = `${change > 0 ? '+' : ''}${num(change, 1)}`;
     body = (
       <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <KpiTile
-            icon={BirdIcon}
-            label={t('flock.latest')}
-            value={latest ? num(latest.mean_morning_exit) : NO_VALUE}
-            sub={latestSub}
-          />
-          <KpiTile
-            icon={TrendUpIcon}
-            label={t('flock.change')}
-            value={changeText}
-            unit={change === null ? undefined : '%'}
-            sub={t('flock.changeSub')}
-          />
-        </div>
+        <StatStrip
+          items={[
+            { label: t('flock.latest'), value: latest ? num(latest.mean_morning_exit) : NO_VALUE, sub: latestSub },
+            { label: t('flock.change'), value: changeText, unit: change === null ? undefined : '%', sub: t('flock.changeSub') },
+          ]}
+        />
         {periods.length > 0 ? (
           <div className="h-64">
             <Bar data={chartData} options={chartOptions} />

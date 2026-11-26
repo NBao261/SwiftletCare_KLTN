@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildFarmStructure, detectBreaches, isNameTaken, mergeMetrics, summarizeScope, wifiQuality, type StructureInput, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
+import { houseReasonText } from '@/components/features/farm-owner/farms/houseHeadline'
 import { translate } from '@/lib/i18n'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import type { Alert, CameraNode, Farm, HarvestBatch, House, SensorNode, Thresholds, Zone } from '@/types'
@@ -174,5 +175,19 @@ describe('summarizeScope', () => {
     expect(zoneTotals.zones).toBe(1)
     expect(zoneTotals.counts).toEqual(structure.zoneById.get('zA')?.counts)
     expect(zoneTotals.monthKg).toBe(0.5)
+  })
+})
+
+describe('houseReasonText', () => {
+  const t = (key: keyof typeof farmDict.vi, params?: Record<string, string | number>) => translate(farmDict, 'vi', key, params)
+  const num = (value: number) => String(value)
+
+  it('nhà chỉ có camera mất kết nối vẫn nêu lý do, nhà bình thường thì để trống', () => {
+    const offlineCamera = { ...camera, status: 'OFFLINE', house_id: 'h1' } as CameraNode
+    const [broken] = buildFarmStructure(input({ cameras: [offlineCamera], sensors: [sensor('s1', 'zA', 'ONLINE')] })).houses
+    expect(broken.health).toBe('ALERT')
+    expect(houseReasonText(broken, t, num)).toBe('1 camera mất kết nối')
+    const [healthy] = buildFarmStructure(input({ sensors: [sensor('s1', 'zA', 'ONLINE')] })).houses
+    expect(houseReasonText(healthy, t, num)).toBe('')
   })
 })

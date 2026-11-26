@@ -1,7 +1,7 @@
 import {
   BasketIcon, BirdIcon, ChartBarIcon, ClipboardTextIcon, ClockCounterClockwiseIcon, CloudArrowUpIcon, CpuIcon, CrosshairIcon,
-  FileTextIcon, GaugeIcon, GearSixIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon, ScrollIcon,
-  ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, UsersIcon, WarningIcon, WrenchIcon,
+  FileTextIcon, GaugeIcon, GearSixIcon, HandPointingIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon,
+  ScrollIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, UsersIcon, WarningIcon, WrenchIcon,
 } from '@phosphor-icons/react'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import { canAccessPath } from '@/constants/roles'
@@ -20,22 +20,14 @@ const GROUP_TITLE: Record<MenuGroup, string> = {
 const CATALOG: Record<MenuGroup, MenuItem[]> = {
   monitor: [
     { label: 'Tổng quan hệ thống', path: '/system/health', icon: GaugeIcon },
-    {
-      label: 'Tổng quan',
-      path: '/dashboard',
-      icon: SquaresFourIcon,
-      tabs: [
-        { label: 'Tình trạng các nhà', path: '/dashboard' },
-        { label: 'So sánh nhà', path: '/overview' },
-        { label: 'Điều khiển tay', path: '/dashboard/scada' },
-      ],
-    },
+    { label: 'Tổng quan', path: '/dashboard', icon: SquaresFourIcon },
     { label: 'Cảnh báo', path: '/alerts', icon: WarningIcon },
-    { label: 'Đàn chim', path: '/vision', icon: BirdIcon },
+    { label: 'Chim ra vào', path: '/vision', icon: BirdIcon },
     { label: 'Sức khoẻ & báo cáo', path: '/health', icon: HeartbeatIcon },
     { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
   ],
   operations: [
+    { label: 'Điều khiển tay', path: '/relay-control', icon: HandPointingIcon },
     {
       label: 'Công việc',
       path: '/work-orders',
@@ -63,11 +55,11 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
         { label: 'Ngưỡng & hệ số mờ', path: '/domain-expert/tuning' },
         { label: 'Duyệt & đề xuất', path: '/domain-expert/reviews' },
         { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles' },
-        { label: 'Bù thời tiết', path: '/domain-expert/weather-rules' },
+        { label: 'Phun sương theo thời tiết', path: '/domain-expert/weather-rules' },
       ],
     },
     {
-      label: 'Đếm chim',
+      label: 'Cài đặt đếm chim',
       path: '/domain-expert/counting-schedule',
       icon: CrosshairIcon,
       tabs: [

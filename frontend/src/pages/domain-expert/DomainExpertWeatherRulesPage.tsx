@@ -1,8 +1,8 @@
 // luật bù phun sương của nhà; Farm Owner ở farm có chuyên gia gửi đề xuất
 import { useState, useEffect } from 'react'
-import { CloudRain, Info, Zap, AlertTriangle, Send } from 'lucide-react'
+import { CloudRain, AlertTriangle } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import { Button } from '@/components/ui/Button'
+import { Badge, Button } from '@/components/ui'
 import EmptyState from '@/components/ui/EmptyState'
 import SectionCard from '@/components/ui/SectionCard'
 import { Modal } from '@/components/ui/Modal'
@@ -23,27 +23,25 @@ import { t } from '@/i18n'
 
 const MAX_RULES = 10
 
+// Lần bù gần nhất: một khối trung tính, dòng trên là mức bù và lúc gửi, dòng dưới là hạn và số liệu dự báo
 function LastCompensationBadge({ data }: {
   data: NonNullable<import('@/types/expert.types').WeatherRulesResponse['last_compensation']>
 }) {
   const sign = data.offset_pct > 0 ? '+' : ''
   const forecast = data.forecast
   return (
-    <div className="flex flex-wrap items-start gap-3 p-3.5 rounded-2xl bg-infoBlue/5 border border-infoBlue/20 text-sm">
-      <Zap className="w-4 h-4 text-infoBlue shrink-0 mt-0.5" />
-      <div className="space-y-0.5 min-w-0">
-        <p className="font-semibold text-charcoal">
-          {t('Lần bù gần nhất:')} <span className="text-charcoal">{t('{{offset}}% phun', { offset: `${sign}${data.offset_pct}` })}</span>
-          <span className="ml-2 font-normal text-infoBlue/80">{t('lúc {{time}}', { time: formatDate(data.sent_at) })}</span>
-        </p>
-        <p className="text-infoBlue/80">
-          {t('Hết hạn lúc {{time}}', { time: formatDate(data.expires_at) })}
-          {forecast.temperature_max !== null && <> · {t('Nhiệt:')} {forecast.temperature_max}°C</>}
-          {forecast.humidity_max !== null && <> · {t('Độ ẩm:')} {forecast.humidity_max}%</>}
-          {forecast.rain_mm !== null && <> · {t('Mưa:')} {forecast.rain_mm} mm</>}
-        </p>
-        <WeatherSource />
-      </div>
+    <div className="flex flex-col gap-0.5 rounded-xl bg-warmGray/10 px-3.5 py-2.5 text-sm">
+      <p className="font-semibold text-charcoal">
+        {t('Lần bù gần nhất:')} {t('{{offset}}% phun', { offset: `${sign}${data.offset_pct}` })}
+        <span className="ml-2 font-normal text-warmGray">{t('lúc {{time}}', { time: formatDate(data.sent_at) })}</span>
+      </p>
+      <p className="text-small text-graphite">
+        {t('Hết hạn lúc {{time}}', { time: formatDate(data.expires_at) })}
+        {forecast.temperature_max !== null && <> · {t('Nhiệt:')} {forecast.temperature_max}°C</>}
+        {forecast.humidity_max !== null && <> · {t('Độ ẩm:')} {forecast.humidity_max}%</>}
+        {forecast.rain_mm !== null && <> · {t('Mưa:')} {forecast.rain_mm} mm</>}
+      </p>
+      <WeatherSource />
     </div>
   )
 }
@@ -121,10 +119,9 @@ export default function DomainExpertWeatherRulesPage() {
     const proposal = data?.proposal
     if (!proposal) return null
     return (
-      <div className="space-y-3 p-4 rounded-2xl border border-statusYellow/40 bg-statusYellow/5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-climateOrange/30 bg-climateOrange/5 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="flex items-center gap-2 text-sm font-semibold text-charcoal">
-            <Send className="w-4 h-4 shrink-0" />
+          <p className="text-sm font-semibold text-charcoal">
             {t('Đề xuất của chủ nhà yến đang chờ duyệt ({{n}} luật, gửi lúc {{time}})', { n: proposal.rules.length, time: formatDate(proposal.proposed_at) })}
           </p>
           {isExpert && (
@@ -137,7 +134,7 @@ export default function DomainExpertWeatherRulesPage() {
           )}
         </div>
         {ownerNeedsExpert && <p className="text-small text-graphite">{t('Gửi lại bộ luật mới sẽ thay đề xuất này.')}</p>}
-        <fieldset disabled className="space-y-1.5">
+        <fieldset disabled className="divide-y divide-warmGray/10 rounded-xl bg-white px-4">
           {proposal.rules.map((rule, index) => (
             <WeatherRuleRow key={rule._id ?? index} rule={rule} onToggle={() => undefined} onRemove={() => undefined} disabled />
           ))}
@@ -158,26 +155,22 @@ export default function DomainExpertWeatherRulesPage() {
     // Không hiện hộp "chưa có bù" khi chưa có luật nào: EmptyState bên dưới đã đủ
     if (!rules.length) return null
     return (
-      <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-warmGray/5 border border-warmGray/15 text-sm text-warmGray">
-        <Info className="w-4 h-4 shrink-0" />
-        <span>{t('Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).')}</span>
-      </div>
+      <p className="rounded-xl bg-warmGray/10 px-3.5 py-2.5 text-sm text-graphite">{t('Chưa có lần bù nào kể từ khi lưu luật, hoặc dự báo chưa khớp luật nào.')}</p>
     )
   }
 
   function renderHeaderAction() {
-    if (isLoading || !canEditParameters || isError) return undefined
-    if (rules.length >= MAX_RULES) {
-      return (
-        <span className="text-xs text-charcoal bg-statusYellow/10 border border-statusYellow/40 px-2 py-0.5 rounded-full font-semibold">
-          {t('Đã đạt tối đa 10 luật')}
-        </span>
-      )
-    }
+    if (isLoading || isError) return undefined
+    // Số luật hiện ngay cạnh nút Thêm; đủ 10 luật thì nút thay bằng chữ báo đã đạt tối đa
+    const count = <span className="text-small text-warmGray">{t('{{n}}/{{max}} luật', { n: rules.length, max: MAX_RULES })}</span>
+    if (!canEditParameters) return count
     return (
-      <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>
-        {t('Thêm luật')}
-      </Button>
+      <div className="flex items-center gap-3">
+        {count}
+        {rules.length >= MAX_RULES
+          ? <Badge tone="warning">{t('Đã đạt tối đa 10 luật')}</Badge>
+          : <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>{t('Thêm luật')}</Button>}
+      </div>
     )
   }
 
@@ -194,7 +187,7 @@ export default function DomainExpertWeatherRulesPage() {
       )
     }
     return (
-      <div className="space-y-1.5">
+      <div className="divide-y divide-warmGray/10 rounded-2xl border border-warmGray/15 px-4">
         {rules.map((rule, index) => (
           <WeatherRuleRow
             key={rule._id ?? index}
@@ -220,18 +213,16 @@ export default function DomainExpertWeatherRulesPage() {
   return (
     // Farm Owner soạn được; farm có chuyên gia thì nút lưu gửi đề xuất
     <fieldset disabled={!canEditParameters} className="contents">
-    <div className="mx-auto w-full max-w-screen-xl space-y-5">
+    <div className="flex w-full flex-col gap-6">
       <SectionCard
-        icon={<CloudRain className="w-5 h-5" />}
-        title={t('Luật bù phun sương theo thời tiết')}
         description={t('Tự chỉnh mức phun sương theo dự báo thời tiết')}
         help={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.')}
         action={renderHeaderAction()}
       >
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {/* Lỗi tải dữ liệu */}
           {isError && !isLoading && (
-            <div className="flex items-start gap-2 p-3.5 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+            <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3.5 py-2.5 text-sm text-alertRed">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{t('Không tải được luật bù thời tiết. Thử lại.')}</span>
             </div>
@@ -243,14 +234,7 @@ export default function DomainExpertWeatherRulesPage() {
           {renderProposal()}
 
           {/* Danh sách luật: ẩn khi GET lỗi */}
-          {!isError && (
-            <>
-              <h3 className="text-base font-semibold text-charcoal">
-                {t('Danh sách luật ({{n}}/{{max}})', { n: isLoading ? '…' : rules.length, max: MAX_RULES })}
-              </h3>
-              {renderRulesList()}
-            </>
-          )}
+          {!isError && renderRulesList()}
         </div>
       </SectionCard>
 
@@ -266,14 +250,14 @@ export default function DomainExpertWeatherRulesPage() {
       </Modal>
 
       {saveError && (
-        <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+        <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3.5 py-2.5 text-sm text-alertRed">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{saveError}</span>
         </div>
       )}
 
       {isDirty && (
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
+        <div className="flex items-center justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={handleDiscard} disabled={mutation.isPending}>
             {t('Huỷ thay đổi')}
           </Button>

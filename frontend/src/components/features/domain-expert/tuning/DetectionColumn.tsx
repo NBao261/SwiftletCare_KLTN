@@ -1,9 +1,10 @@
 // Cột tham số phát hiện bất thường
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
-import { AlertTriangle, RotateCcw, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react'
+import { Badge, Button, LoadingSkeleton, SectionCard } from '@/components/ui'
 import { detectionTuningPayload, type TuningBlockHandle } from '@/components/features/domain-expert/tuning/tuning.utils'
 import TuningStepperInput from './TuningStepperInput'
-import TuningRangeTip from './TuningRangeTip'
+import { TuningRangeList } from './TuningRangeTip'
 import type { ExpertDetectionTuning, ExpertVerdictStats } from '@/types/expert.types'
 import { t, translated } from '@/i18n'
 
@@ -43,22 +44,13 @@ const TYPE_LABELS: Record<string, string> = translated({
   LOW_RETURN_RATE: 'Giảm tỷ lệ chim về',
 })
 
+// Ghi chú một dòng về kết luận của chuyên gia trong kỳ: chưa có, toàn đúng, hay loại báo giả nhiều nhất
 function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
   const totalVerdicts = stats.reduce((acc, s) => acc + s.confirmed + s.rejected, 0)
+  const title = t('Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ')
 
   if (totalVerdicts === 0) {
-    return (
-      <div className="mb-3 rounded-xl border border-stone-200/90 border-l-4 border-l-[#8BAF2A] bg-[#FAF9F5] px-3.5 py-2.5 shadow-2xs"
-        title={t('Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ')}>
-        <div className="flex items-center gap-1.5 min-w-0">
-          <ShieldCheck className="w-4 h-4 text-[#4A5C00] shrink-0" />
-          <span className="font-bold text-xs text-[#27231F] whitespace-nowrap">{t('Kết luận trong kỳ')}</span>
-        </div>
-        <p className="mt-1 text-xs text-stone-600 leading-snug">
-          {t('Chưa có cảnh báo nào được kết luận trong kỳ, chưa đủ để đánh giá các tham số này.')}
-        </p>
-      </div>
-    )
+    return <p title={title} className="rounded-xl bg-warmGray/10 px-3 py-2 text-small text-graphite">{t('Chưa có cảnh báo nào được kết luận trong kỳ, chưa đủ để đánh giá các tham số này.')}</p>
   }
 
   const worst = [...stats].filter(s => (s.confirmed + s.rejected) > 0 && s.rejected > 0)
@@ -66,45 +58,25 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
 
   if (!worst) {
     return (
-      <div className="mb-3 rounded-xl border border-emerald-200/90 border-l-4 border-l-emerald-600 bg-emerald-50/60 px-3.5 py-2.5 shadow-2xs"
-        title={t('Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ')}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="font-bold text-xs text-emerald-900 whitespace-nowrap">{t('Kết luận trong kỳ')}</span>
-          </div>
-          <span className="text-small font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap shrink-0">
-            {t('100% chuẩn xác ({{n}}/{{n}})', { n: totalVerdicts })}
-          </span>
-        </div>
-        <p className="mt-1 text-xs text-emerald-800 leading-snug">
-          {t('Mọi cảnh báo trong kỳ đều được xác nhận đúng.')}
-        </p>
-      </div>
+      <p title={title} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent-50 px-3 py-2 text-small text-graphite">
+        <span>{t('Mọi cảnh báo trong kỳ đều được xác nhận đúng.')}</span>
+        <Badge tone="positive">{t('100% chuẩn xác ({{n}}/{{n}})', { n: totalVerdicts })}</Badge>
+      </p>
     )
   }
 
   const total = worst.confirmed + worst.rejected
   const rejPct = Math.round((worst.rejected / total) * 100)
   const label = TYPE_LABELS[worst.type] ?? worst.type
-  const hint = worst.type === 'NOISE_ANOMALY' ? t('Tăng biên độ ồn vượt nền.')
-    : t('Điều chỉnh tham số phát hiện tương ứng.')
+  const hint = worst.type === 'NOISE_ANOMALY' ? t('Tăng biên độ ồn vượt nền.') : t('Điều chỉnh tham số phát hiện tương ứng.')
 
   return (
-    <div className="mb-3 rounded-xl border border-amber-300 border-l-4 border-l-amber-500 bg-amber-50/80 px-3.5 py-2.5 shadow-2xs"
-      title={t('Tỷ lệ kết luận đúng của loại cảnh báo này trong kỳ')}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span className="font-bold text-xs text-amber-950 whitespace-nowrap">{t('Khuyến nghị độ nhạy')}</span>
-        </div>
-        <span className="text-small font-bold px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 whitespace-nowrap shrink-0">
-          {t('{{pct}}% báo giả ({{n}}/{{total}})', { pct: rejPct, n: worst.rejected, total })}
-        </span>
+    <div title={title} className="flex flex-col gap-1 rounded-xl bg-climateOrange/10 px-3 py-2 text-small text-graphite">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-semibold text-charcoal">{t('Khuyến nghị độ nhạy')}</span>
+        <Badge tone="warning">{t('{{pct}}% báo giả ({{n}}/{{total}})', { pct: rejPct, n: worst.rejected, total })}</Badge>
       </div>
-      <p className="mt-1 text-xs text-amber-800 leading-snug">
-        {t('Cảnh báo {{type}} có tỷ lệ báo giả cao. Khuyến nghị: {{hint}}', { type: label, hint })}
-      </p>
+      <span>{t('Cảnh báo {{type}} có tỷ lệ báo giả cao. Khuyến nghị: {{hint}}', { type: label, hint })}</span>
     </div>
   )
 }
@@ -127,49 +99,31 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
     cancel: () => setForm(base),
   }))
 
-  if (isLoading) return (
-    <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-5 animate-pulse space-y-3 h-full">
-      <div className="h-14 bg-stone-100 rounded-xl" />
-      {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-12 bg-neutral-100 rounded-xl" />)}
-    </div>
-  )
+  if (isLoading) return <LoadingSkeleton count={6} className="h-12 w-full" />
 
   return (
-    <div className="h-full flex flex-col justify-between bg-white rounded-2xl p-5 border border-stone-200/80 shadow-2xs">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="flex items-center gap-1 text-base font-bold text-charcoal">
-              {t('3. Tham số phát hiện bất thường')}
-              <TuningRangeTip hints={FIELDS.map(field => ({ label: t(field.label), range: field.range, defaultValue: field.defaultHint }))} />
-            </h3>
-            <span className="bg-charcoal text-limeMist text-small px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">{t('Chuyên gia')}</span>
-          </div>
-          <p className="text-small text-warmGray mt-0.5">{t('Cấu hình tham số nhận diện sự cố')}</p>
-        </div>
-        <button type="button" onClick={onReset} disabled={isResetting}
-          className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-stone-500 hover:bg-warmGray/10 hover:text-charcoal whitespace-nowrap shrink-0 transition-colors disabled:opacity-50 max-sm:h-11">
-          <RotateCcw className="w-3.5 h-3.5" />
-          {t('Khôi phục mặc định')}
-        </button>
-      </div>
+    <SectionCard
+      title={t('Tham số phát hiện bất thường')}
+      description={t('Cấu hình tham số nhận diện sự cố')}
+      help={<TuningRangeList hints={FIELDS.map(field => ({ label: t(field.label), range: field.range, defaultValue: field.defaultHint }))} />}
+      action={(
+        <Button variant="icon" size="sm" onClick={onReset} disabled={isResetting} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>
+            <ArrowCounterClockwiseIcon size={16} weight="bold" />
+          </Button>
+      )}
+    >
+      <VerdictStatsHint stats={verdictStats} />
 
       {/* Nút Lưu chung ở thanh dính đáy của trang */}
-      <fieldset disabled={isSaving} className="flex-1 py-1 divide-y divide-stone-100">
-        <VerdictStatsHint stats={verdictStats} />
+      <fieldset disabled={isSaving} className="divide-y divide-warmGray/10">
         {FIELDS.map(field => (
           <TuningStepperInput key={field.key} label={t(field.label)} value={form[field.key] ?? DEFAULT_DETECTION[field.key]}
             onChange={set(field.key)} min={field.min} max={field.max} step={field.step} decimals={field.decimals} unit={field.unit} />
         ))}
       </fieldset>
 
-      {updatedAt && (
-        <p className="mt-auto inline-flex items-center gap-1.5 pt-4 border-t border-stone-100 text-small text-stone-500">
-          <Clock className="w-3.5 h-3.5 shrink-0" />
-          {t('Cập nhật gần nhất: {{time}}', { time: updatedAt })}
-        </p>
-      )}
-    </div>
+      {updatedAt && <p className="text-small text-warmGray">{t('Cập nhật gần nhất: {{time}}', { time: updatedAt })}</p>}
+    </SectionCard>
   )
 })
 

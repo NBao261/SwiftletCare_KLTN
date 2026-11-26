@@ -18,7 +18,7 @@ export default function SettingsCardHeader({ title, description, isDefault, onEd
           <h2 className="text-h2 text-charcoal">{t(title)}</h2>
           {isDefault !== undefined && (
             <span
-              title={isDefault ? undefined : t('Khác với mặc định kỹ thuật gốc')}
+              title={isDefault ? undefined : t('Khác với mặc định ban đầu')}
               className="rounded-full bg-warmGray/10 px-2.5 py-0.5 text-xs font-semibold text-graphite"
             >
               {t(isDefault ? 'Mặc định gốc' : 'Đã tuỳ chỉnh')}

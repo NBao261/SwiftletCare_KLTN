@@ -75,6 +75,18 @@ export function useEnvSummary(zoneId: string | undefined, range: AnalyticsRange)
   })
 }
 
+// Thời tiết ngoài trời của giờ gần nhất đã có, lấy từ cùng API và cùng cache với biểu đồ (range 1h); số liệu theo giờ nên hỏi lại mỗi 10 phút
+const OUTDOOR_REFETCH_MS = 10 * 60_000
+export function useOutdoorWeatherNow(zoneId: string | undefined) {
+  return useQuery({
+    queryKey: ['analytics', 'env-summary', zoneId, '1h'],
+    queryFn: () => analyticsApi.envSummary(zoneId!, '1h').then(response => response.data.data),
+    enabled: !!zoneId,
+    refetchInterval: OUTDOOR_REFETCH_MS,
+    select: data => [...data.outdoor].reverse().find(point => point.temperature !== null || point.humidity !== null),
+  })
+}
+
 // so sánh môi trường nhiều Zone (tối đa 6, xem useEnvCompareBatched cho >6)
 export function useEnvCompare(zoneIds: string[], range: AnalyticsRange) {
   return useQuery({

@@ -81,7 +81,7 @@ export default function OnsiteCheckSection({ checks }: Props) {
                         className="max-h-32 rounded-xl border border-warmGray/15 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                       />
                     </a>
-                    <p className="text-xs text-warmGray mt-0.5">{t('Ảnh tại chỗ (URL tạm 1 giờ)')}</p>
+                    <p className="text-xs text-warmGray mt-0.5">{t('Ảnh tại chỗ (liên kết dùng được trong 1 giờ)')}</p>
                   </div>
                 )}
 

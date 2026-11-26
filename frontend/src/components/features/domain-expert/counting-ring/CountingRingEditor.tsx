@@ -152,8 +152,8 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
           <div className="absolute left-1/2 top-3 -translate-x-1/2 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-xs text-white">
             <span>
               {status === 'connecting'
-                ? t('Đang kết nối luồng…')
-                : t('Chưa có luồng, nền đen, vẫn đặt điểm và lưu được')}
+                ? t('Đang mở hình trực tiếp…')
+                : t('Chưa có hình trực tiếp (nền đen), vẫn đặt điểm và lưu được')}
             </span>
             {status === 'failed' && (
               <button type="button" onClick={retry} className="inline-flex items-center gap-1 underline">
@@ -214,7 +214,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
                   className={cn('rounded-xl border px-3 py-2 text-left text-sm', chosenDirection === true ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
                 >
                   <span className="font-semibold text-charcoal">{t('Camera trong nhà')}</span>
-                  <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = RA khỏi tổ')}</span>
+                  <span className="block text-xs text-warmGray">{t('Chim bay vào vòng là chim ra khỏi tổ')}</span>
                 </button>
                 <button
                   type="button"
@@ -222,7 +222,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
                   className={cn('rounded-xl border px-3 py-2 text-left text-sm', chosenDirection === false ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
                 >
                   <span className="font-semibold text-charcoal">{t('Camera ngoài trời')}</span>
-                  <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = VỀ tổ')}</span>
+                  <span className="block text-xs text-warmGray">{t('Chim bay vào vòng là chim về tổ')}</span>
                 </button>
               </div>
             </div>
@@ -248,30 +248,35 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
           </div>
         </>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {shown.rings.length === 0 && (
             <p className="text-sm text-warmGray">{t('Chưa có vòng đếm, camera đếm chim dùng vòng mặc định trong cấu hình.')}</p>
           )}
-          {shown.rings.map((ring, index) => (
-            <div key={index} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warmGray/15 bg-white px-3 py-2 text-sm">
-              <span className="font-semibold text-charcoal">
-                {t('Vòng {{n}}', { n: index + 1 })}
-                <span className="ml-2 font-normal text-warmGray">
-                  {shown.isDefault ? t('Vòng mặc định') : t('{{n}} đỉnh', { n: ring.points.length })}
-                </span>
-              </span>
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm" onClick={() => handleRedraw(index)} disabled={mutation.isPending}>
-                  <Pencil className="w-4 h-4" /> {t('Vẽ lại')}
-                </Button>
-                {!shown.isDefault && (
-                  <Button variant="secondary" size="sm" onClick={() => setConfirming({ kind: 'delete', index })} disabled={mutation.isPending}>
-                    <Trash2 className="w-4 h-4" /> {t('Xoá')}
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
+          {/* Các vòng nằm chung một khung, ngăn bằng vạch mảnh; vẽ lại và xoá là nút biểu tượng */}
+          {shown.rings.length > 0 && (
+            <ul className="divide-y divide-warmGray/10 rounded-2xl border border-warmGray/15 px-4">
+              {shown.rings.map((ring, index) => (
+                <li key={index} className="flex items-center justify-between gap-2 py-2.5 text-sm">
+                  <span className="font-semibold text-charcoal">
+                    {t('Vòng {{n}}', { n: index + 1 })}
+                    <span className="ml-2 font-normal text-warmGray">
+                      {shown.isDefault ? t('Vòng mặc định') : t('{{n}} đỉnh', { n: ring.points.length })}
+                    </span>
+                  </span>
+                  <div className="flex gap-1">
+                    <Button variant="icon" size="sm" onClick={() => handleRedraw(index)} disabled={mutation.isPending} aria-label={t('Vẽ lại')} title={t('Vẽ lại')}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    {!shown.isDefault && (
+                      <Button variant="icon" size="sm" onClick={() => setConfirming({ kind: 'delete', index })} disabled={mutation.isPending} aria-label={t('Xoá')} title={t('Xoá')}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="flex flex-wrap justify-end gap-2">
             {!shown.isDefault && (
               <Button variant="secondary" size="sm" onClick={() => setConfirming({ kind: 'default' })} disabled={mutation.isPending}>

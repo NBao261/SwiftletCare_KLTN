@@ -51,8 +51,9 @@ describe('menu theo vai trò từ danh mục chung', () => {
 
   it('một tab duy nhất thì mục mở thẳng trang đó, không hiện tab', () => {
     const expert = roleMenu('DOMAIN_EXPERT').sections.flatMap(section => section.items);
-    // Chuyên gia không vào Điều khiển tay: Tổng quan còn 2 tab
-    expect(expert.find(item => item.label === 'Tổng quan')?.tabs?.map(tab => tab.path)).toEqual(['/dashboard', '/overview']);
+    // So sánh nhà nằm trong Phân tích, không còn mục riêng; chuyên gia không vào Điều khiển tay
+    expect(expert.map(item => item.path)).not.toContain('/overview');
+    expect(expert.map(item => item.path)).not.toContain('/relay-control');
     const technician = roleMenu('FARM_TECHNICIAN').sections.flatMap(section => section.items);
     expect(technician.find(item => item.label === 'Tham số điều khiển')?.tabs?.map(tab => tab.path))
       .toEqual(['/domain-expert/tuning', '/domain-expert/weather-rules']);

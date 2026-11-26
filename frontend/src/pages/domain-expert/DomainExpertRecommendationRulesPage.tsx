@@ -1,6 +1,8 @@
 // Luật khuyến nghị của farm: chuyên gia viết, sửa, bật/tắt luật và xem hiệu quả theo luật (phần 2)
 import { useState } from 'react'
-import { Lightbulb, Plus } from 'lucide-react'
+import { Lightbulb } from 'lucide-react'
+import { PlusIcon } from '@phosphor-icons/react'
+import StatusTabs from '@/components/common/StatusTabs'
 import RecommendationEffectPanel from '@/components/features/domain-expert/recommendations/RecommendationEffectPanel'
 import RecommendationRuleFormModal from '@/components/features/domain-expert/recommendations/RecommendationRuleFormModal'
 import RecommendationRuleRow from '@/components/features/domain-expert/recommendations/RecommendationRuleRow'
@@ -11,16 +13,13 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import {
   RULES_PAGE_SIZE, useRecommendationRuleEffects, useRecommendationRules, useSaveRecommendationRule,
 } from '@/hooks/domain-expert/useRecommendationRules'
-import { cn } from '@/lib/cn'
 import { useToastStore } from '@/stores/toastStore'
 import { useZoneStore } from '@/stores/zoneStore'
 import type { RecommendationRule } from '@/types'
 import { toggledRuleInput } from '@/validations/common/recommendationRule.validation'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 
-const TABS = ['rules', 'effects'] as const
-type RulesTab = (typeof TABS)[number]
-const TAB_LABEL = { rules: 'rules.tabRules', effects: 'rules.tabEffects' } as const
+type RulesTab = 'rules' | 'effects'
 
 export default function DomainExpertRecommendationRulesPage() {
   // Farm Owner viết luật; farm có chuyên gia thì luật chờ chuyên gia bật
@@ -66,7 +65,8 @@ export default function DomainExpertRecommendationRulesPage() {
   }
   if (!rules.isLoading && !rules.isError && rules.records.length > 0) {
     rulesBody = (
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
+        <div className="divide-y divide-warmGray/10 rounded-2xl border border-warmGray/15 px-4">
         {rules.records.map(rule => (
           <RecommendationRuleRow
             key={rule._id}
@@ -78,6 +78,7 @@ export default function DomainExpertRecommendationRulesPage() {
             onEdit={() => setEditing(rule)}
           />
         ))}
+        </div>
         <Pagination page={page} limit={RULES_PAGE_SIZE} total={rules.total} onChange={next => setPageState({ farmId, page: next })} />
       </div>
     )
@@ -106,33 +107,21 @@ export default function DomainExpertRecommendationRulesPage() {
   return (
     <>
       <SectionCard
-        title={t('rules.title')}
         description={t('rules.subtitle')}
         action={tab === 'rules' && canEditParameters && (
           <Button size="sm" onClick={() => setEditing(null)}>
-            <Plus className="h-3.5 w-3.5" aria-hidden />
+            <PlusIcon size={14} weight="bold" aria-hidden />
             {t('rules.add')}
           </Button>
         )}
       >
-        {/* Tab pill như trang Sức khỏe nhà yến */}
-        <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('rules.tabs')}>
-          {TABS.map(value => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={tab === value}
-              onClick={() => setTab(value)}
-              className={cn(
-                'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
-                tab === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-              )}
-            >
-              {t(TAB_LABEL[value])}
-            </button>
-          ))}
-        </div>
+        <StatusTabs
+          variant="underline"
+          ariaLabel={t('rules.tabs')}
+          value={tab}
+          onChange={setTab}
+          tabs={[{ id: 'rules', label: t('rules.tabRules') }, { id: 'effects', label: t('rules.tabEffects') }]}
+        />
         {tab === 'rules' ? rulesBody : effectsBody}
       </SectionCard>
 

@@ -133,7 +133,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
       {/* QR URI paste panel */}
       {showQrInput && (
         <div className="flex flex-col gap-2 rounded-xl border border-graphite/15 bg-graphite/[0.04] p-3">
-          <label className="label-caption" htmlFor="onboarding-qr-text">Dán nội dung QR (URI từ nhãn thiết bị)</label>
+          <label className="label-caption" htmlFor="onboarding-qr-text">Dán nội dung mã QR trên nhãn thiết bị</label>
           <div className="flex gap-2">
             <input
               id="onboarding-qr-text"
@@ -193,7 +193,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             <li>Thiết bị đang thuộc một trang trại khác</li>
             <li>Có thể mã thiết bị bị nhập sai chữ hoa/thường</li>
           </ul>
-          <p className="mt-2 text-sm text-climateOrange/70">Liên hệ Admin để gỡ gán thiết bị.</p>
+          <p className="mt-2 text-sm text-climateOrange/70">Liên hệ Quản trị viên để gỡ thiết bị khỏi trang trại đó.</p>
         </div>
       )}
 

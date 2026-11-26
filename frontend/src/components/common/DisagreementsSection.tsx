@@ -1,13 +1,8 @@
-// Ngày đánh giá lệch, độ đồng thuận và mức chỉ số sức khỏe của nhà
+// Ngày đánh giá khác hệ thống và mức khớp giữa người đánh giá với hệ thống
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  AlertTriangle,
-  SlidersHorizontal,
-  Building2,
-  BarChart3,
-} from 'lucide-react';
+import { AlertTriangle, Building2, BarChart3 } from 'lucide-react';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import HealthLevelsModal from '@/components/common/HealthLevelsModal';
 import {
@@ -15,14 +10,7 @@ import {
   vietnamDate,
 } from '@/components/common/healthDay.utils';
 import DisagreementDayCard from '@/components/common/DisagreementDayCard';
-import {
-  Badge,
-  Button,
-  EmptyState,
-  FilterChip,
-  LoadingSkeleton,
-  SectionCard,
-} from '@/components/ui';
+import { Button, EmptyState, FilterChip, LoadingSkeleton } from '@/components/ui';
 import { NO_VALUE } from '@/constants/display';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -101,7 +89,6 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
 
   const {
     days,
-    houses,
     totalDays,
     totalDisagreements,
     isLoading,
@@ -241,7 +228,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
                 </span>
                 <span className="mt-0.5 text-small tabular-nums text-warmGray">
                   {evaluation.agreement
-                    ? `${percent(evaluation.agreement.ci_low)} – ${percent(evaluation.agreement.ci_high)}`
+                    ? t('dis.agreementRange', { low: percent(evaluation.agreement.ci_low), high: percent(evaluation.agreement.ci_high) })
                     : t('dis.noCi')}
                 </span>
               </div>
@@ -249,7 +236,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
 
             <div className="col-span-2 flex flex-col justify-between rounded-xl border border-warmGray/15 bg-stone/25 px-3 py-2.5 sm:col-span-1 lg:col-span-1">
               <span className="text-small font-medium text-warmGray">
-                Kappa / Gwet&apos;s AC1
+                {t('dis.index')}
               </span>
               <div className="mt-1 flex flex-col">
                 <div className="flex items-baseline gap-1.5 text-sm font-bold leading-tight tabular-nums text-charcoal">
@@ -291,122 +278,7 @@ export default function DisagreementsSection({ farmId: selectedFarmId, farmName:
         ) : null}
       </section>
 
-      {/* Khối 2: Mức chỉ số của từng nhà; lỗi tải thì khối 3 báo lỗi kèm nút Thử lại */}
-      {!isError && (
-        <SectionCard title={t('dis.levelsTitle')} description={t('levels.intro')} className="w-full">
-          {isLoading ? (
-            <div
-              role="status"
-              aria-live="polite"
-              aria-label={t('dis.loading')}
-            >
-              <LoadingSkeleton count={1} className="h-32 w-full rounded-xl" />
-            </div>
-          ) : houses.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-warmGray/30 bg-stone/15 px-4 py-6 text-center text-xs text-warmGray text-balance">
-              {t('dis.noHouses')}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {houses.map((house) => (
-                <div
-                  key={house.house_id}
-                  className="flex flex-col gap-3 rounded-xl border border-warmGray/20 bg-stone/20 p-3.5 sm:p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warmGray/15 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-warmGray/15 bg-white text-charcoal">
-                        <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      </div>
-                      <span className="text-sm font-bold text-charcoal">
-                        {house.house_name}
-                      </span>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() =>
-                        setEditingHouse({
-                          id: house.house_id,
-                          name: house.house_name,
-                        })
-                      }
-                    >
-                      <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>{t('dis.editLevels')}</span>
-                    </Button>
-                  </div>
-
-                  {/* 3 Cột Bento ngang hiển thị rõ ngưỡng Lệch nhẹ (cam) và Lệch rõ (đỏ) */}
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-                    {/* Cột 1: Môi trường */}
-                    <div className="flex flex-col justify-between gap-2 rounded-xl border border-warmGray/15 bg-white p-3">
-                      <div>
-                        <p className="text-xs font-bold text-charcoal">
-                          {t('levels.environment')}
-                        </p>
-                        <p className="text-small text-warmGray">
-                          {t('levels.environmentHint')}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Badge tone="warning" className="tabular-nums">
-                          {t('level.SLIGHT')} &lt; {house.health_levels.in_range_slight_pct} {t('levels.unit.environment')}
-                        </Badge>
-                        <Badge tone="critical" className="tabular-nums">
-                          {t('level.CLEAR')} &lt; {house.health_levels.in_range_clear_pct} {t('levels.unit.environment')}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Cột 2: Không khí */}
-                    <div className="flex flex-col justify-between gap-2 rounded-xl border border-warmGray/15 bg-white p-3">
-                      <div>
-                        <p className="text-xs font-bold text-charcoal">
-                          {t('levels.air')}
-                        </p>
-                        <p className="text-small text-warmGray">
-                          {t('levels.airHint')}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Badge tone="warning" className="tabular-nums">
-                          {t('level.SLIGHT')} ≥ {house.health_levels.air_slight_h} {t('levels.unit.air')}
-                        </Badge>
-                        <Badge tone="critical" className="tabular-nums">
-                          {t('level.CLEAR')} ≥ {house.health_levels.air_clear_h} {t('levels.unit.air')}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Cột 3: Tiếng ồn */}
-                    <div className="flex flex-col justify-between gap-2 rounded-xl border border-warmGray/15 bg-white p-3">
-                      <div>
-                        <p className="text-xs font-bold text-charcoal">
-                          {t('levels.noise')}
-                        </p>
-                        <p className="text-small text-warmGray">
-                          {t('levels.noiseHint')}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <Badge tone="warning" className="tabular-nums">
-                          {t('level.SLIGHT')} ≥ {house.health_levels.noise_slight} {t('levels.unit.noise')}
-                        </Badge>
-                        <Badge tone="critical" className="tabular-nums">
-                          {t('level.CLEAR')} ≥ {house.health_levels.noise_clear} {t('levels.unit.noise')}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-      )}
-
-      {/* Khối 3: Danh sách các ngày có đánh giá lệch */}
+      {/* Khối 2: Danh sách các ngày có đánh giá lệch */}
       <div className="flex w-full flex-col gap-4">
         {isLoading ? (
           <div

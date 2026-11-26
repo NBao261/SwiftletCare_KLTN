@@ -96,7 +96,7 @@ export default function TechnicianDevicesPage() {
         onError: (err) => {
           if ((err as { response?: { status?: number } })?.response?.status === 501) {
             setRebootUnsupportedIds(prev => new Set(prev).add(nodeId));
-            push("Firmware chưa hỗ trợ lệnh khởi động lại từ xa (501)", "error");
+            push("Firmware chưa hỗ trợ lệnh khởi động lại từ xa", "error");
           } else {
             push(getApiErrorMessage(err, "Khởi động lại thất bại"), "error");
           }
