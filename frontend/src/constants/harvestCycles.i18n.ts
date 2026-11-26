@@ -45,7 +45,7 @@ const vi = {
 
   // Empty state
   'empty.title': 'Chưa có chu kỳ thu hoạch',
-  'empty.desc': 'Các chu kỳ sẽ được tạo tự động khi lô thu hoạch được xác nhận.',
+  'empty.desc': 'Các chu kỳ sẽ được tạo tự động khi đợt thu hoạch được xác nhận.',
   'empty.filteredTitle': 'Không có chu kỳ nào khớp bộ lọc',
   'empty.filteredDesc': 'Thử chọn trạng thái khác hoặc bỏ bộ lọc.',
   'error.title': 'Không tải được chu kỳ thu hoạch',
@@ -66,7 +66,7 @@ const vi = {
   'drawer.compSameYear': 'Cùng kỳ năm ngoái',
   'drawer.compNoData': 'Không có chu kỳ để so sánh',
   'drawer.healthLabel': 'Chỉ số sức khoẻ',
-  'drawer.healthGoodDays': '% ngày tốt',
+  'drawer.healthGoodDays': '% ngày sức khoẻ tốt',
   'drawer.healthReturnRate': 'Tỷ lệ chim về trung bình',
   'drawer.healthTimeInRange': 'Thời gian trong ngưỡng',
   'drawer.healthNone': 'Chưa có dữ liệu sức khoẻ',

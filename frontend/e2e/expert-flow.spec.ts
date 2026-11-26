@@ -290,7 +290,7 @@ test('B8 — thêm hoặc sửa luật khuyến nghị rồi tắt, xem tab hi�
 
 test('B9 — báo cáo & kết luận mở được, đổi sang tab Ngày lệch (EXPERT-FR-005, 022)', async ({ page }) => {
   const crashes = await openAsExpert(page, '/domain-expert/reports', { farmId, houseId: houseA });
-  const disagreements = page.getByRole('button', { name: /Ngày lệch/ });
+  const disagreements = page.getByRole('button', { name: /Ngày đánh giá khác/ });
   await expect(disagreements).toBeVisible();
   await disagreements.click();
   await expect(disagreements).toHaveAttribute('aria-current', 'page');

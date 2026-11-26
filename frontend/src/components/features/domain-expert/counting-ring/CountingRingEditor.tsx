@@ -152,8 +152,8 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
           <div className="absolute left-1/2 top-3 -translate-x-1/2 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-xs text-white">
             <span>
               {status === 'connecting'
-                ? t('Đang kết nối luồng…')
-                : t('Chưa có luồng, nền đen, vẫn đặt điểm và lưu được')}
+                ? t('Đang mở hình trực tiếp…')
+                : t('Chưa có hình trực tiếp (nền đen), vẫn đặt điểm và lưu được')}
             </span>
             {status === 'failed' && (
               <button type="button" onClick={retry} className="inline-flex items-center gap-1 underline">
@@ -214,7 +214,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
                   className={cn('rounded-xl border px-3 py-2 text-left text-sm', chosenDirection === true ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
                 >
                   <span className="font-semibold text-charcoal">{t('Camera trong nhà')}</span>
-                  <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = RA khỏi tổ')}</span>
+                  <span className="block text-xs text-warmGray">{t('Chim bay vào vòng là chim ra khỏi tổ')}</span>
                 </button>
                 <button
                   type="button"
@@ -222,7 +222,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
                   className={cn('rounded-xl border px-3 py-2 text-left text-sm', chosenDirection === false ? 'border-charcoal bg-charcoal/5' : 'border-warmGray/20')}
                 >
                   <span className="font-semibold text-charcoal">{t('Camera ngoài trời')}</span>
-                  <span className="block text-xs text-warmGray">{t('Chim bay VÀO vòng = VỀ tổ')}</span>
+                  <span className="block text-xs text-warmGray">{t('Chim bay vào vòng là chim về tổ')}</span>
                 </button>
               </div>
             </div>

@@ -9,8 +9,8 @@ import ProfileStatusBadge from './ProfileStatusBadge'
 import { t, translated } from '@/i18n'
 
 const STAGE_LABEL: Record<string, string> = translated({
-  ATTRACTING: 'Dẫn dụ',
-  OCCUPIED:   'Đang nuôi',
+  ATTRACTING: 'Đang dẫn dụ',
+  OCCUPIED:   'Đã có chim ở',
 })
 
 interface Props {
@@ -157,9 +157,9 @@ function ThresholdSection({ thresholds }: { thresholds: NonNullable<ConfigProfil
     <GroupBox title={t('Ngưỡng môi trường')}>
       <FieldRow label={t('Nhiệt độ')} value={`${thresholds.temp_min}–${thresholds.temp_max} °C`} />
       <FieldRow label={t('Độ ẩm')} value={`${thresholds.humidity_min}–${thresholds.humidity_max} %`} />
-      <FieldRow label={t('Ánh sáng max')} value={`${thresholds.light_max} lux`} />
-      <FieldRow label="NH3 max" value={`${thresholds.nh3_max} ppm`} />
-      <FieldRow label="CO2 max" value={`${thresholds.co2_max} ppm`} />
+      <FieldRow label={t('Ánh sáng cao nhất')} value={`${thresholds.light_max} lux`} />
+      <FieldRow label="NH3 cao nhất" value={`${thresholds.nh3_max} ppm`} />
+      <FieldRow label="CO2 cao nhất" value={`${thresholds.co2_max} ppm`} />
     </GroupBox>
   )
 }

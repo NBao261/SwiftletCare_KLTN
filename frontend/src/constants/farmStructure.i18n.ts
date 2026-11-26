@@ -182,7 +182,7 @@ const vi = {
   'members.email': 'Email',
   'members.emailPlaceholder': 'nguoi-duoc-moi@email.com',
   'members.ownerHint': 'Đồng sở hữu vận hành trang trại như chủ chính nhưng không mời / gỡ được thành viên.',
-  'members.expertHint': 'Chuyên gia chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo, chỉnh ngưỡng và tham số phát hiện; không điều khiển rơ-le, không tạo yêu cầu, không ghi thu hoạch.',
+  'members.expertHint': 'Chuyên gia chỉ đọc dữ liệu vận hành, kiểm chứng cảnh báo, chỉnh ngưỡng và tham số phát hiện; không điều khiển rơ-le, không ghi thu hoạch.',
   'members.inviteHint': 'Lời mời có hiệu lực 7 ngày. Email chưa có tài khoản thì người được mời đăng ký xong sẽ tự vào trang trại với đúng vai trò. Một email chỉ mang 1 vai trò.',
   'members.send': 'Gửi lời mời',
   'members.cancel': 'Huỷ',
@@ -329,7 +329,7 @@ const vi = {
   'structure.cancel': 'Huỷ',
   // Tham số do chuyên gia đặt
   'tuning.title': 'Tham số phát hiện',
-  'tuning.desc': 'Chuyên gia chỉnh theo Zone; bộ điều khiển dùng các tham số này để phát hiện tiếng ồn bất thường, phun sương không tăng ẩm và hỏng loa. Chủ nhà yến chỉ xem.',
+  'tuning.desc': 'Sửa ở trang Tham số điều khiển. Bộ điều khiển dùng các tham số này để phát hiện tiếng ồn bất thường, phun sương không tăng ẩm và hỏng loa.',
   'tuning.seconds': 'giây',
   'tuning.noiseMargin': 'Mức ồn vượt nền',
   'tuning.noiseMarginHint': 'Cao hơn mức nền của giờ đó',

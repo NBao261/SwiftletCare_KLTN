@@ -26,7 +26,7 @@ const vi = {
 
   // Bảng ngày
   'table.title': 'Đánh giá theo ngày',
-  'disagreements.title': 'Ngày đánh giá khác hệ thống',
+  'disagreements.title': 'Ngày đánh giá khác trạng thái hệ thống',
   'table.subtitle': 'Xem trạng thái hệ thống tính cho từng ngày, rồi xác nhận hoặc sửa theo quan sát của bạn tại nhà yến.',
   'table.subtitleExpert': 'Trạng thái hệ thống tính cho từng ngày, kèm đánh giá của chủ nhà yến theo quan sát tại nhà yến.',
   'table.loading': 'Đang tải các ngày…',
@@ -139,14 +139,14 @@ const vi = {
   // Lý do (api-spec HealthReason): client tự dịch
   'reason.ALL_NORMAL': 'Các chỉ số đã xét đều bình thường',
   'reason.MISSING_DATA.noZones': 'Thiếu dữ liệu môi trường: nhà chưa có Zone',
-  'reason.MISSING_DATA.environment': 'Thiếu dữ liệu môi trường: mẫu nhiệt độ, độ ẩm hợp lệ dưới {pct} % ({zones})',
+  'reason.MISSING_DATA.environment': 'Thiếu dữ liệu môi trường: số đo nhiệt độ, độ ẩm hợp lệ dưới {pct} % ({zones})',
   'reason.MISSING_DATA.MORNING': 'Thiếu dữ liệu đàn chim: thiếu phiên sáng',
   'reason.MISSING_DATA.EVENING': 'Thiếu dữ liệu đàn chim: thiếu phiên chiều',
   'reason.MISSING_DATA.NO_DEPARTURES': 'Thiếu dữ liệu đàn chim: phiên sáng không có chim ra',
   'reason.MISSING_DATA.INCOMPLETE': 'Thiếu dữ liệu đàn chim: phiên đếm không đầy đủ vì camera đếm chim mất kết nối',
   'reason.MISSING_DATA.flock': 'Thiếu dữ liệu đàn chim',
-  'reason.NOT_ASSESSED.air': 'Chưa xét không khí (thiếu mẫu NH3, CO2)',
-  'reason.NOT_ASSESSED.noise': 'Chưa xét tiếng ồn (thiếu mẫu độ ồn)',
+  'reason.NOT_ASSESSED.air': 'Chưa xét không khí (thiếu số đo NH3, CO2)',
+  'reason.NOT_ASSESSED.noise': 'Chưa xét tiếng ồn (thiếu số đo độ ồn)',
   'reason.ENV_IN_RANGE': 'Môi trường: {zone} chỉ {pct} % thời gian nhiệt độ, độ ẩm trong ngưỡng ({level})',
   'reason.AIR_OVER_LIMIT': 'Không khí: NH3 hoặc CO2 vượt ngưỡng {hours} giờ ở {zone} ({level})',
   'reason.FLOCK_DROP': 'Đàn chim: tỷ lệ chim về {rate} %, giảm {drop} % so với trung bình {days} ngày trước ({average} %) ({level})',
