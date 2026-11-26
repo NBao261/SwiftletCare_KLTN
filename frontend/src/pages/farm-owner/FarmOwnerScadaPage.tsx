@@ -4,26 +4,25 @@ import { WifiSlashIcon } from '@phosphor-icons/react';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
 import HeaderActions from '@/components/layouts/HeaderActions';
+import RelayOverrideHistoryCard from '@/components/features/farm-owner/dashboard/RelayOverrideHistoryCard';
+import { OVERRIDE_HISTORY_LIMIT } from '@/components/features/farm-owner/analytics/analytics.constants';
 import ScadaNodeCard from '@/components/features/farm-owner/dashboard/ScadaNodeCard';
 import { withLiveRelays } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import {
   SCADA_DEFAULT_DURATION_MINUTES,
   SCADA_DURATION_MINUTES,
 } from '@/components/features/farm-owner/dashboard/scada.constants';
-import { Button, EmptyState, FilterChip, LoadingSkeleton, SectionCard } from '@/components/ui';
+import { Button, EmptyState, FilterChip, LoadingSkeleton } from '@/components/ui';
 import { dashboardDict } from '@/constants/dashboard.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useZoneRelayOverrides } from '@/hooks/farm-owner/useAnalytics';
 import { useLiveZoneTelemetry } from '@/hooks/farm-owner/useLiveZoneTelemetry';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useSensorNodes } from '@/hooks/shared/useDevices';
-import { cn } from '@/lib/cn';
-
-const HISTORY_LIMIT = 8;
 
 // Điều khiển tay: mỗi Zone một thẻ, bật hoặc tắt rơ-le có thời hạn rồi tự về tự động
 export default function FarmOwnerScadaPage(): JSX.Element {
-  const { t, dateTime } = useTranslation(dashboardDict);
+  const { t } = useTranslation(dashboardDict);
   const scope = useScopeFilter();
   const { houseId, zones, zone, isLoading: isLoadingScope } = scope;
   const [durationMinutes, setDurationMinutes] = useState(SCADA_DEFAULT_DURATION_MINUTES);
@@ -45,7 +44,7 @@ export default function FarmOwnerScadaPage(): JSX.Element {
       .sort((left, right) => (order.get(left.zone_id) ?? 0) - (order.get(right.zone_id) ?? 0));
   }, [allNodes, zoneIds, live]);
   const nodeIds = useMemo(() => nodes.map(node => node._id), [nodes]);
-  const history = useZoneRelayOverrides(nodeIds, HISTORY_LIMIT);
+  const history = useZoneRelayOverrides(nodeIds, OVERRIDE_HISTORY_LIMIT);
 
   // Nhãn thời hạn: dưới 60 phút ghi phút, còn lại ghi giờ
   const durationLabel = (minutes: number): string => (minutes < 60 ? t('scada.minutes', { n: minutes }) : t('scada.hours', { n: minutes / 60 }));
@@ -122,30 +121,8 @@ export default function FarmOwnerScadaPage(): JSX.Element {
 
       {devices}
 
-      {/* Lần điều khiển tay gần nhất: danh sách gọn, trạng thái ở bên phải */}
-      <SectionCard title={t('scada.historyTitle')}>
-        {history.isLoading && <LoadingSkeleton count={3} className="h-12 w-full" />}
-        {history.logs.length === 0 && !history.isLoading && <p className="text-body text-warmGray">{t('scada.historyEmpty')}</p>}
-        {history.logs.length > 0 && (
-          <ul className="flex flex-col divide-y divide-warmGray/10">
-            {history.logs.map(log => (
-              <li key={log._id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="truncate text-body font-semibold text-charcoal">
-                    {t(`relay.${log.relay}`)} · {log.state ? t('relay.on') : t('relay.off')}
-                  </p>
-                  <p className="truncate text-small text-warmGray">
-                    {t('scada.historyBy', { name: log.started_by?.full_name ?? t('scada.unknownUser'), time: dateTime(log.started_at) })}
-                  </p>
-                </div>
-                <span className={cn('shrink-0 rounded-full px-2.5 py-0.5 text-small font-semibold', log.ended_at ? 'bg-warmGray/15 text-warmGray' : 'bg-statusYellow/70 text-charcoal')}>
-                  {log.ended_at ? t('scada.historyEnded') : t('scada.historyActive')}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
+      {/* Lịch sử điều khiển tay của các Zone đang xem: nơi bấm cũng là nơi xem kết quả */}
+      <RelayOverrideHistoryCard zoneIds={zoneIds} />
     </div>
   );
 }

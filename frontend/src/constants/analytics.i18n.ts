@@ -14,7 +14,6 @@ const vi = {
   'page.errorTitle': 'Không tải được danh sách Zone',
   'page.tabs': 'Nhóm phân tích',
   'tab.env': 'Môi trường',
-  'tab.birds': 'Chim ra vào',
   'tab.ops': 'Vận hành thiết bị',
   'tab.houses': 'So sánh nhà',
 
@@ -256,7 +255,6 @@ const en: Record<AnalyticsKey, string> = {
   'page.errorTitle': 'Could not load the zone list',
   'page.tabs': 'Analytics groups',
   'tab.env': 'Environment',
-  'tab.birds': 'Birds in & out',
   'tab.ops': 'Equipment operation',
   'tab.houses': 'Compare houses',
 
