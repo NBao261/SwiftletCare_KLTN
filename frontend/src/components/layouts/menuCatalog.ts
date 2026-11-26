@@ -95,6 +95,7 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
 interface SectionPlan {
   group: MenuGroup
   readOnly?: boolean
+  only?: string[] // chỉ giữ các mục có đường dẫn này; không ghi thì giữ cả nhóm
 }
 
 // Nhóm việc chính của vai trò đứng đầu; dock điện thoại là 4 trang vai trò đó dùng nhiều nhất
@@ -113,7 +114,8 @@ const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[] }> = {
     dock: ['/alerts', '/work-orders', '/dashboard', '/health'],
   },
   DOMAIN_EXPERT: {
-    sections: [{ group: 'expertise' }, { group: 'monitor', readOnly: true }, { group: 'operations', readOnly: true }, { group: 'manage', readOnly: true }],
+    // Chuyên gia quyết định ở nhóm Chuyên môn; chỉ giữ ba trang số liệu để đối chiếu khi quyết định, còn việc vận hành, thiết bị là của chủ nhà yến
+    sections: [{ group: 'expertise' }, { group: 'monitor', readOnly: true, only: ['/analytics', '/vision', '/health'] }],
     dock: ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/domain-expert/tuning', '/domain-expert/counting-schedule'],
   },
 }
@@ -129,10 +131,13 @@ function itemFor(role: Role, item: MenuItem): MenuItem | null {
 export function roleMenu(role: Role): { sections: MenuSection[]; dock: MenuItem[] } {
   const plan = ROLE_PLAN[role]
   const sections = plan.sections
-    .map(({ group, readOnly }) => ({
+    .map(({ group, readOnly, only }) => ({
       title: readOnly ? `${GROUP_TITLE[group]} (chỉ đọc)` : GROUP_TITLE[group],
       collapsible: true,
-      items: CATALOG[group].map(item => itemFor(role, item)).filter((item): item is MenuItem => item !== null),
+      items: CATALOG[group]
+        .filter(item => !only || only.includes(item.path))
+        .map(item => itemFor(role, item))
+        .filter((item): item is MenuItem => item !== null),
     }))
     .filter(section => section.items.length > 0)
   const items = sections.flatMap(section => section.items)

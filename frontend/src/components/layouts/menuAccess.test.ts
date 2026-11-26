@@ -9,6 +9,11 @@ const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN', 'DOMAIN_EXPERT'
 // Trang mở từ chỗ khác nên không có mục menu: chi tiết, lắp thiết bị (từ trang thiết bị), cài đặt (menu ảnh đại diện)
 const OPENED_ELSEWHERE = ['/devices/detail', '/devices/onboarding', '/settings'];
 
+// Chuyên gia vẫn mở được các trang này bằng đường dẫn nhưng menu chỉ giữ việc của chuyên môn và ba trang số liệu
+const HIDDEN_FROM_MENU: Partial<Record<Role, string[]>> = {
+  DOMAIN_EXPERT: ['/dashboard', '/work-orders', '/maintenance', '/recommendations', '/harvests', '/devices', '/farms'],
+};
+
 function menuPaths(role: Role): string[] {
   return roleMenu(role).sections.flatMap(section => section.items.flatMap(item => [item.path, ...(item.tabs ?? []).map(tab => tab.path)]));
 }
@@ -18,7 +23,7 @@ describe('menu theo vai trò từ danh mục chung', () => {
     it(`${role}: mọi trang vào được đều có mục menu hoặc tab, và không mục nào trỏ tới trang bị chặn`, () => {
       const paths = new Set(menuPaths(role));
       const missing = MENU_ACCESS
-        .filter(entry => entry.roles.includes(role) && !OPENED_ELSEWHERE.includes(entry.path))
+        .filter(entry => entry.roles.includes(role) && !OPENED_ELSEWHERE.includes(entry.path) && !HIDDEN_FROM_MENU[role]?.includes(entry.path))
         .map(entry => entry.path)
         .filter(path => !paths.has(path));
       expect(missing).toEqual([]);
