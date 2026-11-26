@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PlusIcon, SlidersHorizontalIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -35,6 +35,7 @@ import { printQrLabels, zoneCode } from '@/lib/qrCode'
 export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t, ago } = useTranslation(farmDict)
   useScrollToTop(zoneId)
   const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
@@ -174,7 +175,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         help={t('zone.devicesDesc')}
         action={canSetUpDevice && farmId && houseId && zoneId && (
           // Mở thiết lập với vị trí của Zone này đã chọn sẵn
-          <Button size="sm" onClick={() => navigate(DEVICE_SETUP_PATH, { state: { location: { farmId, houseId, zoneId } } satisfies DeviceSetupState })}>
+          <Button size="sm" onClick={() => navigate(DEVICE_SETUP_PATH, { state: { location: { farmId, houseId, zoneId }, returnTo: location.pathname } satisfies DeviceSetupState })}>
             <PlusIcon size={14} weight="bold" />
             {t('zone.setupDevice')}
           </Button>

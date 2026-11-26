@@ -52,9 +52,11 @@ interface Props {
   data: OnboardingState
   onSuccess: () => void
   onRetry: () => void
+  // Nơi nút thoát đưa về: danh sách thiết bị, hoặc trang Zone đã mở thiết lập
+  leaveLabel?: string
 }
 
-export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
+export function Step5WaitOnline({ data, onSuccess, onRetry, leaveLabel = 'Về danh sách thiết bị' }: Props) {
   const [elapsed, setElapsed]           = useState(0)
   const [timedOut, setTimedOut]         = useState(false)
   // Sự kiện socket DEVICE_STATUS_CHANGE: báo ngay, không chờ lần đọc lại
@@ -119,10 +121,10 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
         <div>
           <h2 className="text-lg font-bold text-charcoal">Thiết bị đã kết nối nhưng chưa áp cấu hình của Zone</h2>
           <p className="mt-1 text-sm text-warmGray">
-            Hệ thống vẫn gửi lại cấu hình; nếu không khớp, cảnh báo CONFIG_MISMATCH sẽ hiện ở trang Cảnh báo. Kiểm tra lại phiên bản firmware của thiết bị.
+            Hệ thống vẫn gửi lại cấu hình; nếu không khớp, cảnh báo cấu hình chưa khớp sẽ hiện ở trang Cảnh báo. Kiểm tra lại phiên bản firmware của thiết bị.
           </p>
         </div>
-        <Button onClick={onSuccess} className="w-full max-w-xs justify-center">Về danh sách thiết bị</Button>
+        <Button onClick={onSuccess} className="w-full max-w-xs justify-center">{leaveLabel}</Button>
       </div>
     )
   }
@@ -151,7 +153,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
             Thử lại
           </Button>
           <button onClick={onSuccess} className="text-sm text-warmGray hover:text-charcoal">
-            Bỏ qua, về danh sách thiết bị
+            Bỏ qua, {leaveLabel.charAt(0).toLowerCase() + leaveLabel.slice(1)}
           </button>
         </div>
       </div>

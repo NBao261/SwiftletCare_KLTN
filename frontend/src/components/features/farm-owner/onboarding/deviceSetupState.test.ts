@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isDeviceSetupState } from '@/components/features/farm-owner/onboarding/deviceSetupState'
+import { clearSetupProgress, isDeviceSetupState, loadSetupProgress, saveSetupProgress, type SetupProgress } from '@/components/features/farm-owner/onboarding/deviceSetupState'
 
 describe('vị trí truyền từ trang Zone sang thiết lập thiết bị', () => {
   it('nhận khi có đủ trang trại, nhà và Zone', () => {
@@ -12,5 +12,40 @@ describe('vị trí truyền từ trang Zone sang thiết lập thiết bị', (
     expect(isDeviceSetupState({})).toBe(false)
     expect(isDeviceSetupState({ location: { farmId: 'f1', houseId: 'h1' } })).toBe(false)
     expect(isDeviceSetupState({ fromChildPage: true })).toBe(false)
+  })
+})
+
+describe('giữ tiến trình thiết lập khi tải lại trang', () => {
+  const progress: SetupProgress = {
+    step: 2, deviceType: 'SENSOR_NODE', location: { farmId: 'f1', houseId: 'h1', zoneId: 'z1' },
+    deviceId: 'node_100', deviceDbId: 'db1', returnTo: '/farms/f1/houses/h1/zones/z1',
+  }
+
+  function memoryStorage() {
+    const store = new Map<string, string>()
+    return {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+      removeItem: (key: string) => void store.delete(key),
+    }
+  }
+
+  it('lưu rồi đọc lại đúng, xoá thì mất', () => {
+    const storage = memoryStorage()
+    saveSetupProgress(progress, storage)
+    expect(loadSetupProgress(storage)).toEqual(progress)
+    clearSetupProgress(storage)
+    expect(loadSetupProgress(storage)).toBeUndefined()
+  })
+
+  it('không đọc dữ liệu hỏng, thiếu thiết bị đã đăng ký, hoặc kho bị chặn', () => {
+    const storage = memoryStorage()
+    storage.setItem('swiftletcare.deviceSetupProgress', '{không phải json')
+    expect(loadSetupProgress(storage)).toBeUndefined()
+    saveSetupProgress({ ...progress, deviceDbId: '' }, storage)
+    expect(loadSetupProgress(storage)).toBeUndefined()
+    const blocked = { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } }
+    expect(loadSetupProgress(blocked)).toBeUndefined()
+    expect(() => saveSetupProgress(progress, blocked)).not.toThrow()
   })
 })

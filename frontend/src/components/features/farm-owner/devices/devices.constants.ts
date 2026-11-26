@@ -3,6 +3,9 @@ import type { ComponentStatus } from '@/components/features/farm-owner/devices/z
 // Trang chi tiết thiết bị của 1 nhà yến; id truyền qua history state, không đưa lên URL (FE_Design 13.16)
 export const DEVICE_DETAIL_PATH = '/devices/detail';
 
+// Danh sách thiết bị của role
+export const DEVICE_LIST_PATH = '/devices';
+
 export interface DeviceDetailState {
   houseId: string;
   // Có thì cuộn tới và làm nổi thiết bị này
