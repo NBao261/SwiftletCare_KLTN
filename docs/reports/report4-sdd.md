@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.34 (Review 2, final scope) |
+| Document version | 2.2.35 (Review 2, final scope) |
 | Date | 27/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.27 (`docs/reports/report3-srs.md`) |
+| Requirements baseline | Report 3 – SRS 4.2.28 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -1910,6 +1910,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.35 | 27/11/2026 | Header baseline SRS 4.2.28 (BR-36 lists the Work Orders, maintenance and recommendations kept for good); the privacy policy page of the web has a table of contents and is rewritten as version 1.2 |
 | 2.2.34 | 27/11/2026 | Maintenance: the 07:00 run also reminds each due or overdue plan once a day (Report 3 4.2.27, OPS-FR-006); a preventive Work Order needs one photo to be reported done (OPS-FR-008) |
 | 2.2.33 | 26/11/2026 | The Farm Technician sets up, moves and removes devices of the assigned houses (Report 3 4.2.26, BM03 row 21): DF-9, D14, §5.4 technician client, the `/devices` route table, device lifecycle, AD-10 and AD-11 follow |
 | 2.2.32 | 26/11/2026 | Staging database on MongoDB Atlas instead of the MongoDB container: `MONGODB_URI` in the staging compose, Atlas snapshots plus a logical dump by the backup script (Sections 3.1, 3.4, 11) |
