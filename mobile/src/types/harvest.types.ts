@@ -16,6 +16,8 @@ export interface HarvestBatch {
   weight_grams: number
   nest_type: NestType
   product_images?: string[]
+  // Link ký sẵn tới ảnh của lô (HARVEST-FR-001): chỉ có ở GET /harvests/{id} và PUT /harvests/{id}/photo
+  photo_url?: string | null
   // Lô cũ trước G-20 không có trường này: coi như đã xác nhận
   status?: HarvestStatus
   // Đã xoá mềm (HARVEST-FR-005): phải ẩn khỏi danh sách

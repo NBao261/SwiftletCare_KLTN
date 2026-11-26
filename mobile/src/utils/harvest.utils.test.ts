@@ -4,9 +4,11 @@ import {
   canEditHarvestRun,
   checkNestAmount,
   formatCycleComparison,
+  getRunBatchIdsAfterSave,
   groupHarvestRuns,
   harvestTotalsByPeriod,
   harvestYears,
+  limitAmountInput,
   planHarvestRunOperations,
   summarizeHouseMonthYield,
   toHarvestDateIso,
@@ -169,7 +171,7 @@ describe('checkNestAmount', () => {
     expect(checkNestAmount({ nests: '40', grams: '' }).error).toBe('Điền cả số tổ và trọng lượng')
     expect(checkNestAmount({ nests: '0', grams: '300' }).error).toBe('Điền cả số tổ và trọng lượng')
     expect(checkNestAmount({ nests: '2,5', grams: '300' }).error).toBe('Nhập số nguyên')
-    expect(checkNestAmount({ nests: '-1', grams: '300' }).error).toBe('Từ 0 trở lên')
+    expect(checkNestAmount({ nests: '-1', grams: '300' }).error).toBe('Từ 0 đến 999.999')
     expect(checkNestAmount({ nests: '4', grams: 'abc' }).error).toBe('Nhập một số')
   })
 
@@ -267,5 +269,42 @@ describe('formatCycleComparison', () => {
   it('không có chu kỳ để so thì "_"', () => {
     expect(formatCycleComparison(null)).toBe('_')
     expect(formatCycleComparison({ ...base, weight_change_pct: null, nest_count_change_pct: null })).toBe('_')
+  })
+})
+
+describe('getRunBatchIdsAfterSave', () => {
+  const day = '2026-11-10T00:00:00.000Z'
+
+  it('đợt vừa tạo thêm vào, đợt vừa xoá bỏ ra, đợt không đổi giữ nguyên', () => {
+    const existing = {
+      RAW: buildBatch('raw', 'zone-1', day),
+      CLEANED: buildBatch('cleaned', 'zone-1', day, { nest_type: 'CLEANED' }),
+    }
+    const saved = { CLEANED: null, PREMIUM: buildBatch('premium', 'zone-1', day, { nest_type: 'PREMIUM' }) }
+    expect(getRunBatchIdsAfterSave(existing, saved)).toEqual(['raw', 'premium'])
+  })
+
+  it('chỉ chụp ảnh mới, không đổi số: gửi ảnh cho mọi đợt đang có', () => {
+    expect(getRunBatchIdsAfterSave({ RAW: buildBatch('raw', 'zone-1', day) }, {})).toEqual(['raw'])
+  })
+})
+
+describe('limitAmountInput và giới hạn 6 chữ số', () => {
+  it('số tổ: chỉ số nguyên, cắt ở 6 chữ số', () => {
+    expect(limitAmountInput('1234567890123456', 0)).toBe('123456')
+    expect(limitAmountInput('12,5', 0)).toBe('12')
+    expect(limitAmountInput('1a2-3', 0)).toBe('123')
+  })
+
+  it('số gram: phần nguyên 6 chữ số, tối đa 2 chữ số lẻ, giữ dấu thập phân người dùng gõ', () => {
+    expect(limitAmountInput('9999999', 2)).toBe('999999')
+    expect(limitAmountInput('123456,789', 2)).toBe('123456,78')
+    expect(limitAmountInput('12.5.6', 2)).toBe('12.56')
+    expect(limitAmountInput('12,', 2)).toBe('12,')
+  })
+
+  it('checkNestAmount chặn số quá 6 chữ số dán vào ô', () => {
+    expect(checkNestAmount({ nests: '1000000', grams: '10' }).error).not.toBeNull()
+    expect(checkNestAmount({ nests: '999999', grams: '999999' }).isFilled).toBe(true)
   })
 })
