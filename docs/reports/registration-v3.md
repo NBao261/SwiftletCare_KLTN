@@ -216,7 +216,7 @@ Default temperature, humidity and light thresholds are taken from the swiftlet-f
 
 (8) The detection model is named "YOLO" without a version (declared in the design document), and birds are counted by crossings of a closed ring around the entrance hole instead of a virtual line.
 
-(9) Device setup by the Farm Owner is a supporting flow done with two QR scans in the mobile app (the device label and the floor code).
+(9) Device setup by the Farm Owner or the Farm Technician of the house is a supporting flow done with two QR scans in the mobile app (the device label and the floor code).
 
 (10) The health assessment becomes a daily status per house combining the sources by agreement, with daily, weekly and monthly reports exportable to PDF and CSV, rated on site by the Farm Technician and the Farm Owner, with the disagreements reviewed by the Domain Expert (Flow 6).
 
