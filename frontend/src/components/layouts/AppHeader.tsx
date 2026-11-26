@@ -3,6 +3,7 @@ import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
 import { useHeaderSlotStore } from '@/stores/headerSlotStore'
 import { cn } from '@/lib/cn'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
+import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import { activeTabPath, isMenuItemActive } from '@/lib/menuMatch'
 import NotificationPopover from '@/components/common/NotificationPopover'
@@ -37,6 +38,8 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
   const page = usePageTitle(menuSections)
   const registeredTrail = useBreadcrumbStore(s => s.trail)
   const rootState = useBreadcrumbStore(s => s.rootState)
+  // Tab trình duyệt ghi trang đang xem: mục con (VD tên nhà, Zone) trước, tên trang sau
+  useDocumentTitle(registeredTrail.at(-1)?.label, page.label === 'SwiftletCare' ? undefined : page.label)
 
   // Chỉ trang tự đăng ký breadcrumb (VD Farms drill-down) mới có cấp con
   const trail: Crumb[] = [

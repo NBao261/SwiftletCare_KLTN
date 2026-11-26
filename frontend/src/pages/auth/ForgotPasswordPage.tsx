@@ -4,9 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
+import { t } from '@/i18n'
 
 // Trang quên mật khẩu: gửi mã → nhập mã + mật khẩu mới; khung và ảnh ở AuthLayout
 export default function ForgotPasswordPage(): JSX.Element {
+  useDocumentTitle(t('Quên mật khẩu'))
   const { forgotPassword, resetPassword } = useAuth();
   const navigate = useNavigate();
   const apiErrorMessage = useApiErrorMessage();
