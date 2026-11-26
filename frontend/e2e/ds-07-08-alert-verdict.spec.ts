@@ -62,7 +62,7 @@ test.describe('DS-07, DS-08 Kiểm chứng cảnh báo suy luận', () => {
         scopeFarmId: '', selectedHouseId: farm.house('A')._id, scopeZoneId: '',
       };
       await page.evaluate(value => localStorage.setItem('swiftletcare-zone', value), JSON.stringify({ state, version: 2 }));
-      await page.goto('/domain-expert/alert-verdicts');
+      await page.goto('/domain-expert/alert-verdicts?tab=ALL');
     };
 
     // Mặc định cả trang trại: cảnh báo ồn ở zone A phải hiện
