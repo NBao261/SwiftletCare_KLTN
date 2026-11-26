@@ -474,6 +474,15 @@ describe('nhắc hằng ngày khi bảo trì đến hạn hoặc quá hạn (OPS
     expect(reminders().sort()).toEqual([String(owner._id), String(tech.user._id)].sort())
   })
 
+  it('kế hoạch không còn phiếu nào đang mở thì nhắc thẳng Farm Owner, không im lặng', async () => {
+    const { owner, tech } = await dueAt()
+    await WorkOrder.updateMany({}, { status: 'CANCELLED', is_open: false })
+
+    await checkDuePlans(at(1), { calendar: true })
+    expect(reminders()).toEqual([String(owner._id)])
+    expect(reminders()).not.toContain(String(tech.user._id))
+  })
+
   it('ghi bảo trì xong thì hết nhắc', async () => {
     const { tech, tech$, owner$ } = await dueAt()
     const wo = (await WorkOrder.findOne())!

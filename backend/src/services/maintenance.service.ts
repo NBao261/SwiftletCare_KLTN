@@ -283,6 +283,14 @@ async function remindDuePlans(now: Date): Promise<number> {
       if (modifiedCount === 0) continue
       const days = Math.max(1, Math.floor((now.getTime() - (plan.due_since ?? now).getTime()) / DAY_MS))
       const orders = await WorkOrder.find({ plan_id: plan._id, kind: 'PREVENTIVE', is_open: true })
+      // Không còn phiếu nào đang mở (đã huỷ, hay chưa mở được): nhắc thẳng Farm Owner để kế hoạch không im lặng
+      if (orders.length === 0) {
+        const owners = await findRecipients(String(plan.farm_id))
+        await Promise.all(owners.map(o => notifyUser(String(o._id), {
+          title: `Nhắc bảo trì: ${EQUIPMENT_LABEL[plan.equipment]}`, body: `Đã đến hạn ${days} ngày mà chưa ghi bảo trì và chưa có phiếu công việc nào đang mở.`,
+        })))
+        reminded++
+      }
       for (const order of orders) {
         await remindPreventiveWorkOrder(order, plan.state === 'OVERDUE', `Nhắc bảo trì: ${order.title}`, `Đã đến hạn ${days} ngày mà chưa ghi bảo trì.`)
         reminded++
