@@ -2853,10 +2853,11 @@ paths:
   /devices/sensor-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — FARM_OWNER (FARM-FR-003, SF-01)"
+      summary: "Đăng ký ESP32 Sensor Node vào 1 Zone — FARM_OWNER, FARM_TECHNICIAN (nhà được giao) (FARM-FR-003, SF-01)"
       description: |
-        Farm Owner tự setup thiết bị ở farm của mình (SF-01): Zone thuộc farm khác → 403
-        (FARM-FR-007). Farm Technician, Administrator, Domain Expert → 403 (Report 3 §2.4).
+        Farm Owner setup thiết bị ở farm của mình, Farm Technician ở các nhà được giao (SF-01): Zone thuộc farm khác,
+        hoặc thuộc nhà không giao cho Farm Technician → 403 (FARM-FR-007). Việc của Farm Technician được ghi audit và
+        báo trong ứng dụng cho các Farm Owner của farm. Administrator, Domain Expert → 403 (Report 3 §2.4).
         Phải nhập đúng cặp `{device_id, secret_key}` in trên nhãn thiết bị (do Admin
         cấp qua `POST /admin/provisioned-devices`, không phân biệt hoa/thường).
         Node tạo ra ở trạng thái `PENDING`, chỉ chuyển `ONLINE` khi thiết bị gửi
@@ -2924,7 +2925,7 @@ paths:
           in: query
           schema: { type: string, enum: [recent] }
           description: >-
-            Chỉ Farm Owner (role khác → 403): thay vì thiết bị đang dùng, trả thiết bị đã gỡ còn khôi phục được
+            Chỉ Farm Owner và Farm Technician, thợ chỉ thấy nhà được giao (role khác → 403): thay vì thiết bị đang dùng, trả thiết bị đã gỡ còn khôi phục được
             (FARM-FR-008) — gỡ trong 24 giờ, `device_id` chưa đăng ký lại, chưa có thiết bị khác đang chạy thế chỗ;
             mỗi dòng kèm `restorable_until` (date-time). Cùng điều kiện với `POST …/{id}/restore`.
       responses:
@@ -3398,11 +3399,11 @@ paths:
   /devices/camera-nodes/register:
     post:
       tags: [Devices]
-      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — FARM_OWNER (farm của mình) (FARM-FR-004, SF-01)"
+      summary: "Đăng ký camera đếm chim (nút AI) vào nhà yến — FARM_OWNER (farm của mình), FARM_TECHNICIAN (nhà được giao) (FARM-FR-004, SF-01)"
       description: |
         Giống sensor node: bắt buộc `secret_key` của thiết bị loại CAMERA trong kho. SRS v2.1.8: camera lắp ở
         cửa ra vào của cả nhà yến nên gắn House (`house_id`). `zone_id` là cách gửi cũ (trước v2.1.8), được quy
-        ra House chứa Zone; cần một trong hai. Farm Technician, Administrator → 403 (Report 3 §2.4).
+        ra House chứa Zone; cần một trong hai. Farm Technician chỉ đăng ký vào nhà được giao (nhà khác → 403), việc đó được ghi audit và báo cho Farm Owner; không nhập địa chỉ camera (FARM-FR-004b). Administrator → 403 (Report 3 §2.4).
       requestBody:
         required: true
         content:
@@ -3459,7 +3460,7 @@ paths:
           in: query
           schema: { type: string, enum: [recent] }
           description: >-
-            Chỉ Farm Owner (role khác → 403): thay vì thiết bị đang dùng, trả thiết bị đã gỡ còn khôi phục được
+            Chỉ Farm Owner và Farm Technician, thợ chỉ thấy nhà được giao (role khác → 403): thay vì thiết bị đang dùng, trả thiết bị đã gỡ còn khôi phục được
             (FARM-FR-008) — gỡ trong 24 giờ, `device_id` chưa đăng ký lại, chưa có thiết bị khác đang chạy thế chỗ;
             mỗi dòng kèm `restorable_until` (date-time). Cùng điều kiện với `POST …/{id}/restore`.
       responses:
@@ -3515,7 +3516,7 @@ paths:
   /devices/sensor-nodes/{id}/decommission:
     post:
       tags: [Devices]
-      summary: "Gỡ bỏ thiết bị, giữ lịch sử dữ liệu (FARM-FR-008) — FARM_OWNER (farm của mình)"
+      summary: "Gỡ bỏ thiết bị, giữ lịch sử dữ liệu (FARM-FR-008) — FARM_OWNER (farm của mình), FARM_TECHNICIAN (nhà được giao)"
       description: |
         Không xoá document: telemetry/alert cũ tham chiếu `node_id` nên vẫn truy
         vấn được. Thiết bị bị ẩn khỏi danh sách/thống kê, heartbeat/telemetry từ
@@ -3552,7 +3553,7 @@ paths:
   /devices/sensor-nodes/{id}/restore:
     post:
       tags: [Devices]
-      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình)"
+      summary: "Khôi phục thiết bị vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình), FARM_TECHNICIAN (nhà được giao)"
       description: |
         Xoá `decommissioned_at` và cờ `activation_overdue_at`, đưa thiết bị về
         `OFFLINE` — hoặc `PENDING` nếu nó chưa từng gửi heartbeat lần nào (vẫn
@@ -4215,7 +4216,7 @@ paths:
   /devices/camera-nodes/{id}/restore:
     post:
       tags: [Devices]
-      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình)"
+      summary: "Khôi phục Camera Node vừa gỡ nhầm, trong 24 giờ (FARM-FR-008) — FARM_OWNER (farm của mình), FARM_TECHNICIAN (nhà được giao)"
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -4240,7 +4241,7 @@ paths:
   /devices/sensor-nodes/{id}/replace:
     post:
       tags: [Devices]
-      summary: "Thay thiết bị hỏng bằng thiết bị mới cùng Zone (FARM-FR-008) — FARM_OWNER (farm của mình)"
+      summary: "Thay thiết bị hỏng bằng thiết bị mới cùng Zone (FARM-FR-008) — FARM_OWNER (farm của mình), FARM_TECHNICIAN (nhà được giao)"
       description: |
         Đăng ký thiết bị mới (cần `secret_key` như onboarding, trạng thái PENDING)
         vào đúng Zone của thiết bị cũ, chép lịch loa/âm lượng, rồi gỡ thiết bị cũ
@@ -4273,10 +4274,11 @@ paths:
   /devices/sensor-nodes/{id}/reassign-zone:
     put:
       tags: [Devices]
-      summary: "Dời thiết bị sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — FARM_OWNER"
+      summary: "Dời thiết bị sang Zone/Farm khác (FARM-FR-007b, Flow 21 nhánh A) — FARM_OWNER, FARM_TECHNICIAN (nhà được giao)"
       description: |
         Farm Owner chỉ dời trong farm của mình: Zone nguồn hoặc đích thuộc farm khác → 403
-        (FARM-FR-007); Administrator → 403 (Report 3 §2.4).
+        (FARM-FR-007). Farm Technician chỉ dời giữa các Zone của nhà được giao: thiết bị hoặc Zone đích
+        thuộc nhà khác → 403, và việc dời được báo cho Farm Owner. Administrator → 403 (Report 3 §2.4).
         Chỉ đổi Zone trong cơ sở dữ liệu rồi publish lại `config` (retained) của Zone mới lên topic
         của thiết bị, thiết bị offline nhận khi kết nối lại; thiết bị không biết farm, house, zone (D3). Kiểm quyền trên cả Zone
         nguồn lẫn Zone đích; cảnh báo còn mở của thiết bị ở Zone cũ được đóng; audit
@@ -4370,7 +4372,7 @@ paths:
   /devices/camera-nodes/{id}/decommission:
     post:
       tags: [Devices]
-      summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — FARM_OWNER (farm của mình)"
+      summary: "Gỡ bỏ Camera Node, giữ lịch sử (FARM-FR-008) — FARM_OWNER (farm của mình), FARM_TECHNICIAN (nhà được giao)"
       description: |
         Cùng quy tắc với `POST /devices/sensor-nodes/{id}/decommission`: không xoá
         document nên dữ liệu cũ tham chiếu `node_id` vẫn truy vấn được, thiết bị

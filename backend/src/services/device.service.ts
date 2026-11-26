@@ -646,7 +646,7 @@ const RETIRED_SUFFIX = '#retired-'
 
 // Cùng điều kiện với restoreDevice
 async function listRestorableDevices(kind: DeviceKind, scope: Record<string, unknown>, user: CurrentUser) {
-  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ chủ nhà yến xem và khôi phục thiết bị đã gỡ')
+  if (user.role !== 'FARM_OWNER' && user.role !== 'FARM_TECHNICIAN') throw ForbiddenError('Chỉ chủ nhà yến và kỹ thuật viên của nhà xem và khôi phục thiết bị đã gỡ')
   const Model = DEVICE_MODELS[kind]
   const removed = await Model.find({
     ...scope,

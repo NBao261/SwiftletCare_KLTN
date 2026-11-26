@@ -361,7 +361,7 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
     expect((await recent(ownerToken).expect(200)).body.data).toEqual([])
   })
 
-  it('removed=recent: camera theo nhà, không trả rtsp_url; ID đã đăng ký lại không hiện; Farm Owner farm khác không thấy; chuyên gia, thợ → 403', async () => {
+  it('removed=recent: camera theo nhà, không trả rtsp_url; ID đã đăng ký lại không hiện; Farm Owner farm khác không thấy; chuyên gia → 403', async () => {
     const { ownerToken, owner, a } = await seed()
     const justNow = new Date()
     await CameraNode.create({
@@ -385,11 +385,9 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
       .set('Authorization', `Bearer ${tokenFor(otherOwner._id, 'FARM_OWNER')}`).expect(200)
     expect(otherList.body.data).toEqual([])
 
-    for (const role of ['DOMAIN_EXPERT', 'FARM_TECHNICIAN'] as const) {
-      const user = await User.create({ email: `${role.toLowerCase()}@test.vn`, password_hash: 'password123', full_name: role, role })
-      await request(app).get('/devices/sensor-nodes?removed=recent').set('Authorization', `Bearer ${tokenFor(user._id, role)}`).expect(403)
-      await request(app).get('/devices/camera-nodes?removed=recent').set('Authorization', `Bearer ${tokenFor(user._id, role)}`).expect(403)
-    }
+    const expert = await User.create({ email: 'domain_expert@test.vn', password_hash: 'password123', full_name: 'DE', role: 'DOMAIN_EXPERT' })
+    await request(app).get('/devices/sensor-nodes?removed=recent').set('Authorization', `Bearer ${tokenFor(expert._id, 'DOMAIN_EXPERT')}`).expect(403)
+    await request(app).get('/devices/camera-nodes?removed=recent').set('Authorization', `Bearer ${tokenFor(expert._id, 'DOMAIN_EXPERT')}`).expect(403)
   })
 
   it('thay thiết bị đang chạy không cần force riêng', async () => {
