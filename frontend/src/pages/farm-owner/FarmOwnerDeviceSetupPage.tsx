@@ -1,7 +1,7 @@
 // Bộ điều khiển 4 bước, camera 3 bước (không cần AP/WiFi)
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Card } from '@/components/ui'
+import { Button, Card } from '@/components/ui'
 import Stepper from '@/components/ui/Stepper'
 import { Step1Location }   from '@/components/features/farm-owner/onboarding/Step1Location'
 import { Step2Validate }   from '@/components/features/farm-owner/onboarding/Step2Validate'
@@ -11,6 +11,7 @@ import type { OnboardingState } from '@/components/features/farm-owner/onboardin
 import { clearSetupProgress, isDeviceSetupState, loadSetupProgress, saveSetupProgress } from '@/components/features/farm-owner/onboarding/deviceSetupState'
 import { DEVICE_LIST_PATH } from '@/components/features/farm-owner/devices/devices.constants'
 import { useAllZones } from '@/hooks/shared/useFarms'
+import { useAuthStore } from '@/stores/authStore'
 
 // SENSOR_NODE: 4 bước; CAMERA_NODE: 3 bước (bỏ AP WiFi)
 const SENSOR_STEPS  = ['Vị trí', 'Xác thực', 'Kết nối Wi-Fi', 'Đợi kết nối']
@@ -27,24 +28,14 @@ const INITIAL_STATE: OnboardingState = {
 export default function FarmOwnerDeviceSetupPage() {
   const navigate = useNavigate()
   const { state } = useLocation()
-  // Mở từ trang Zone: vị trí đã chọn sẵn nên vào thẳng bước xác thực, và làm xong thì quay lại trang đó.
-  // Không có state mà thiết bị đang đăng ký dở (vừa tải lại trang) thì làm tiếp từ bước đã dừng
-  const [initial] = useState(() => {
-    const saved = loadSetupProgress()
-    const preset = isDeviceSetupState(state) ? state : undefined
-    // Tải lại trang giữa chừng: history state vẫn còn, nên chỉ coi là thiết lập mới khi khác thiết lập đang lưu
-    const isSameSetup = saved && (!preset || (saved.location.zoneId === preset.location.zoneId && saved.returnTo === preset.returnTo))
-    if (saved && isSameSetup) {
-      const { step: savedStep, returnTo: savedReturnTo, ...savedData } = saved
-      return { step: savedStep, data: { ...INITIAL_STATE, ...savedData }, returnTo: savedReturnTo }
-    }
-    clearSetupProgress()
-    if (preset) return { step: 1, data: { ...INITIAL_STATE, location: preset.location }, returnTo: preset.returnTo }
-    return { step: 0, data: INITIAL_STATE, returnTo: undefined }
-  })
-  const [step, setStep] = useState(initial.step)
-  const [data, setData] = useState<OnboardingState>(initial.data)
-  const returnTo = initial.returnTo
+  const userId = useAuthStore(authState => authState.user?._id)
+  // Mở từ trang Zone: vị trí đã chọn sẵn nên vào thẳng bước xác thực, và làm xong thì quay lại trang đó
+  const preset = isDeviceSetupState(state) ? state : undefined
+  const [step, setStep] = useState(preset ? 1 : 0)
+  const [data, setData] = useState<OnboardingState>(preset ? { ...INITIAL_STATE, location: preset.location } : INITIAL_STATE)
+  const [returnTo, setReturnTo] = useState(preset?.returnTo)
+  // Thiết bị của chính người này đã đăng ký mà chưa xong (tải lại trang, hay rời đi giữa chừng): hỏi nối lại hay làm mới, không tự nối
+  const [unfinished, setUnfinished] = useState(() => loadSetupProgress(userId))
   const leaveLabel = returnTo ? 'Quay lại Zone' : 'Về danh sách thiết bị'
 
   const patch = (partial: Partial<OnboardingState>) =>
@@ -58,12 +49,27 @@ export default function FarmOwnerDeviceSetupPage() {
 
   // Giữ tiến trình từ lúc thiết bị đã đăng ký (bước 3 và 4 chờ lâu, dễ bấm tải lại)
   useEffect(() => {
-    if (data.deviceDbId) saveSetupProgress({ step, deviceType: data.deviceType, location: data.location, deviceId: data.deviceId, deviceDbId: data.deviceDbId, returnTo })
-  }, [step, data.deviceType, data.location, data.deviceId, data.deviceDbId, returnTo])
+    if (data.deviceDbId && userId) saveSetupProgress({ userId, step, deviceType: data.deviceType, location: data.location, deviceId: data.deviceId, deviceDbId: data.deviceDbId, returnTo })
+  }, [userId, step, data.deviceType, data.location, data.deviceId, data.deviceDbId, returnTo])
 
   function leave() {
     clearSetupProgress()
     navigate(returnTo ?? DEVICE_LIST_PATH)
+  }
+
+  // Nối lại thiết bị đang thiết lập dở ở đúng bước đã dừng
+  function resume() {
+    if (!unfinished) return
+    const { step: savedStep, returnTo: savedReturnTo, userId: _savedUser, ...savedData } = unfinished
+    setStep(savedStep)
+    setData({ ...INITIAL_STATE, ...savedData })
+    setReturnTo(savedReturnTo)
+    setUnfinished(undefined)
+  }
+
+  function discardUnfinished() {
+    clearSetupProgress()
+    setUnfinished(undefined)
   }
 
   // Bắt đầu thiết lập khác khi đang làm dở
@@ -103,6 +109,20 @@ export default function FarmOwnerDeviceSetupPage() {
           </p>
         )}
       </div>
+
+      {unfinished && !data.deviceDbId && (
+        <Card className="!p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-charcoal">
+              Bạn đang thiết lập dở thiết bị <span className="font-semibold">{unfinished.deviceId}</span>: đã đăng ký nhưng chưa xong.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={resume}>Tiếp tục</Button>
+              <Button size="sm" variant="secondary" onClick={discardUnfinished}>Bắt đầu mới</Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Stepper */}
       <Card className="!p-5">

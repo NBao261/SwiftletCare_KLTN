@@ -19,6 +19,8 @@ export function isDeviceSetupState(state: unknown): state is DeviceSetupState {
 
 // Tiến trình giữ lại khi tải lại trang: chỉ từ lúc thiết bị đã đăng ký. Không lưu mã kích hoạt trên nhãn
 export interface SetupProgress {
+  // Người đang thiết lập: người khác đăng nhập trong cùng tab không nhận lại tiến trình này
+  userId: string
   step: number
   deviceType: DeviceType
   location: Partial<FarmHouseZonePickerValue>
@@ -32,7 +34,7 @@ const PROGRESS_KEY = 'swiftletcare.deviceSetupProgress'
 function isProgress(value: unknown): value is SetupProgress {
   if (typeof value !== 'object' || value === null) return false
   const progress = value as Partial<SetupProgress>
-  return typeof progress.step === 'number' && Boolean(progress.deviceDbId) && typeof progress.deviceId === 'string'
+  return typeof progress.userId === 'string' && typeof progress.step === 'number' && Boolean(progress.deviceDbId) && typeof progress.deviceId === 'string'
     && (progress.deviceType === 'SENSOR_NODE' || progress.deviceType === 'CAMERA_NODE') && typeof progress.location === 'object'
 }
 
@@ -45,10 +47,10 @@ export function saveSetupProgress(progress: SetupProgress, storage: Pick<Storage
   }
 }
 
-export function loadSetupProgress(storage: Pick<Storage, 'getItem'> = sessionStorage): SetupProgress | undefined {
+export function loadSetupProgress(userId: string | undefined, storage: Pick<Storage, 'getItem'> = sessionStorage): SetupProgress | undefined {
   try {
     const stored: unknown = JSON.parse(storage.getItem(PROGRESS_KEY) ?? 'null')
-    return isProgress(stored) ? stored : undefined
+    return userId && isProgress(stored) && stored.userId === userId ? stored : undefined
   } catch {
     return undefined
   }

@@ -17,7 +17,7 @@ describe('vị trí truyền từ trang Zone sang thiết lập thiết bị', (
 
 describe('giữ tiến trình thiết lập khi tải lại trang', () => {
   const progress: SetupProgress = {
-    step: 2, deviceType: 'SENSOR_NODE', location: { farmId: 'f1', houseId: 'h1', zoneId: 'z1' },
+    userId: 'u1', step: 2, deviceType: 'SENSOR_NODE', location: { farmId: 'f1', houseId: 'h1', zoneId: 'z1' },
     deviceId: 'node_100', deviceDbId: 'db1', returnTo: '/farms/f1/houses/h1/zones/z1',
   }
 
@@ -33,19 +33,26 @@ describe('giữ tiến trình thiết lập khi tải lại trang', () => {
   it('lưu rồi đọc lại đúng, xoá thì mất', () => {
     const storage = memoryStorage()
     saveSetupProgress(progress, storage)
-    expect(loadSetupProgress(storage)).toEqual(progress)
+    expect(loadSetupProgress('u1', storage)).toEqual(progress)
     clearSetupProgress(storage)
-    expect(loadSetupProgress(storage)).toBeUndefined()
+    expect(loadSetupProgress('u1', storage)).toBeUndefined()
   })
 
   it('không đọc dữ liệu hỏng, thiếu thiết bị đã đăng ký, hoặc kho bị chặn', () => {
     const storage = memoryStorage()
     storage.setItem('swiftletcare.deviceSetupProgress', '{không phải json')
-    expect(loadSetupProgress(storage)).toBeUndefined()
+    expect(loadSetupProgress('u1', storage)).toBeUndefined()
     saveSetupProgress({ ...progress, deviceDbId: '' }, storage)
-    expect(loadSetupProgress(storage)).toBeUndefined()
+    expect(loadSetupProgress('u1', storage)).toBeUndefined()
     const blocked = { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } }
-    expect(loadSetupProgress(blocked)).toBeUndefined()
+    expect(loadSetupProgress('u1', blocked)).toBeUndefined()
     expect(() => saveSetupProgress(progress, blocked)).not.toThrow()
+  })
+
+  it('không trả tiến trình của người dùng khác trong cùng tab, hay khi chưa biết người dùng', () => {
+    const storage = memoryStorage()
+    saveSetupProgress(progress, storage)
+    expect(loadSetupProgress('u2', storage)).toBeUndefined()
+    expect(loadSetupProgress(undefined, storage)).toBeUndefined()
   })
 })
