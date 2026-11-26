@@ -1,6 +1,6 @@
 // Bộ điều khiển 4 bước, camera 3 bước (không cần AP/WiFi)
 import { useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui'
 import Stepper from '@/components/ui/Stepper'
 import { Step1Location }   from '@/components/features/farm-owner/onboarding/Step1Location'
@@ -8,6 +8,7 @@ import { Step2Validate }   from '@/components/features/farm-owner/onboarding/Ste
 import { Step3ConnectAP }  from '@/components/features/farm-owner/onboarding/Step3ConnectAP'
 import { Step5WaitOnline } from '@/components/features/farm-owner/onboarding/Step5WaitOnline'
 import type { OnboardingState } from '@/components/features/farm-owner/onboarding/onboardingTypes'
+import { isDeviceSetupState } from '@/components/features/farm-owner/onboarding/deviceSetupState'
 
 // SENSOR_NODE: 4 bước; CAMERA_NODE: 3 bước (bỏ AP WiFi)
 const SENSOR_STEPS  = ['Vị trí', 'Xác thực', 'Kết nối Wi-Fi', 'Đợi kết nối']
@@ -23,8 +24,11 @@ const INITIAL_STATE: OnboardingState = {
 
 export default function FarmOwnerDeviceSetupPage() {
   const navigate = useNavigate()
-  const [step, setStep] = useState(0)
-  const [data, setData] = useState<OnboardingState>(INITIAL_STATE)
+  // Mở từ trang Zone: vị trí đã chọn sẵn nên vào thẳng bước xác thực
+  const { state } = useLocation()
+  const presetLocation = isDeviceSetupState(state) ? state.location : undefined
+  const [step, setStep] = useState(presetLocation ? 1 : 0)
+  const [data, setData] = useState<OnboardingState>(presetLocation ? { ...INITIAL_STATE, location: presetLocation } : INITIAL_STATE)
 
   const patch = (partial: Partial<OnboardingState>) =>
     setData(prev => ({ ...prev, ...partial }))
