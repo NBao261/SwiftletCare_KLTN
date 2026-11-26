@@ -66,11 +66,9 @@ test('B2 — kiểm chứng cảnh báo suy luận: bác bỏ thiếu lý do b�
   const [noise] = await owner.data<Alert[]>(await owner.get(`/alerts?farmId=${farmId}&type=NOISE_ANOMALY`));
   expect(noise, 'cảnh báo ồn của DS-07 — chạy `npm run seed:demo`').toBeTruthy();
 
-  const crashes = await openAsExpert(page, '/domain-expert/alert-verdicts', { farmId });
-  await expect(page.getByRole('heading', { name: 'Danh sách cảnh báo' })).toBeVisible();
-
-  // Cảnh báo đã có kết luận ở lần chạy trước thì nút là "Chi tiết"; ngăn kéo vẫn cho ghi lại kết luận
-  await page.locator(`#btn-verdict-${noise._id}, #btn-detail-${noise._id}`).click();
+  // Mở thẳng ngăn kéo của cảnh báo bằng ?alertId= (như link từ thông báo): cảnh báo đã có kết luận ở lần chạy trước vẫn mở được để ghi lại
+  const crashes = await openAsExpert(page, `/domain-expert/alert-verdicts?alertId=${noise._id}`, { farmId });
+  await expect(page.getByRole('tab', { name: /Chờ kiểm chứng/ })).toBeVisible();
 
   // Bác bỏ phải có lý do: thiếu ghi chú thì nút lưu khoá; ngăn kéo điền lại ghi chú cũ nên xoá trước khi kiểm
   await page.getByRole('button', { name: 'Bác bỏ - Báo động giả' }).click();
@@ -84,8 +82,8 @@ test('B2 — kiểm chứng cảnh báo suy luận: bác bỏ thiếu lý do b�
   );
   await page.getByRole('button', { name: 'Lưu kết luận' }).click();
   expect((await saving).ok()).toBe(true);
-  // Cảnh báo đã có kết luận: ô thao tác của dòng đó đổi từ "Kiểm chứng" sang "Chi tiết"
-  await expect(page.locator(`#btn-detail-${noise._id}`)).toBeVisible();
+  // Cảnh báo đã có kết luận: dòng đó không còn nút "Kiểm chứng"
+  await expect(page.locator(`#btn-verdict-${noise._id}`)).toHaveCount(0);
 
   const saved = await owner.data<Alert>(await owner.get(`/alerts/${noise._id}`));
   expect(saved.expert_verdict?.result).toBe('CONFIRMED');
