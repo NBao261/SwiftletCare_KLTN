@@ -9,8 +9,11 @@ import NotificationPopover from '@/components/common/NotificationPopover'
 import ProfilePopover from '@/components/common/ProfilePopover'
 import LanguageToggle from '@/components/common/LanguageToggle'
 
-// Trang không nằm trên sidebar mà mở từ menu avatar (SH-03): Cài đặt và Quyền riêng tư
-const AVATAR_MENU_PAGES: Pick<MenuItem, 'label' | 'path' | 'tabs'>[] = [{ label: 'Cài đặt', path: '/settings' }]
+// Trang không nằm trên sidebar: Cài đặt (và Quyền riêng tư) mở từ menu avatar, Thông báo mở từ chuông
+const AVATAR_MENU_PAGES: Pick<MenuItem, 'label' | 'path' | 'tabs'>[] = [
+  { label: 'Cài đặt', path: '/settings' },
+  { label: 'Thông báo', path: '/notifications' },
+]
 
 // Tên trang + base path theo route hiện tại, tra trong chính menu của role đang đăng nhập.
 function usePageTitle(menuSections: MenuSection[]): { label: string; to: string } {

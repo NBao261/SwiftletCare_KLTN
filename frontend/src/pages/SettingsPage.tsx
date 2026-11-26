@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   BellIcon, EnvelopeIcon, MoonIcon, PhoneIcon, ShieldCheckIcon, ShieldIcon,
   TelegramLogoIcon, TrashIcon, type Icon,
@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { usePermission } from '@/hooks/common/usePermission'
 import { Avatar, Button, Input, TimePicker, Toggle } from '@/components/ui'
+import StatusTabs from '@/components/common/StatusTabs'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
 import { formatDate, getApiErrorMessage } from '@/lib/helpers'
@@ -26,50 +27,118 @@ import {
 } from '@/validations/common/notificationChannels.validation'
 import type { SeverityLevel } from '@/types'
 
+// Ba nhóm: Tài khoản (hồ sơ, mật khẩu), Thông báo (kênh nhận), Quyền riêng tư và dữ liệu (chính sách, xoá tài khoản)
+const TABS = ['account', 'notifications', 'privacy'] as const
+type SettingsTab = typeof TABS[number]
+
+const TAB_LABEL: Record<SettingsTab, string> = {
+  account: 'Tài khoản',
+  notifications: 'Thông báo',
+  privacy: 'Quyền riêng tư và dữ liệu',
+}
+
 // Cài đặt theo role (todo-ui-layout-1120)
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
   const isAlertRecipient = usePermission('FARM_OWNER', 'FARM_TECHNICIAN')
   const isFarmOwner = usePermission('FARM_OWNER')
-  const isExpert = usePermission('DOMAIN_EXPERT')
+  // Tab nằm trên URL (?tab=notifications) để chuông và menu mở thẳng đúng nhóm
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab: SettingsTab = TABS.find(value => value === searchParams.get('tab')) ?? 'account'
+  const setTab = (value: SettingsTab) => setSearchParams(previous => {
+    const next = new URLSearchParams(previous)
+    if (value === 'account') next.delete('tab')
+    else next.set('tab', value)
+    return next
+  }, { replace: true })
 
   if (!user) return null
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-4">
-      {/* Hồ sơ: chỉ xem */}
-      <section className="flex flex-wrap items-center gap-x-8 gap-y-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <Avatar name={user.full_name} size="lg" />
-          <div className="min-w-0">
-            <p className="truncate text-h2 text-charcoal">{user.full_name}</p>
-            <span className="mt-1 inline-block rounded-full bg-accent-300 px-2.5 py-0.5 text-small font-semibold text-charcoal">
-              {ROLE_LABEL[user.role] ?? user.role}
-            </span>
-          </div>
-        </div>
-
-        <dl className="flex flex-wrap gap-x-8 gap-y-3">
-          <InfoItem icon={EnvelopeIcon} label="Email" value={user.email} />
-          <InfoItem icon={PhoneIcon} label="Số điện thoại" value={user.phone || NO_VALUE} />
-        </dl>
-      </section>
-
-      {isAlertRecipient && <AlertChannelsCard />}
-      {isFarmOwner && <QuietHoursCard />}
-      {isAlertRecipient && <TelegramCard />}
-      {isExpert && (
-        <SettingsCard icon={BellIcon} title="Thông báo" subtitle="Thông báo chuyên môn hiện trong hộp thông báo của ứng dụng" />
-      )}
-      <SecurityCard />
-      <SettingsCard
-        icon={ShieldIcon}
-        title="Quyền riêng tư"
-        subtitle="Cách SwiftletCare thu thập và dùng dữ liệu của bạn"
-        action={<Link to="/settings/privacy" className="text-body font-semibold text-charcoal underline underline-offset-4">{t('Xem chính sách')}</Link>}
+    <div className="flex w-full max-w-4xl flex-col gap-5">
+      <StatusTabs
+        ariaLabel={t('Nhóm cài đặt')}
+        value={tab}
+        onChange={setTab}
+        tabs={TABS.map(id => ({ id, label: t(TAB_LABEL[id]) }))}
       />
-      <DeletionCard />
+
+      {tab === 'account' && (
+        <>
+          <ProfileCard />
+          <SecurityCard />
+        </>
+      )}
+
+      {tab === 'notifications' && (
+        isAlertRecipient ? (
+          <>
+            <AlertChannelsCard />
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {isFarmOwner && <QuietHoursCard />}
+              <TelegramCard />
+            </div>
+          </>
+        ) : <InAppOnlyCard />
+      )}
+
+      {tab === 'privacy' && (
+        <>
+          <PolicyCard />
+          <DeletionCard />
+        </>
+      )}
     </div>
+  )
+}
+
+// Hồ sơ: chỉ xem
+function ProfileCard() {
+  const user = useAuthStore(s => s.user)
+  if (!user) return null
+  return (
+    <section className="flex flex-wrap items-center gap-x-8 gap-y-5 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-card">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <Avatar name={user.full_name} size="lg" />
+        <div className="min-w-0">
+          <p className="truncate text-h2 text-charcoal">{user.full_name}</p>
+          <span className="mt-1 inline-block rounded-full bg-accent-300 px-2.5 py-0.5 text-small font-semibold text-charcoal">
+            {ROLE_LABEL[user.role] ?? user.role}
+          </span>
+        </div>
+      </div>
+
+      <dl className="flex flex-wrap gap-x-8 gap-y-3">
+        <InfoItem icon={EnvelopeIcon} label="Email" value={user.email} />
+        <InfoItem icon={PhoneIcon} label="Số điện thoại" value={user.phone || NO_VALUE} />
+      </dl>
+    </section>
+  )
+}
+
+// Vai trò không nhận cảnh báo ra ngoài ứng dụng (Chuyên gia, Quản trị viên): thông báo chỉ nằm trong hộp thông báo
+function InAppOnlyCard() {
+  const navigate = useNavigate()
+  return (
+    <SettingsCard
+      icon={BellIcon}
+      title="Thông báo"
+      subtitle="Thông báo của bạn hiện trong hộp thông báo của ứng dụng"
+      action={<Button variant="secondary" size="sm" onClick={() => navigate('/notifications')}>{t('Mở hộp thông báo')}</Button>}
+    />
+  )
+}
+
+// Chính sách quyền riêng tư: nút mở trang chính sách trong khung ứng dụng
+function PolicyCard() {
+  const navigate = useNavigate()
+  return (
+    <SettingsCard
+      icon={ShieldIcon}
+      title="Chính sách quyền riêng tư"
+      subtitle="Cách SwiftletCare thu thập và dùng dữ liệu của bạn"
+      action={<Button variant="secondary" size="sm" onClick={() => navigate('/settings/privacy')}>{t('Đọc chính sách')}</Button>}
+    />
   )
 }
 
