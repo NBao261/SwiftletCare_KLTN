@@ -13,6 +13,8 @@ import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { applyGeneralPush, buildBySeverityPayload, getGeneralChannels, getLevelChannels } from '@/utils/notificationChannel.utils'
+import { canPerform } from '@/utils/permission.utils'
+import { formatTimeInput, getTimeInputError } from '@/utils/timeInput.utils'
 import { isValidClockTime } from '@/utils/validation.utils'
 import { t } from '@/utils/i18n.utils'
 
@@ -58,20 +60,82 @@ function ChannelRow({
   )
 }
 
+// Giờ yên lặng (ALERT-FR-006): trong khoảng này chỉ cảnh báo nghiêm trọng được gửi ra ngoài ứng dụng
+function QuietHoursSection() {
+  const palette = usePalette()
+  const preferences = useAuthStore(state => state.user?.notification_preferences)
+  const updatePreferences = useUpdateNotificationPreferences()
+  const [quietStart, setQuietStart] = useState(preferences?.quiet_hours.start ?? '')
+  const [quietEnd, setQuietEnd] = useState(preferences?.quiet_hours.end ?? '')
+  const isQuietValid = isValidClockTime(quietStart) && isValidClockTime(quietEnd)
+  const isQuietChanged =
+    quietStart.trim() !== preferences?.quiet_hours.start || quietEnd.trim() !== preferences?.quiet_hours.end
+  // Báo ngay khi giờ, phút đã gõ chắc chắn sai (25:00, 07:70); giờ yên lặng được vắt qua nửa đêm (22:00–06:00)
+  const startError = getTimeInputError(quietStart)
+  const endError = getTimeInputError(quietEnd)
+
+  return (
+    <View style={[styles.section, { borderTopColor: palette.divider }]}>
+      <Text variant="body" weight="semiBold">
+        {t('Giờ yên lặng')}
+      </Text>
+      <Text variant="small" color={palette.textSecondary}>
+        {t('Trong khoảng này chỉ cảnh báo nghiêm trọng được gửi; mọi cảnh báo vẫn có trong danh sách.')}
+      </Text>
+      <View style={styles.row}>
+        <View style={styles.flex}>
+          <SettingsInput
+            value={quietStart}
+            onChangeText={value => setQuietStart(formatTimeInput(value))}
+            label={t('Bắt đầu')}
+            placeholder="22:00"
+            align="left"
+            keyboardType="number-pad"
+            maxLength={5}
+            hasError={startError !== null}
+          />
+        </View>
+        <Text variant="body">–</Text>
+        <View style={styles.flex}>
+          <SettingsInput
+            value={quietEnd}
+            onChangeText={value => setQuietEnd(formatTimeInput(value))}
+            label={t('Kết thúc')}
+            placeholder="06:00"
+            align="left"
+            keyboardType="number-pad"
+            maxLength={5}
+            hasError={endError !== null}
+          />
+        </View>
+        <Button
+          label={t('Lưu')}
+          size="md"
+          onPress={() =>
+            updatePreferences.mutate({ quiet_hours: { start: quietStart.trim(), end: quietEnd.trim() } })
+          }
+          disabled={!isQuietValid || !isQuietChanged}
+          loading={updatePreferences.isPending}
+        />
+      </View>
+      <FormMessage
+        message={startError ?? endError ?? (updatePreferences.error ? getSettingsErrorMessage(updatePreferences.error) : null)}
+      />
+    </View>
+  )
+}
+
 // Cài đặt thông báo ngay từ tab Cảnh báo (đặc tả §7): kênh push, Telegram chung và theo mức cảnh báo (ALERT-FR-005, by_severity
-// như web), giờ yên lặng (ALERT-FR-006), liên kết bot Telegram (ALERT-FR-013)
+// như web), giờ yên lặng của chủ trại (ALERT-FR-006), liên kết bot Telegram (ALERT-FR-013)
 export function NotificationSettingsSheet({ visible, onClose }: NotificationSettingsSheetProps) {
   const palette = usePalette()
   const user = useAuthStore(state => state.user)
   const updatePreferences = useUpdateNotificationPreferences()
   const { link, unlink } = useTelegramLink()
   const preferences = user?.notification_preferences
-  const [quietStart, setQuietStart] = useState(preferences?.quiet_hours.start ?? '')
-  const [quietEnd, setQuietEnd] = useState(preferences?.quiet_hours.end ?? '')
-  const isQuietValid = isValidClockTime(quietStart) && isValidClockTime(quietEnd)
-  const isQuietChanged =
-    quietStart.trim() !== preferences?.quiet_hours.start || quietEnd.trim() !== preferences?.quiet_hours.end
   const isLinked = user?.telegram_linked
+  // Giờ yên lặng chỉ chủ trại đặt (ALERT-FR-006, backend 403 với role khác); kỹ thuật viên chỉ chọn kênh
+  const canEditQuietHours = canPerform(user, 'editQuietHours')
 
   const confirmUnlink = () =>
     NativeAlert.alert(t('Huỷ liên kết Telegram?'), t('Bạn sẽ không nhận cảnh báo qua Telegram nữa.'), [
@@ -110,48 +174,7 @@ export function NotificationSettingsSheet({ visible, onClose }: NotificationSett
         onChange={next => updatePreferences.mutate({ telegram: next })}
         disabled={updatePreferences.isPending}
       />
-      <View style={[styles.section, { borderTopColor: palette.divider }]}>
-        <Text variant="body" weight="semiBold">
-          {t('Giờ yên lặng')}
-        </Text>
-        <Text variant="small" color={palette.textSecondary}>
-          {t('Trong khoảng này chỉ cảnh báo nghiêm trọng được gửi; mọi cảnh báo vẫn có trong danh sách.')}
-        </Text>
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <SettingsInput
-              value={quietStart}
-              onChangeText={setQuietStart}
-              label={t('Bắt đầu')}
-              placeholder="22:00"
-              align="left"
-              keyboardType="numbers-and-punctuation"
-              hasError={quietStart !== '' && !isValidClockTime(quietStart)}
-            />
-          </View>
-          <Text variant="body">–</Text>
-          <View style={styles.flex}>
-            <SettingsInput
-              value={quietEnd}
-              onChangeText={setQuietEnd}
-              label={t('Kết thúc')}
-              placeholder="06:00"
-              align="left"
-              keyboardType="numbers-and-punctuation"
-              hasError={quietEnd !== '' && !isValidClockTime(quietEnd)}
-            />
-          </View>
-          <Button
-            label={t('Lưu')}
-            size="md"
-            onPress={() =>
-              updatePreferences.mutate({ quiet_hours: { start: quietStart.trim(), end: quietEnd.trim() } })
-            }
-            disabled={!isQuietValid || !isQuietChanged}
-            loading={updatePreferences.isPending}
-          />
-        </View>
-      </View>
+      {canEditQuietHours && <QuietHoursSection />}
       <FormMessage message={updatePreferences.error ? getSettingsErrorMessage(updatePreferences.error) : null} />
       <View style={[styles.section, { borderTopColor: palette.divider }]}>
         <Text variant="body" weight="semiBold">
