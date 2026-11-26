@@ -5,6 +5,7 @@ import { WifiSlashIcon } from '@phosphor-icons/react';
 import ScopeFilter from '@/components/common/ScopeFilter';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import RelayOverrideHistoryCard from '@/components/features/farm-owner/dashboard/RelayOverrideHistoryCard';
+import { OVERRIDE_HISTORY_LIMIT } from '@/components/features/farm-owner/analytics/analytics.constants';
 import ScadaNodeCard from '@/components/features/farm-owner/dashboard/ScadaNodeCard';
 import { withLiveRelays } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import {
@@ -18,8 +19,6 @@ import { useZoneRelayOverrides } from '@/hooks/farm-owner/useAnalytics';
 import { useLiveZoneTelemetry } from '@/hooks/farm-owner/useLiveZoneTelemetry';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useSensorNodes } from '@/hooks/shared/useDevices';
-
-const HISTORY_LIMIT = 8;
 
 // Điều khiển tay: mỗi Zone một thẻ, bật hoặc tắt rơ-le có thời hạn rồi tự về tự động
 export default function FarmOwnerScadaPage(): JSX.Element {
@@ -45,7 +44,7 @@ export default function FarmOwnerScadaPage(): JSX.Element {
       .sort((left, right) => (order.get(left.zone_id) ?? 0) - (order.get(right.zone_id) ?? 0));
   }, [allNodes, zoneIds, live]);
   const nodeIds = useMemo(() => nodes.map(node => node._id), [nodes]);
-  const history = useZoneRelayOverrides(nodeIds, HISTORY_LIMIT);
+  const history = useZoneRelayOverrides(nodeIds, OVERRIDE_HISTORY_LIMIT);
 
   // Nhãn thời hạn: dưới 60 phút ghi phút, còn lại ghi giờ
   const durationLabel = (minutes: number): string => (minutes < 60 ? t('scada.minutes', { n: minutes }) : t('scada.hours', { n: minutes / 60 }));
