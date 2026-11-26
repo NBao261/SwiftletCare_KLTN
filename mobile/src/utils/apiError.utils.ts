@@ -136,3 +136,20 @@ export function getDeviceRestartErrorMessage(error: unknown): string {
     403: t('Chỉ chủ trại hoặc kỹ thuật viên được giao nhà này mới khởi động lại được'),
   })
 }
+
+// Câu báo lỗi khi sửa hoặc xoá nhà, khu vực (FARM-FR-002): 409 phân biệt trùng tên với còn thiết bị đang dùng theo mã lỗi
+export function getStructureErrorMessage(error: unknown, target: 'house' | 'zone'): string {
+  const { code } = readApiError(error)
+  if (code === 'HAS_ACTIVE_DEVICES') {
+    return target === 'house'
+      ? t('Nhà còn thiết bị đang dùng. Gỡ các thiết bị trước khi xoá')
+      : t('Khu vực còn bộ điều khiển đang dùng. Gỡ bộ điều khiển trước khi xoá')
+  }
+  return getSettingsErrorMessage(error, {
+    409: target === 'house' ? t('Trang trại đã có nhà tên này') : t('Nhà đã có khu vực tên này'),
+    400:
+      target === 'house'
+        ? t('Số tầng không được thấp hơn tầng cao nhất đang có khu vực')
+        : t('Tầng vượt quá số tầng của nhà'),
+  })
+}

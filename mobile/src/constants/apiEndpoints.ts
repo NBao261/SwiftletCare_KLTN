@@ -29,6 +29,8 @@ export const ENDPOINTS = {
   FARM_INVITATIONS: (farmId: string) => `/farms/${farmId}/invitations`,
   // Tổng quan farm (ANALYTICS-FR-015): Farm Owner, Domain Expert
   FARM_OVERVIEW: (farmId: string) => `/farms/${farmId}/overview`,
+  // Sửa (PUT) hoặc xoá mềm (DELETE) một nhà; Zone dùng ZONE_DETAIL (FARM-FR-002): chỉ Farm Owner
+  HOUSE_DETAIL: (houseId: string) => `/farms/houses/${houseId}`,
   HOUSE_ZONES: (houseId: string) => `/farms/houses/${houseId}/zones`,
   ZONE_THRESHOLDS: (zoneId: string) => `/farms/zones/${zoneId}/thresholds`,
   ZONE_THRESHOLDS_RESET: (zoneId: string) => `/farms/zones/${zoneId}/thresholds/reset`,
@@ -69,6 +71,8 @@ export const ENDPOINTS = {
   CAMERA_STREAM_TOKEN: (cameraId: string) => `/devices/camera-nodes/${cameraId}/stream-token`,
   // Vẽ vòng đếm của camera (VISION-FR-018): Domain Expert, Farm Technician nhà được giao, Farm Owner khi farm chưa có chuyên gia
   CAMERA_COUNTING_RING: (cameraId: string) => `/devices/camera-nodes/${cameraId}/counting-ring`,
+  // Địa chỉ camera IP của camera đếm chim và tình trạng camera (FARM-FR-004b): chỉ Farm Owner, không bao giờ trả mật khẩu
+  CAMERA_SOURCE: (cameraId: string) => `/devices/camera-nodes/${cameraId}/source`,
 
   // Dữ liệu cảm biến (ENV-FR-*)
   TELEMETRY_LATEST: (zoneId: string) => `/telemetry/zones/${zoneId}/latest`,
@@ -149,6 +153,8 @@ export const ENDPOINTS = {
   HARVEST_DETAIL: (harvestId: string) => `/harvests/${harvestId}`,
   // Chủ trại xác nhận lô DRAFT của kỹ thuật viên (HARVEST-FR-006)
   HARVEST_CONFIRM: (harvestId: string) => `/harvests/${harvestId}/confirm`,
+  // Một ảnh của lô (HARVEST-FR-001): multipart trường photo, ảnh mới thay ảnh cũ
+  HARVEST_PHOTO: (harvestId: string) => `/harvests/${harvestId}/photo`,
   // Chu kỳ thu hoạch của zone (HARVEST-FR-007): đọc như lô thu hoạch
   HARVEST_CYCLES: '/harvests/cycles',
 

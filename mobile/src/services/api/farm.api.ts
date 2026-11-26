@@ -23,6 +23,8 @@ import type {
   WeatherRulesView,
   Thresholds,
   UpdateFarmPayload,
+  UpdateHousePayload,
+  UpdateZonePayload,
   Zone,
 } from '@/types'
 
@@ -58,6 +60,15 @@ export const farmApi = {
 
   createZone: (houseId: string, payload: CreateZonePayload) =>
     apiClient.post<ApiResponse<Zone>>(ENDPOINTS.HOUSE_ZONES(houseId), payload),
+
+  // Sửa, xoá mềm nhà và zone (FARM-FR-002): chỉ Farm Owner. Tên trùng 409 DUPLICATE_NAME, số tầng thấp hơn tầng của zone 400,
+  // còn thiết bị đang dùng thì xoá bị 409 HAS_ACTIVE_DEVICES
+  updateHouse: (houseId: string, payload: UpdateHousePayload) =>
+    apiClient.put<ApiResponse<House>>(ENDPOINTS.HOUSE_DETAIL(houseId), payload),
+  deleteHouse: (houseId: string) => apiClient.delete<ApiResponse<null>>(ENDPOINTS.HOUSE_DETAIL(houseId)),
+  updateZone: (zoneId: string, payload: UpdateZonePayload) =>
+    apiClient.put<ApiResponse<Zone>>(ENDPOINTS.ZONE_DETAIL(zoneId), payload),
+  deleteZone: (zoneId: string) => apiClient.delete<ApiResponse<null>>(ENDPOINTS.ZONE_DETAIL(zoneId)),
 
   // Ngưỡng của Zone (ENV-FR-006); backend kiểm min < max và khoảng đo, sai thì 400
   updateThresholds: (zoneId: string, payload: Partial<Thresholds>) =>

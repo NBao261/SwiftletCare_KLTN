@@ -1,13 +1,6 @@
 import { useRef, useState } from 'react'
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-  type LayoutChangeEvent,
-  type ScrollViewInstance,
-} from 'react-native'
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native'
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
@@ -19,6 +12,7 @@ import { DetectionTuningSection } from '@/components/farm/settings/DetectionTuni
 import { DeviceListSection } from '@/components/farm/settings/DeviceListSection'
 import { FuzzyTuningSection } from '@/components/farm/settings/FuzzyTuningSection'
 import { HouseInfoSection } from '@/components/farm/settings/HouseInfoSection'
+import { HouseLocationSection } from '@/components/farm/settings/HouseLocationSection'
 import { CountingScheduleSection } from '@/components/farm/settings/CountingScheduleSection'
 import { HealthLevelsSection } from '@/components/farm/settings/HealthLevelsSection'
 import { HouseStageSection } from '@/components/farm/settings/HouseStageSection'
@@ -36,6 +30,7 @@ import { useCameraNodes } from '@/hooks/device/useCameraNodes'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
 import { useFarmHasExpert } from '@/hooks/farm/useFarmHasExpert'
 import { useAllHouses } from '@/hooks/farm/useAllHouses'
+import { useFarms } from '@/hooks/farm/useFarms'
 import { useCreateZone } from '@/hooks/farm/useCreateZone'
 import { useHouseZones } from '@/hooks/farm/useHouseZones'
 import { useSingleSectionEdit } from '@/hooks/farm/useSingleSectionEdit'
@@ -72,6 +67,9 @@ export default function HouseSettingsScreen() {
   const user = useAuthStore(state => state.user)
   const housesQuery = useAllHouses()
   const house = housesQuery.houses.find(item => item._id === houseId) ?? null
+  // Nhà dùng toạ độ của trang trại chứa nó (backend chưa có toạ độ riêng của nhà)
+  const farmsQuery = useFarms()
+  const farmCoordinates = (farmsQuery.data?.data ?? []).find(item => item._id === house?.farm_id)?.coordinates ?? null
   // Mục BR-22 (tham số phát hiện, lịch đếm, luật thời tiết…): chủ trại chỉ sửa khi farm chưa có chuyên gia
   const hasExpert = useFarmHasExpert(house?.farm_id ?? '')
   // Mở từ nút ⋮ "Chỉnh sửa" ở chi tiết nhà: mục đó sổ sẵn, có quyền thì mở sẵn chế độ sửa
@@ -87,7 +85,7 @@ export default function HouseSettingsScreen() {
         }
       : null,
   )
-  const scrollRef = useRef<ScrollViewInstance>(null)
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null)
   // Vị trí của mục cần mở trong vùng cuộn: mục theo tầng nằm trong khối tầng nên cộng vị trí khối
   const focusLayout = useRef({ groupY: 0, sectionY: null as number | null, isUserScrolled: false })
   const toast = useToastMessage()
@@ -190,7 +188,17 @@ export default function HouseSettingsScreen() {
           scrollToTarget()
         }}
       >
-        <ZoneInfoSection zone={zone} editor={editor} />
+        <ZoneInfoSection
+          zone={zone}
+          houseFloors={house.floors}
+          otherZoneNames={zones.flatMap(item => (item._id === zone._id ? [] : [item.name]))}
+          editor={editor}
+          onSaved={toast.show}
+          onDeleted={message => {
+            setSelectedZoneId(null)
+            toast.show(message)
+          }}
+        />
         <View onLayout={event => handleSectionLayout(getSettingsSectionId('thresholds', zone._id), event)}>
           <ThresholdSection zone={zone} farmId={house.farm_id} editor={editor} onSaved={toast.show} />
         </View>
@@ -237,9 +245,9 @@ export default function HouseSettingsScreen() {
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <View key={language} style={styles.screen}>
         <AppHeader title={t('Cài đặt nhà')} onBack={goBack} />
-        <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView
+          <KeyboardAwareScrollView
             ref={scrollRef}
+            bottomOffset={Spacing.xl}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             onScrollBeginDrag={() => {
@@ -250,10 +258,21 @@ export default function HouseSettingsScreen() {
             <Text variant="small" weight="semiBold" color={palette.textSecondary} style={styles.groupLabel}>
               {house.name}
             </Text>
-            <HouseInfoSection house={house} zones={zones} editor={editor} />
+            <HouseInfoSection
+              house={house}
+              zones={zones}
+              otherHouseNames={housesQuery.houses.flatMap(item =>
+                item.farm_id === house.farm_id && item._id !== house._id ? [item.name] : [],
+              )}
+              editor={editor}
+              onSaved={toast.show}
+              // Nhà đã xoá: trang cài đặt không còn gì để xem, về danh sách nhà của tab Trang trại
+              onDeleted={() => router.dismissTo('/(tabs)/farms')}
+            />
             <View onLayout={event => handleSectionLayout(getSettingsSectionId('stage'), event)}>
               <HouseStageSection house={house} editor={editor} onSaved={toast.show} />
             </View>
+            <HouseLocationSection farmCoordinates={farmCoordinates} editor={editor} />
             <DeviceListSection
               id="cameras"
               kind="camera"
@@ -293,8 +312,7 @@ export default function HouseSettingsScreen() {
               />
             )}
             {renderZoneSections()}
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
 
         <AddDeviceSheet
           key={`device-${sheetKey}`}
