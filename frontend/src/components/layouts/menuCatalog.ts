@@ -91,11 +91,10 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
   ],
 }
 
-// readOnly: nhóm chỉ để xem của vai trò này, thu gọn được và ghi rõ "(chỉ đọc)"
+// readOnly: nhóm chỉ để xem của vai trò này, ghi rõ "(chỉ đọc)"; mọi nhóm đều thu gọn được như nhau
 interface SectionPlan {
   group: MenuGroup
   readOnly?: boolean
-  collapsible?: boolean
 }
 
 // Nhóm việc chính của vai trò đứng đầu; dock điện thoại là 4 trang vai trò đó dùng nhiều nhất
@@ -105,13 +104,12 @@ const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[] }> = {
     dock: ['/system/health', '/devices', '/alerts', '/users'],
   },
   FARM_OWNER: {
-    // Chuyên môn ít dùng hằng ngày (farm có chuyên gia thì chỉ xem, nhắc) nên thu gọn được
-    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise', collapsible: true }],
+    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise' }],
     dock: ['/dashboard', '/alerts', '/vision', '/health'],
   },
   FARM_TECHNICIAN: {
-    // Vòng đếm thợ vẽ được nên nhóm Chuyên môn không ghi "chỉ đọc", chỉ thu gọn
-    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise', collapsible: true }],
+    // Vòng đếm thợ vẽ được nên nhóm Chuyên môn không ghi "chỉ đọc"
+    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise' }],
     dock: ['/alerts', '/work-orders', '/dashboard', '/health'],
   },
   DOMAIN_EXPERT: {
@@ -131,9 +129,9 @@ function itemFor(role: Role, item: MenuItem): MenuItem | null {
 export function roleMenu(role: Role): { sections: MenuSection[]; dock: MenuItem[] } {
   const plan = ROLE_PLAN[role]
   const sections = plan.sections
-    .map(({ group, readOnly, collapsible }) => ({
+    .map(({ group, readOnly }) => ({
       title: readOnly ? `${GROUP_TITLE[group]} (chỉ đọc)` : GROUP_TITLE[group],
-      collapsible: readOnly || collapsible,
+      collapsible: true,
       items: CATALOG[group].map(item => itemFor(role, item)).filter((item): item is MenuItem => item !== null),
     }))
     .filter(section => section.items.length > 0)
