@@ -2,6 +2,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import { User } from '@/models/user.model'
 import { createInAppNotification, findRecipients } from '@/services/notification.service'
 import { assertFarmAccess } from '@/utils/farmAccess.util'
+import { PARAMETER_LABEL, formatVnDateTime, type ParameterField } from '@/utils/displayLabel.util'
 import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
@@ -21,16 +22,26 @@ export const BR22_ACTIONS: ExpertDecisionAction[] = [
   'HEALTH_LEVELS_UPDATED', 'WEATHER_RULES_UPDATED', 'COUNTING_SCHEDULE_UPDATED',
 ]
 
-const VN_TIME = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })
+const VN_NUMBER = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 })
 
-// Chỉ các khoá đổi giá trị
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return 'chưa đặt'
+  if (typeof value === 'boolean') return value ? 'bật' : 'tắt'
+  if (typeof value === 'number') return VN_NUMBER.format(value)
+  return String(value)
+}
+
+// Chỉ các khoá đổi giá trị, ghi bằng tên tham số người đọc được
 export function formatChanges(before: object = {}, after: object = {}): string {
   const b = before as Record<string, unknown>
   const a = after as Record<string, unknown>
   return Object.keys(a)
     .filter(key => JSON.stringify(b[key]) !== JSON.stringify(a[key]))
-    .map(key => `${key} ${JSON.stringify(b[key] ?? null)} → ${JSON.stringify(a[key])}`)
-    .join(', ')
+    .map(key => {
+      const label = Object.hasOwn(PARAMETER_LABEL, key) ? PARAMETER_LABEL[key as ParameterField] : key
+      return `${label}: ${formatValue(b[key])} → ${formatValue(a[key])}`
+    })
+    .join('; ')
 }
 
 // Farm Owner làm thay thì không báo chính họ. Không throw
@@ -44,7 +55,7 @@ export async function notifyExpertDecision(
       findRecipients(String(farmId)), User.findById(user._id).select('full_name').lean(),
     ])
     const title = `Chuyên gia ${expert?.full_name ?? user.email} đã ${message.what}`
-    const body = [`${message.place} — ${VN_TIME.format(new Date())}`, message.detail].filter(Boolean).join('. ')
+    const body = [`${message.place} lúc ${formatVnDateTime(new Date())}`, message.detail].filter(Boolean).join('. ')
     await Promise.all(owners.map(owner => createInAppNotification(String(owner._id), {
       title, body, ...(auditId && { ref: { kind: 'expert_decision' as const, id: auditId } }),
     })))
