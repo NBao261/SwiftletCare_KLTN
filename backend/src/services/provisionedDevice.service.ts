@@ -115,11 +115,11 @@ export async function verifyActivationKey(deviceId: string, kind: ProvisionedDev
   const expected = Buffer.from(device?.secret_key_hash ?? hashKey(''), 'hex')
   const actual = Buffer.from(hashKey(secretKey ?? ''), 'hex')
   if (!device || !crypto.timingSafeEqual(expected, actual)) {
-    throw BadRequestError('Mã kích hoạt không đúng, hãy kiểm tra lại mã thiết bị và mã kích hoạt trên nhãn')
+    throw BadRequestError('Mã kích hoạt không đúng, hãy kiểm tra lại mã thiết bị và mã kích hoạt trên nhãn', 'INVALID_DEVICE_LABEL')
   }
   // Chỉ báo rõ sau khi đúng key
   if (device.revoked_at) {
-    throw ConflictError('Thiết bị này đã bị quản trị viên thu hồi nên không kích hoạt được. Hãy liên hệ quản trị viên')
+    throw ConflictError('Thiết bị này đã bị quản trị viên thu hồi nên không kích hoạt được. Hãy liên hệ quản trị viên', 'DEVICE_REVOKED')
   }
   return { simulated: device.simulated === true }
 }

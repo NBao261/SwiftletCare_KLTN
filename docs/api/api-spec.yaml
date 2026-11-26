@@ -2864,6 +2864,12 @@ paths:
         heartbeat đầu tiên (Flow 1 bước 8). Quá 15 phút chưa có heartbeat thì node
         được gắn `activation_overdue_at` và người đăng ký nhận thông báo (case 8a).
         Thiết bị đã gỡ (FARM-FR-008) đăng ký lại được — bản ghi cũ đổi tên, giữ lịch sử.
+
+        Lý do thất bại nằm ở `error.code` để màn thiết lập nói đúng: `INVALID_DEVICE_LABEL` (400, mã thiết bị hoặc mã
+        kích hoạt không đúng; cố ý không phân biệt hai trường hợp để không dò được kho), `DEVICE_REVOKED` (409, đã bị
+        quản trị viên thu hồi), `DEVICE_ALREADY_REGISTERED` (409, đã đăng ký trong farm này), `DEVICE_IN_OTHER_FARM`
+        (409, đang dùng ở farm khác), `SETUP_LOCATION_NOT_ALLOWED` (403, Zone không thuộc farm của người dùng hoặc
+        nhà không giao cho Farm Technician). Camera đếm chim dùng cùng các mã.
       requestBody:
         required: true
         content:

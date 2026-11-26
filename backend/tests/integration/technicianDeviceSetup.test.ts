@@ -68,6 +68,7 @@ describe('Kỹ thuật viên đăng ký thiết bị ở nhà được giao (FAR
     const denied = await request(app).post('/devices/sensor-nodes/register').set(auth(techToken))
       .send({ device_id: 'tech_node_1', zone_id: String(otherZone._id), secret_key: key }).expect(403)
     expect(denied.body.success).toBe(false)
+    expect(denied.body.error.code).toBe('SETUP_LOCATION_NOT_ALLOWED')
     expect(await SensorNode.findOne({ device_id: 'tech_node_1' })).toBeNull()
 
     const res = await request(app).post('/devices/sensor-nodes/register').set(auth(techToken))
@@ -154,5 +155,35 @@ describe('Kỹ thuật viên dời, gỡ, thay và khôi phục (FARM-FR-007b, 0
       .send({ new_device_id: 'tech_node_new', secret_key: key, reason: 'Hỏng' }).expect(201)
     expect(String(res.body.data.newNode.zone_id)).toBe(String(node.zone_id))
     expect((await SensorNode.findById(node._id))!.decommissioned_at).toBeInstanceOf(Date)
+  })
+})
+
+describe('mỗi lý do đăng ký thất bại có mã lỗi riêng để màn thiết lập nói đúng', () => {
+  const registerAs = (token: string, deviceId: string, zoneId: unknown, key: string) =>
+    request(app).post('/devices/sensor-nodes/register').set(auth(token)).send({ device_id: deviceId, zone_id: String(zoneId), secret_key: key })
+
+  it('sai mã kích hoạt, thiết bị bị thu hồi', async () => {
+    const { techToken, zone } = await seed()
+    const key = await stockKey('code_node_1', 'SENSOR')
+
+    const wrong = await registerAs(techToken, 'code_node_1', zone._id, 'AAAA-BBBB-CCCC').expect(400)
+    expect(wrong.body.error.code).toBe('INVALID_DEVICE_LABEL')
+
+    await ProvisionedDevice.updateOne({ device_id: 'code_node_1' }, { revoked_at: new Date() })
+    const revoked = await registerAs(techToken, 'code_node_1', zone._id, key).expect(409)
+    expect(revoked.body.error.code).toBe('DEVICE_REVOKED')
+  })
+
+  it('đã đăng ký ở chính trang trại này, hoặc đang dùng ở trang trại khác', async () => {
+    const { techToken, zone, secondZone } = await seed()
+    const key = await stockKey('code_node_2', 'SENSOR')
+    await registerAs(techToken, 'code_node_2', zone._id, key).expect(201)
+
+    const sameFarm = await registerAs(techToken, 'code_node_2', secondZone._id, key).expect(409)
+    expect(sameFarm.body.error.code).toBe('DEVICE_ALREADY_REGISTERED')
+
+    const other = await seedOwnerFarm()
+    const otherFarm = await registerAs(other.token, 'code_node_2', other.zone._id, key).expect(409)
+    expect(otherFarm.body.error.code).toBe('DEVICE_IN_OTHER_FARM')
   })
 })
