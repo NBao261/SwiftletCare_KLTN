@@ -32,9 +32,10 @@ test.describe('Bố cục trang chuyên gia & kỹ thuật viên (todo-ui-layout
     await signInUi(page, 'expert');
     await setScope(page, { farmId });
     await page.goto('/domain-expert/reviews');
-    const proposalsTab = page.getByRole('button', { name: 'Đề xuất hệ số mờ' });
+    // Hai tab của trang là role tab (StatusTabs): tab đang chọn có aria-selected
+    const proposalsTab = page.getByRole('tab', { name: /Đề xuất hệ số mờ/ });
     await proposalsTab.click();
-    await expect(proposalsTab).toHaveAttribute('aria-current', 'page');
+    await expect(proposalsTab).toHaveAttribute('aria-selected', 'true');
     expect(crashes, crashes.join('\n')).toHaveLength(0);
   });
 

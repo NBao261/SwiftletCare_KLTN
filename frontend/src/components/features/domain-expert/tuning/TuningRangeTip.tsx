@@ -12,18 +12,24 @@ function translateHint(hint: string): string {
   return hint.replace(/^Phạm vi:/, t('Phạm vi:')).replace(/^Mặc định:/, t('Mặc định:')).replace(/(\d)s\b/g, '$1 s');
 }
 
-// "Phạm vi · Mặc định" của cả khối trong một nút (i), thay một nút cho mỗi ô số
+// Danh sách "Phạm vi · Mặc định" của cả khối: đưa vào help của thẻ hoặc nút (i), thay một nút cho mỗi ô số
+export function TuningRangeList({ hints }: { hints: TuningHint[] }) {
+  return (
+    <ul className="space-y-1">
+      {hints.map(hint => (
+        <li key={hint.label}>
+          <span className="font-semibold">{hint.label}</span>: {translateHint(hint.range)}
+          {hint.defaultValue && ` · ${translateHint(hint.defaultValue)}`}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function TuningRangeTip({ hints }: { hints: TuningHint[] }) {
   return (
     <InfoTip>
-      <ul className="space-y-1">
-        {hints.map(hint => (
-          <li key={hint.label}>
-            <span className="font-semibold">{hint.label}</span>: {translateHint(hint.range)}
-            {hint.defaultValue && ` · ${translateHint(hint.defaultValue)}`}
-          </li>
-        ))}
-      </ul>
+      <TuningRangeList hints={hints} />
     </InfoTip>
   );
 }

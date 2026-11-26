@@ -95,7 +95,7 @@ test('B3 — sửa ngưỡng khí CO2 của Zone rồi khôi phục, quyền s�
   const before = await readThresholds(expertApi, zoneA);
 
   const crashes = await openAsExpert(page, '/domain-expert/tuning', { farmId, houseId: houseA, zoneId: zoneA });
-  await expect(page.getByRole('heading', { name: '2. Ngưỡng vi khí hậu & khí độc' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ngưỡng vi khí hậu & khí độc' })).toBeVisible();
 
   // Cả 4 khối dùng một thanh lưu dính đáy, chỉ hiện khi có thay đổi
   const saveBar = page.getByRole('button', { name: 'Lưu', exact: true });
@@ -190,7 +190,7 @@ test('B5 — tạo hồ sơ cấu hình, duyệt rồi lưu trữ (EXPERT-FR-014
 test('B6 — thêm luật bù phun sương theo thời tiết rồi xoá (ENV-FR-030, BR-38)', async ({ page, request }) => {
   const expertApi = await signIn(request, 'expert');
   const crashes = await openAsExpert(page, '/domain-expert/weather-rules', { farmId, houseId: houseA });
-  await expect(page.getByRole('heading', { name: 'Luật bù phun sương theo thời tiết' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bù thời tiết' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Thêm luật' }).click();
   const form = page.getByRole('dialog');

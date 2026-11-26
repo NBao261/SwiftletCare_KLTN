@@ -1,17 +1,8 @@
 // ParameterReviewCard.tsx: Thẻ duyệt thay đổi tham số của Farm Owner
 
 import { useState } from 'react';
-import {
-  SlidersHorizontal,
-  Thermometer,
-  RotateCcw,
-  CheckCircle,
-  Clock,
-  ArrowRight,
-  User,
-  MapPin,
-} from 'lucide-react';
-import { Button } from '@/components/ui';
+import { ArrowRightIcon } from '@phosphor-icons/react';
+import { Badge, Button, type BadgeTone } from '@/components/ui';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatDateTime } from '@/lib/i18n';
 import type { ParameterReview, ParameterReviewGroup, ParameterReviewStatus } from '@/types/expert/reviews.types';
@@ -44,34 +35,11 @@ export function reviewPlace(review: Pick<ParameterReview, 'group' | 'zone_id' | 
   return houseName;
 }
 
-const STATUS_CONFIG: Record<
-  ParameterReviewStatus,
-  { label: string; bg: string; text: string; border: string }
-> = {
-  PENDING_REVIEW: {
-    label: 'Chờ duyệt',
-    bg: 'bg-orange-50',
-    text: 'text-orange-700',
-    border: 'border-orange-200',
-  },
-  ACCEPTED: {
-    label: 'Đã chấp thuận',
-    bg: 'bg-accent-50',
-    text: 'text-accent-900',
-    border: 'border-accent-600/30',
-  },
-  REVERTED: {
-    label: 'Đã hoàn nguyên',
-    bg: 'bg-red-50',
-    text: 'text-alertRed',
-    border: 'border-red-200',
-  },
-  ADJUSTED: {
-    label: 'Chuyên gia đã chỉnh',
-    bg: 'bg-stone',
-    text: 'text-graphite',
-    border: 'border-warmGray/25',
-  },
+const STATUS_TONE: Record<ParameterReviewStatus, { label: string; tone: BadgeTone }> = {
+  PENDING_REVIEW: { label: 'Chờ duyệt', tone: 'warning' },
+  ACCEPTED: { label: 'Đã chấp thuận', tone: 'positive' },
+  REVERTED: { label: 'Đã hoàn nguyên', tone: 'critical' },
+  ADJUSTED: { label: 'Chuyên gia đã chỉnh', tone: 'neutral' },
 };
 
 // Tên mục theo nhóm tham số (Zone, nhà hoặc camera)
@@ -153,7 +121,7 @@ export function formatParamValue(value: unknown, key?: string): string {
   return String(value);
 }
 
-// Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner
+// Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner: tên mục và trạng thái, nơi · người sửa · giờ, từng tham số cũ → mới
 export default function ParameterReviewCard({
   review,
   onAccept,
@@ -163,7 +131,7 @@ export default function ParameterReviewCard({
   places,
 }: ParameterReviewCardProps): JSX.Element {
   const [showConfirmRevert, setShowConfirmRevert] = useState(false);
-  const statusConfig = STATUS_CONFIG[review.status] || STATUS_CONFIG.PENDING_REVIEW;
+  const status = STATUS_TONE[review.status] || STATUS_TONE.PENDING_REVIEW;
   const isPending = review.status === 'PENDING_REVIEW';
   const changedKeys = getChangedParameterKeys(review.old_values, review.new_values);
 
@@ -175,108 +143,43 @@ export default function ParameterReviewCard({
       : t('Chủ nhà yến');
 
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-card border border-warmGray/15 flex flex-col gap-4 transition-all hover:border-warmGray/30">
-      {/* Top Bar: Group badge & Status */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-warmGray/10 flex items-center justify-center text-charcoal">
-            {review.group === 'thresholds' ? (
-              <Thermometer className="w-4 h-4 text-accent-700" />
-            ) : (
-              <SlidersHorizontal className="w-4 h-4 text-accent-700" />
-            )}
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-charcoal leading-tight">
-              {GROUP_TITLE[review.group] ?? t('Thay đổi tham số')}
-            </h4>
-            <div className="flex flex-wrap items-center gap-2 text-small text-warmGray mt-0.5">
-              <span className="flex items-center gap-1 font-semibold text-charcoal">
-                <MapPin className="w-3 h-3 text-accent-700" />
-                {place}
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                {authorName}
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {formatDateTime(review.updated_at || review.created_at)}
-              </span>
-            </div>
-          </div>
+    <div className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold text-charcoal">{GROUP_TITLE[review.group] ?? t('Thay đổi tham số')}</h4>
+          <p className="mt-0.5 text-small text-warmGray">
+            <span className="font-semibold text-charcoal">{place}</span> · {authorName} · {formatDateTime(review.updated_at || review.created_at)}
+          </p>
         </div>
-
-        <span
-          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
-        >
-          {t(statusConfig.label)}
-        </span>
+        <Badge tone={status.tone}>{t(status.label)}</Badge>
       </div>
 
-      {/* Diff Table: So sánh giá trị cũ vs mới */}
-      <div className="rounded-xl border border-warmGray/10 bg-warmGray/5 p-3 overflow-hidden">
-        <p className="text-small font-semibold text-warmGray mb-2">
-          {t('Chi tiết tham số thay đổi ({{n}} chỉ số):', { n: changedKeys.length })}
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {changedKeys.map(key => {
-            const oldValue = review.old_values?.[key];
-            const newValue = review.new_values?.[key];
-            return (
-              <div
-                key={key}
-                className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-warmGray/15 text-xs shadow-sm"
-              >
-                <span className="text-charcoal font-medium truncate max-w-[140px]">
-                  {FIELD_LABELS[key] || key}
-                </span>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-warmGray line-through">
-                    {formatParamValue(oldValue, key)}
-                  </span>
-                  <ArrowRight className="w-3 h-3 text-warmGray/50" />
-                  <span className="text-accent-900 font-bold bg-accent-50 px-1.5 py-0.5 rounded border border-accent-600/30">
-                    {formatParamValue(newValue, key)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Từng tham số đã đổi: giá trị cũ gạch ngang, giá trị mới đậm */}
+      <ul className="divide-y divide-warmGray/10 rounded-xl bg-warmGray/5 px-3">
+        {changedKeys.map(key => (
+          <li key={key} className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span className="min-w-0 truncate text-charcoal">{FIELD_LABELS[key] || key}</span>
+            <span className="flex shrink-0 items-center gap-1.5">
+              <span className="text-warmGray line-through">{formatParamValue(review.old_values?.[key], key)}</span>
+              <ArrowRightIcon size={12} className="text-warmGray" />
+              <span className="font-bold text-charcoal">{formatParamValue(review.new_values?.[key], key)}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
 
-      {/* Nút hành động cho mục chờ duyệt */}
+      {/* Việc cần làm với mục chờ duyệt */}
       {isPending && !readOnly && (
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-warmGray/10">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="text-warmGray hover:text-alertRed hover:bg-red-50 gap-1.5 font-medium"
-            onClick={() => setShowConfirmRevert(true)}
-            disabled={isProcessing}
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
+        <div className="flex items-center justify-end gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => setShowConfirmRevert(true)} disabled={isProcessing}>
             {t('Hoàn nguyên giá trị cũ')}
           </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            loading={isProcessing}
-            onClick={() => onAccept(review._id)}
-            className="gap-1.5"
-          >
-            <CheckCircle className="w-3.5 h-3.5 text-limeMist" />
+          <Button type="button" size="sm" loading={isProcessing} onClick={() => onAccept(review._id)}>
             {t('Chấp thuận thay đổi')}
           </Button>
         </div>
       )}
 
-      {/* Modal xác nhận hoàn nguyên chuẩn ConfirmModal (FE_Design_Claude &a) */}
       <ConfirmModal
         open={showConfirmRevert}
         title={t('Xác nhận hoàn nguyên giá trị cũ')}

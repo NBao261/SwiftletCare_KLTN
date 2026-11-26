@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, CheckCircle2, Archive, Pencil } from 'lucide-react'
+import { CaretDownIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/helpers'
-import { Button } from '@/components/ui/Button'
+import { Badge, Button } from '@/components/ui'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import type { ConfigProfile } from '@/types/expert.types'
 import ProfileStatusBadge from './ProfileStatusBadge'
@@ -38,7 +38,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
   ].filter(Boolean)
 
   return (
-    <div className="rounded-2xl border border-warmGray/15 bg-white shadow-card overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white">
       <div
         role="button"
         tabIndex={0}
@@ -52,11 +52,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-sm text-charcoal truncate">{profile.name}</span>
             <ProfileStatusBadge status={profile.status} />
-            {profile.stage && (
-              <span className="text-xs text-warmGray bg-warmGray/10 px-2 py-0.5 rounded-full border border-warmGray/15">
-                {STAGE_LABEL[profile.stage] ?? profile.stage}
-              </span>
-            )}
+            {profile.stage && <Badge tone="neutral">{STAGE_LABEL[profile.stage] ?? profile.stage}</Badge>}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-warmGray">
             {groups.length > 0 && (
@@ -68,19 +64,19 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
             <span>{t('Tạo {{date}}', { date: formatDate(profile.created_at) })}</span>
           </div>
         </div>
-        <div className="shrink-0 mt-0.5 text-warmGray">
-          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </div>
+        <CaretDownIcon size={16} weight="bold" className={cn('mt-0.5 shrink-0 text-warmGray transition-transform duration-200', expanded && 'rotate-180')} />
       </div>
 
       {expanded && (
-        <div id={`profile-detail-${profile._id}`} className="border-t border-warmGray/10 px-4 py-3 space-y-3">
-          {profile.thresholds && <ThresholdSection thresholds={profile.thresholds} />}
-          {profile.fuzzy_tuning && <FuzzySection fuzzy={profile.fuzzy_tuning} />}
-          {profile.detection_tuning && <DetectionSection detection={profile.detection_tuning} />}
-          {profile.speaker_schedule && <SpeakerSection schedule={profile.speaker_schedule} />}
+        <div id={`profile-detail-${profile._id}`} className="flex flex-col gap-3 border-t border-warmGray/10 px-4 py-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {profile.thresholds && <ThresholdSection thresholds={profile.thresholds} />}
+            {profile.fuzzy_tuning && <FuzzySection fuzzy={profile.fuzzy_tuning} />}
+            {profile.detection_tuning && <DetectionSection detection={profile.detection_tuning} />}
+            {profile.speaker_schedule && <SpeakerSection schedule={profile.speaker_schedule} />}
+          </div>
 
-          {(canApprove || (canEditDraft && profile.status === 'DRAFT')) && <div className={cn('flex flex-wrap gap-2 pt-1 border-t border-warmGray/10', disabled && 'opacity-50 pointer-events-none')}>
+          {(canApprove || (canEditDraft && profile.status === 'DRAFT')) && <div className={cn('flex flex-wrap items-center justify-end gap-2', disabled && 'pointer-events-none opacity-50')}>
             {profile.status === 'DRAFT' && (
               <>
                 {canEditDraft && (
@@ -89,15 +85,14 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
                     size="sm"
                     onClick={e => { e.stopPropagation(); onEdit?.() }}
                   >
-                    <Pencil className="w-3.5 h-3.5" /> {t('Sửa')}
+                    {t('Sửa')}
                   </Button>
                 )}
                 {canApprove && <Button
-                  variant="accent"
                   size="sm"
                   onClick={e => { e.stopPropagation(); setConfirmAction('approve') }}
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {t('Duyệt hồ sơ')}
+                  {t('Duyệt hồ sơ')}
                 </Button>}
                 {!canApprove && <span className="self-center text-small text-warmGray">{t(farmHasExpert ? 'Chờ chuyên gia duyệt' : 'Cần mời chuyên gia để duyệt')}</span>}
               </>
@@ -108,7 +103,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
                 size="sm"
                 onClick={e => { e.stopPropagation(); setConfirmAction('archive') }}
               >
-                <Archive className="w-3.5 h-3.5" /> {t('Lưu trữ')}
+                {t('Lưu trữ')}
               </Button>
             )}
           </div>}
@@ -150,8 +145,8 @@ function FieldRow({ label, value }: { label: string; value: string | number | bo
 
 function GroupBox({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-warmGray/5 border border-warmGray/10 p-3 space-y-1.5">
-      <p className="text-xs font-semibold text-warmGray">{title}</p>
+    <div className="space-y-1.5 rounded-xl bg-warmGray/5 p-3">
+      <p className="text-xs font-semibold text-charcoal">{title}</p>
       {children}
     </div>
   )

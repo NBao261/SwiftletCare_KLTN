@@ -1,6 +1,7 @@
-// Một dòng luật bù thời tiết (xem + toggle + xoá)
-import { Trash2 } from 'lucide-react'
+// Một dòng luật bù thời tiết (xem + bật/tắt + xoá); các dòng nằm chung một khung, ngăn bằng vạch mảnh
+import { TrashIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
+import { Badge, Button } from '@/components/ui'
 import { Toggle } from '@/components/ui/Toggle'
 import type { WeatherRule } from '@/types/expert.types'
 import { t, translated } from '@/i18n'
@@ -26,11 +27,8 @@ interface Props {
 export default function WeatherRuleRow({ rule, onToggle, onRemove, disabled }: Props) {
   const sign = rule.offset_pct > 0 ? '+' : ''
   return (
-    <div className={cn(
-      'flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl border text-sm transition-colors bg-white',
-      rule.active ? 'border-warmGray/15' : 'border-warmGray/10 opacity-60',
-    )}>
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+    <div className={cn('flex items-center justify-between gap-3 py-3 text-sm transition-opacity', !rule.active && 'opacity-60')}>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
         <Toggle
           checked={rule.active}
           onChange={onToggle}
@@ -38,33 +36,22 @@ export default function WeatherRuleRow({ rule, onToggle, onRemove, disabled }: P
           aria-label={rule.active ? t('Tắt luật') : t('Bật luật')}
         />
 
-        <span className="font-medium text-charcoal truncate">
+        <span className="font-medium text-charcoal">
           {METRIC_LABELS[rule.metric]} ≥ <b>{rule.min}</b> {METRIC_UNITS[rule.metric]}
         </span>
 
-        <span className="text-warmGray shrink-0">→</span>
+        <span className="shrink-0 text-warmGray">→</span>
 
-        <span className={cn(
-          'shrink-0 px-2 py-0.5 rounded-full font-semibold border text-xs',
-          rule.offset_pct > 0
-            ? 'bg-infoBlue/5 text-infoBlue border-infoBlue/20'
-            : 'bg-climateOrange/10 text-climateOrange border-climateOrange/20',
-        )}>
+        <Badge tone={rule.offset_pct > 0 ? 'info' : 'warning'} className="shrink-0">
           {t('{{offset}}% phun', { offset: `${sign}${rule.offset_pct}` })}
-        </span>
+        </Badge>
 
-        <span className="text-warmGray text-xs shrink-0">{t('{{n}} phút', { n: rule.duration_min })}</span>
+        <span className="shrink-0 text-xs text-warmGray">{t('{{n}} phút', { n: rule.duration_min })}</span>
       </div>
 
-      <button
-        type="button"
-        onClick={onRemove}
-        disabled={disabled}
-        aria-label={t('Xoá luật')}
-        className="shrink-0 text-warmGray hover:text-alertRed transition-colors p-1 rounded disabled:opacity-40"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+      <Button variant="icon" size="sm" onClick={onRemove} disabled={disabled} aria-label={t('Xoá luật')} title={t('Xoá luật')}>
+        <TrashIcon size={16} />
+      </Button>
     </div>
   )
 }

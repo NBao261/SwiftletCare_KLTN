@@ -6,10 +6,9 @@ import { AlertTriangle } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button, SectionCard } from '@/components/ui';
+import StatusTabs from '@/components/common/StatusTabs';
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu';
-import ClearFiltersButton from '@/components/ui/ClearFiltersButton';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
 import {
@@ -271,91 +270,41 @@ export default function DomainExpertReviewsPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-xl flex-col gap-5 pt-3">
-      {/* Khung Card nội dung chính chuẩn hệ thống */}
-      <Card size="lg" className="flex flex-col gap-4">
-        {/* Header hàng 1: Tabs phân loại nghiệp vụ + Bộ lọc SelectMenu */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warmGray/10 pb-3">
-          {/* Tabs kiểu SectionTabs (rounded pill, bg warmGray/10) */}
-          <nav aria-label={t('Duyệt & đề xuất')} className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('reviews')}
-              aria-current={activeTab === 'reviews' ? 'page' : undefined}
-              className={`flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150 ${
-                activeTab === 'reviews'
-                  ? 'bg-white text-charcoal shadow-card'
-                  : 'text-warmGray hover:text-charcoal'
-              }`}
-            >
-              <span>{t('Duyệt thay đổi tham số')}</span>
-              {pendingReviewsCount > 0 && (
-                <span className="rounded-full bg-orange-500 px-2 py-0.5 text-small font-bold text-white">
-                  {pendingReviewsCount}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('proposals')}
-              aria-current={activeTab === 'proposals' ? 'page' : undefined}
-              className={`flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150 ${
-                activeTab === 'proposals'
-                  ? 'bg-white text-charcoal shadow-card'
-                  : 'text-warmGray hover:text-charcoal'
-              }`}
-            >
-              <span>{t('Đề xuất hệ số mờ')}</span>
-              {pendingProposalsCount > 0 && (
-                <span className="rounded-full bg-limeMist px-2 py-0.5 text-small font-bold text-charcoal">
-                  {pendingProposalsCount}
-                </span>
-              )}
-            </button>
-          </nav>
+    <SectionCard description={activeTab === 'reviews'
+      ? t('Giữ hoặc hoàn tác thay đổi ngưỡng, hệ số mờ của chủ nhà yến.')
+      : t('Duyệt hoặc từ chối gợi ý hệ số mờ chủ nhà yến gửi lên.')}
+    >
+      <StatusTabs
+        variant="underline"
+        ariaLabel={t('Duyệt & đề xuất')}
+        value={activeTab}
+        onChange={setActiveTab}
+        tabs={[
+          { id: 'reviews', label: t('Duyệt thay đổi tham số'), badge: pendingReviewsCount },
+          { id: 'proposals', label: t('Đề xuất hệ số mờ'), badge: pendingProposalsCount },
+        ]}
+      />
 
-          {/* Bộ lọc trạng thái chuẩn SelectMenu */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {activeTab === 'reviews' ? (
-              <>
-                <SelectMenu
-                  value={reviewStatusFilter}
-                  options={REVIEW_STATUS_OPTIONS}
-                  onChange={(selectedValue) => setReviewStatusFilter(selectedValue)}
-                  ariaLabel={t('Lọc theo trạng thái duyệt tham số')}
-                />
-                {isReviewFiltered && (
-                  <ClearFiltersButton onClick={() => setReviewStatusFilter('ALL')} />
-                )}
-              </>
-            ) : (
-              <>
-                <SelectMenu
-                  value={proposalStatusFilter}
-                  options={PROPOSAL_STATUS_OPTIONS}
-                  onChange={(selectedValue) => setProposalStatusFilter(selectedValue)}
-                  ariaLabel={t('Lọc theo trạng thái đề xuất hệ số')}
-                />
-                {isProposalFiltered && (
-                  <ClearFiltersButton onClick={() => setProposalStatusFilter('ALL')} />
-                )}
-              </>
-            )}
-          </div>
-        </div>
+      {/* Chỉ một ô lọc trạng thái, mặc định "Chờ duyệt": đổi ô là đủ, không cần nút Huỷ lọc */}
+      <div>
+        {activeTab === 'reviews' ? (
+          <SelectMenu
+            value={reviewStatusFilter}
+            options={REVIEW_STATUS_OPTIONS}
+            onChange={setReviewStatusFilter}
+            ariaLabel={t('Lọc theo trạng thái duyệt tham số')}
+          />
+        ) : (
+          <SelectMenu
+            value={proposalStatusFilter}
+            options={PROPOSAL_STATUS_OPTIONS}
+            onChange={setProposalStatusFilter}
+            ariaLabel={t('Lọc theo trạng thái đề xuất hệ số')}
+          />
+        )}
+      </div>
 
-        {/* Header hàng 2: Mô tả nhiệm vụ nghiệp vụ gọn gàng */}
-        <p className="-mt-1 pb-1 text-xs text-warmGray">
-          {activeTab === 'reviews'
-            ? t('Giữ hoặc hoàn tác thay đổi ngưỡng, hệ số mờ của chủ nhà yến.')
-            : t('Duyệt hoặc từ chối gợi ý hệ số mờ chủ nhà yến gửi lên.')}
-        </p>
-
-        {/* Nội dung danh sách theo Tab */}
-        <div>
-          {activeTab === 'reviews' ? renderReviewsContent() : renderProposalsContent()}
-        </div>
-      </Card>
-    </div>
+      {activeTab === 'reviews' ? renderReviewsContent() : renderProposalsContent()}
+    </SectionCard>
   );
 }
