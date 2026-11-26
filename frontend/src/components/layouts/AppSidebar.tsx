@@ -25,7 +25,7 @@ export interface MenuItem {
 export interface MenuSection {
   title: string
   items: MenuItem[]
-  // Nhóm thu gọn được bằng mũi tên cạnh tiêu đề (mặc định mở); nhóm chứa trang đang mở luôn mở
+  // Nhóm thu gọn được bằng mũi tên cạnh tiêu đề (mặc định mở); thu gọn rồi vẫn còn mục của trang đang mở
   collapsible?: boolean
 }
 
@@ -91,8 +91,9 @@ export default function AppSidebar({
           <nav ref={scrollRef} className="h-full overflow-y-auto px-[18px] py-4">
             <div ref={contentRef}>
               {menuSections.map(section => {
-                const hasActiveItem = section.items.some(item => isMenuItemActive(item, pathname))
-                const isOpen = !section.collapsible || hasActiveItem || !collapsed.includes(section.title)
+                const isOpen = !section.collapsible || !collapsed.includes(section.title)
+                // Thu gọn: chỉ còn mục của trang đang mở để biết mình đang ở đâu
+                const shownItems = isOpen ? section.items : section.items.filter(item => isMenuItemActive(item, pathname))
                 const titleClass = 'px-[10px] py-1 text-small font-semibold uppercase tracking-[0.08em] text-warmGray'
                 return (
                 <div key={section.title} className="mb-4 last:mb-0">
@@ -100,9 +101,8 @@ export default function AppSidebar({
                     <button
                       type="button"
                       onClick={() => toggleSection(section.title)}
-                      disabled={hasActiveItem}
                       aria-expanded={isOpen}
-                      className={cn(titleClass, 'flex w-full items-center justify-between rounded-full text-left hover:text-charcoal disabled:cursor-default disabled:hover:text-warmGray')}
+                      className={cn(titleClass, 'flex w-full items-center justify-between rounded-full text-left hover:text-charcoal')}
                     >
                       {navigationLabel(section.title)}
                       <CaretDownIcon size={14} weight="bold" className={cn('shrink-0 transition-transform', !isOpen && '-rotate-90')} />
@@ -110,8 +110,8 @@ export default function AppSidebar({
                   ) : (
                     <p className={titleClass}>{navigationLabel(section.title)}</p>
                   )}
-                  {isOpen && <div className="mt-1 space-y-1">
-                    {section.items.map(item => {
+                  {shownItems.length > 0 && <div className="mt-1 space-y-1">
+                    {shownItems.map(item => {
                       const badgeCount = badgeByPath[item.path] ?? 0
                       const isActive = isMenuItemActive(item, pathname)
                       return (
