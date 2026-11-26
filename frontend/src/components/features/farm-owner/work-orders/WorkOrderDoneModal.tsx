@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Button, FilterChip, Modal, Textarea } from '@/components/ui';
+import { missingMaintenancePhoto } from '@/components/features/farm-owner/work-orders/maintenancePhoto';
 import { CAUSE_ALERT_TYPES, SITE_CAUSES } from '@/constants/siteCause';
 import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
@@ -30,6 +31,8 @@ export default function WorkOrderDoneModal({ workOrder, onClose }: { workOrder: 
   const [photos, setPhotos] = useState<File[]>([]);
   const needsCause = Boolean(workOrder?.alert_type && CAUSE_ALERT_TYPES.has(workOrder.alert_type));
   const photoSlots = Math.max(MAX_PHOTOS - (detail?.photo_urls?.length ?? 0), 0);
+  // Bảo trì chưa có ảnh nào thì chưa báo xong được
+  const needsPhoto = missingMaintenancePhoto(detail ?? workOrder, photos.length);
   const badPhoto = photos.some(photo => photo.size > MAX_PHOTO_BYTES || !PHOTO_TYPES.includes(photo.type));
 
   // Popup không unmount giữa các lần mở: xoá lựa chọn cũ mỗi lần mở
@@ -98,11 +101,12 @@ export default function WorkOrderDoneModal({ workOrder, onClose }: { workOrder: 
             className="text-sm"
             onChange={event => setPhotos(Array.from(event.target.files ?? []).slice(0, photoSlots))}
           />
+          {workOrder?.kind === 'PREVENTIVE' && <p className={needsPhoto ? 'text-xs font-semibold text-alertRed' : 'text-xs text-warmGray'}>{t('done.photoRequired')}</p>}
           {badPhoto && <p className="text-xs text-alertRed">{t('done.photoInvalid')}</p>}
         </div>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose} disabled={complete.isPending}>{t('form.cancel')}</Button>
-          <Button type="submit" disabled={(needsCause && !cause) || badPhoto} loading={complete.isPending}>{t('action.done')}</Button>
+          <Button type="submit" disabled={(needsCause && !cause) || badPhoto || needsPhoto} loading={complete.isPending}>{t('action.done')}</Button>
         </div>
       </form>
     </Modal>
