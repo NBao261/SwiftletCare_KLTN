@@ -44,7 +44,7 @@ export function HarvestCycleCard({ cycle, zoneName, hasDivider, canRemindExpert 
   return (
     <View style={[styles.cycle, hasDivider && { borderBottomWidth: BorderWidth.hairline, borderBottomColor: palette.divider }]}>
       <View style={styles.header}>
-        <Text variant="body" weight="semiBold" style={styles.flex} numberOfLines={1}>
+        <Text variant="body" weight="semiBold" style={styles.flex}>
           {zoneName}
         </Text>
         <Text variant="small" weight="semiBold" color={palette.textSecondary}>

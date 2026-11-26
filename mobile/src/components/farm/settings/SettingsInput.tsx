@@ -3,8 +3,9 @@ import { StyleSheet, TextInput, type KeyboardTypeOptions } from 'react-native'
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 
-// Cao đủ chạm (44) mà vẫn gọn trong một dòng bảng
+// Cao đủ chạm (44) mà vẫn gọn trong một dòng bảng; ô nhiều dòng cao tối đa khoảng 5 dòng rồi cuộn trong ô
 const INPUT_HEIGHT = 44
+const MULTILINE_MAX_HEIGHT = 132
 
 export interface SettingsInputProps {
   value: string
@@ -20,9 +21,12 @@ export interface SettingsInputProps {
   editable?: boolean
   // Số ký tự tối đa gõ được (ô tên: NAME_MAX_LENGTH)
   maxLength?: number
+  // Chữ dài (mô tả, địa chỉ): xuống dòng, ô cao dần theo chữ
+  multiline?: boolean
 }
 
-// Ô nhập gọn trong bảng và lưới thông tin của trang cài đặt: nền Paper bo nhỏ, viền Ink khi đang nhập, viền cam khi lỗi
+// Ô nhập gọn trong bảng và lưới thông tin của trang cài đặt: nền Paper bo nhỏ, viền Ink khi đang nhập, viền cam khi lỗi. Ô cao
+// theo chữ (tối thiểu 44), nên chữ xuống dòng không bao giờ tràn ra ngoài khung
 export function SettingsInput({
   value,
   onChangeText,
@@ -34,6 +38,7 @@ export function SettingsInput({
   autoCapitalize = 'none',
   editable = true,
   maxLength,
+  multiline = false,
 }: SettingsInputProps) {
   const palette = usePalette()
   const [isFocused, setFocused] = useState(false)
@@ -51,10 +56,13 @@ export function SettingsInput({
       autoCorrect={false}
       editable={editable}
       maxLength={maxLength}
+      multiline={multiline}
+      textAlignVertical={multiline ? 'top' : 'center'}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={[
         styles.input,
+        multiline && styles.multiline,
         { backgroundColor: palette.surfaceStrong, borderColor, color: palette.text, textAlign: align },
       ]}
     />
@@ -64,10 +72,11 @@ export function SettingsInput({
 const styles = StyleSheet.create({
   input: {
     ...Typography.body,
-    height: INPUT_HEIGHT,
+    minHeight: INPUT_HEIGHT,
     borderWidth: BorderWidth.regular,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 0,
+    paddingVertical: Spacing.xs,
   },
+  multiline: { maxHeight: MULTILINE_MAX_HEIGHT, paddingVertical: Spacing.sm },
 })

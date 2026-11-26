@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { StyleSheet, TextInput, View } from 'react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { PhotoCaptureField } from '@/components/common/PhotoCaptureField'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -17,8 +17,6 @@ import { t } from '@/utils/i18n.utils'
 const NOTE_INPUT_HEIGHT = 88
 // Ghi chú của một mục checklist dài tối đa (Report 3 §4.5, "Maintenance plan and checklist text")
 const NOTE_MAX_LENGTH = 1000
-// Cao tối đa phần form: còn chỗ cho nút khi bàn phím mở
-const FORM_MAX_HEIGHT = 480
 const RESULTS: readonly ChecklistResult[] = ['OK', 'DEFECT']
 
 interface ChecklistItemSheetProps {
@@ -71,12 +69,7 @@ export function ChecklistItemSheet({ workOrderId, item, itemIndex, onClose, onDo
           {item.item}
         </Text>
       </View>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.body}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.body}>
         <ChoiceChips
           options={RESULTS.map(value => ({ id: value, label: getChecklistResultLabel(value) }))}
           selectedId={result}
@@ -101,7 +94,7 @@ export function ChecklistItemSheet({ workOrderId, item, itemIndex, onClose, onDo
             {t('Ghi Hỏng thì hệ thống mở ngay một phiếu công việc sửa chữa cho nhà này.')}
           </Text>
         )}
-      </ScrollView>
+      </View>
       <FormMessage message={errorMessage} />
       <Button label={t('Lưu')} onPress={save} loading={record.isPending} disabled={result === null} />
     </BottomSheet>
@@ -110,7 +103,6 @@ export function ChecklistItemSheet({ workOrderId, item, itemIndex, onClose, onDo
 
 const styles = StyleSheet.create({
   header: { gap: Spacing.xs },
-  scroll: { maxHeight: FORM_MAX_HEIGHT, flexGrow: 0 },
   body: { gap: Spacing.md },
   input: {
     ...Typography.body,

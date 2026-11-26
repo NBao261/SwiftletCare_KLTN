@@ -44,7 +44,7 @@ export function SettingsMetaGrid({ items }: SettingsMetaGridProps) {
           {item.input ? (
             <SettingsInput align="left" {...item.input} hasError={Boolean(item.error)} />
           ) : (
-            <Text variant="body" weight="semiBold" numberOfLines={3}>
+            <Text variant="body" weight="semiBold">
               {item.value || '_'}
             </Text>
           )}

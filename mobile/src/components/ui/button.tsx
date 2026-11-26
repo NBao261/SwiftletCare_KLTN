@@ -43,7 +43,8 @@ export function Button({
   const palette = usePalette()
   const isDisabled = disabled || loading
   const isLink = variant === 'link'
-  const filledStyle = [styles.filled, { height: BUTTON_HEIGHTS[size], paddingHorizontal: BUTTON_PADDINGS[size] }]
+  // Cao tối thiểu theo cỡ nút: nút hẹp có chữ dài thì chữ xuống dòng trong nút, không tràn ra ngoài
+  const filledStyle = [styles.filled, { minHeight: BUTTON_HEIGHTS[size], paddingHorizontal: BUTTON_PADDINGS[size] }]
 
   const variantStyle = {
     primary: [filledStyle, { backgroundColor: palette.primary }],
@@ -78,7 +79,7 @@ export function Button({
         <ActivityIndicator color={isLink ? palette.textSecondary : textColor} />
       ) : (
         <>
-          <Text variant="button" color={textColor} style={isLink && styles.underline}>
+          <Text variant="button" color={textColor} style={[styles.label, isLink && styles.underline]}>
             {label}
           </Text>
           {TrailingIcon && <TrailingIcon size={16} color={textColor} weight="bold" />}
@@ -92,12 +93,14 @@ const styles = StyleSheet.create({
   filled: {
     flexDirection: 'row',
     gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
   // Chữ và icon đứng sau nằm cùng một hàng như các kiểu nút khác (không có row thì icon rớt xuống dưới chữ)
   link: { minHeight: 32, flexDirection: 'row', gap: Spacing.xs, alignItems: 'center', justifyContent: 'center' },
+  label: { flexShrink: 1, textAlign: 'center' },
   underline: { textDecorationLine: 'underline' },
   disabled: { opacity: 0.5 },
 })
