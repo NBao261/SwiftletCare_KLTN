@@ -155,10 +155,10 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         ) : (
           <>
             {telemetryMissing || !cfg.src1
-              ? <MissingNote label={t('Nguồn 1 (Telemetry cảm biến ±30 phút): Không có mẫu ghi nhận')} />
+              ? <MissingNote label={t('Không có số đo cảm biến trong ±30 phút quanh cảnh báo')} />
               : <EvidenceBarCard src={cfg.src1} />}
             {birdCountsMissing || !cfg.src2
-              ? <MissingNote label={t('Nguồn 2 (Số đếm chim 5 phút ±30 phút): Không có chuỗi đếm')} />
+              ? <MissingNote label={t('Không có số chim đếm trong ±30 phút quanh cảnh báo')} />
               : <EvidenceBarCard src={cfg.src2} />}
 
             {/* Thiết bị đang có cảnh báo mở tại Zone */}

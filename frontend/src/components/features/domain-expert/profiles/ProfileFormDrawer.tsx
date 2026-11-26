@@ -158,8 +158,8 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
           onExpand={() => setExpanded(e => ({ ...e, fuzzy_tuning: !e.fuzzy_tuning }))}
         >
           <div className="grid grid-cols-2 gap-2 mt-2">
-            <NumField label={t('Dải độ ẩm')} value={fuzzy.fuzzy_humidity_band} onChange={v => setFuzzy(f => ({ ...f, fuzzy_humidity_band: v }))} min={2} max={20} step={0.5} unit="%RH" />
-            <NumField label={t('Dải nhiệt độ')} value={fuzzy.fuzzy_temp_band} onChange={v => setFuzzy(f => ({ ...f, fuzzy_temp_band: v }))} min={1} max={10} step={0.5} unit="°C" />
+            <NumField label={t('Dải biên độ ẩm')} value={fuzzy.fuzzy_humidity_band} onChange={v => setFuzzy(f => ({ ...f, fuzzy_humidity_band: v }))} min={2} max={20} step={0.5} unit="%RH" />
+            <NumField label={t('Dải biên nhiệt độ')} value={fuzzy.fuzzy_temp_band} onChange={v => setFuzzy(f => ({ ...f, fuzzy_temp_band: v }))} min={1} max={10} step={0.5} unit="°C" />
             <NumField label={t('Quạt khô')} value={fuzzy.fuzzy_fan_dry_level} onChange={v => setFuzzy(f => ({ ...f, fuzzy_fan_dry_level: v }))} min={0} max={100} step={1} unit="%" />
             <NumField label={t('Cửa sổ')} value={fuzzy.fuzzy_window_sec} onChange={v => setFuzzy(f => ({ ...f, fuzzy_window_sec: v }))} min={60} max={600} step={10} unit="giây" />
           </div>
@@ -182,7 +182,7 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
           onExpand={() => setExpanded(e => ({ ...e, detection_tuning: !e.detection_tuning }))}
         >
           <div className="grid grid-cols-2 gap-2 mt-2">
-            <NumField label={t('Biên độ ồn')} value={detection.noise_margin_db} onChange={v => setDetection(d => ({ ...d, noise_margin_db: v }))} min={5} max={30} step={1} unit="dB" />
+            <NumField label={t('Mức ồn vượt nền')} value={detection.noise_margin_db} onChange={v => setDetection(d => ({ ...d, noise_margin_db: v }))} min={5} max={30} step={1} unit="dB" />
             <NumField label={t('Thời gian ồn')} value={detection.noise_min_sec} onChange={v => setDetection(d => ({ ...d, noise_min_sec: v }))} min={5} max={15} step={1} unit="giây" />
             <NumField label={t('Giây bơm')} value={detection.pump_dry_on_sec} onChange={v => setDetection(d => ({ ...d, pump_dry_on_sec: v }))} min={120} max={900} step={30} unit="giây" />
             <NumField label={t('Độ ẩm tăng')} value={detection.pump_dry_min_rise_pct} onChange={v => setDetection(d => ({ ...d, pump_dry_min_rise_pct: v }))} min={0.5} max={10} step={0.5} unit="%RH" />

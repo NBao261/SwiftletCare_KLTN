@@ -37,8 +37,8 @@ export function reviewPlace(review: Pick<ParameterReview, 'group' | 'zone_id' | 
 
 const STATUS_TONE: Record<ParameterReviewStatus, { label: string; tone: BadgeTone }> = {
   PENDING_REVIEW: { label: 'Chờ duyệt', tone: 'warning' },
-  ACCEPTED: { label: 'Đã chấp thuận', tone: 'positive' },
-  REVERTED: { label: 'Đã hoàn nguyên', tone: 'critical' },
+  ACCEPTED: { label: 'Đã giữ', tone: 'positive' },
+  REVERTED: { label: 'Đã hoàn tác', tone: 'critical' },
   ADJUSTED: { label: 'Chuyên gia đã chỉnh', tone: 'neutral' },
 };
 
@@ -63,11 +63,11 @@ const FIELD_LABELS: Record<string, string> = translated({
   co2_max: 'Khí CO2 tối đa (ppm)',
   fuzzy_humidity_band: 'Dải biên độ ẩm (%RH)',
   fuzzy_temp_band: 'Dải biên nhiệt độ (°C)',
-  fuzzy_fan_dry_level: 'Mức quạt hút khử ẩm (%)',
+  fuzzy_fan_dry_level: 'Mức quạt khử ẩm (%)',
   fuzzy_window_sec: 'Chu kỳ điều khiển (giây)',
-  fuzzy_input_filter: 'Lọc nhiễu cảm biến đầu vào',
-  noise_margin_db: 'Biên độ ồn vượt nền (dB)',
-  noise_min_sec: 'Thời gian ồn tối thiểu (giây)',
+  fuzzy_input_filter: 'Lọc nhiễu số đo',
+  noise_margin_db: 'Mức ồn vượt nền (dB)',
+  noise_min_sec: 'Thời gian ồn kéo dài tối thiểu (giây)',
   pump_dry_on_sec: 'Thời gian bơm chạy không tăng ẩm (giây)',
   pump_dry_min_rise_pct: 'Độ ẩm cần tăng tối thiểu (%)',
   speaker_drop_pct: 'Độ sụt âm lượng báo hỏng loa (%)',
@@ -172,19 +172,19 @@ export default function ParameterReviewCard({
       {isPending && !readOnly && (
         <div className="flex items-center justify-end gap-2">
           <Button type="button" variant="secondary" size="sm" onClick={() => setShowConfirmRevert(true)} disabled={isProcessing}>
-            {t('Hoàn nguyên giá trị cũ')}
+            {t('Hoàn tác về giá trị cũ')}
           </Button>
           <Button type="button" size="sm" loading={isProcessing} onClick={() => onAccept(review._id)}>
-            {t('Chấp thuận thay đổi')}
+            {t('Giữ thay đổi')}
           </Button>
         </div>
       )}
 
       <ConfirmModal
         open={showConfirmRevert}
-        title={t('Xác nhận hoàn nguyên giá trị cũ')}
+        title={t('Hoàn tác về giá trị cũ?')}
         description={t('Giá trị cũ được gửi lại xuống thiết bị và mục này chuyển sang Đã hoàn tác.')}
-        confirmLabel={t('Hoàn nguyên')}
+        confirmLabel={t('Hoàn tác')}
         danger
         loading={isProcessing}
         onCancel={() => setShowConfirmRevert(false)}

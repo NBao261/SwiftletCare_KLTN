@@ -155,7 +155,7 @@ export default function DomainExpertWeatherRulesPage() {
     // Không hiện hộp "chưa có bù" khi chưa có luật nào: EmptyState bên dưới đã đủ
     if (!rules.length) return null
     return (
-      <p className="rounded-xl bg-warmGray/10 px-3.5 py-2.5 text-sm text-graphite">{t('Chưa có lần bù nào kể từ khi luật được lưu (hoặc chưa có luật nào thoả dự báo).')}</p>
+      <p className="rounded-xl bg-warmGray/10 px-3.5 py-2.5 text-sm text-graphite">{t('Chưa có lần bù nào kể từ khi lưu luật, hoặc dự báo chưa khớp luật nào.')}</p>
     )
   }
 

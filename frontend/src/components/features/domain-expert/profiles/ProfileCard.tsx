@@ -167,11 +167,11 @@ function ThresholdSection({ thresholds }: { thresholds: NonNullable<ConfigProfil
 function FuzzySection({ fuzzy }: { fuzzy: NonNullable<ConfigProfile['fuzzy_tuning']> }) {
   return (
     <GroupBox title={t('Hệ số mờ')}>
-      <FieldRow label={t('Dải độ ẩm')} value={`${fuzzy.fuzzy_humidity_band} %RH`} />
-      <FieldRow label={t('Dải nhiệt độ')} value={`${fuzzy.fuzzy_temp_band} °C`} />
-      <FieldRow label={t('Mức quạt khi nóng khô')} value={`${fuzzy.fuzzy_fan_dry_level} %`} />
-      <FieldRow label={t('Cửa sổ điều khiển')} value={`${fuzzy.fuzzy_window_sec} ${t('giây')}`} />
-      <FieldRow label={t('Lọc đầu vào')} value={fuzzy.fuzzy_input_filter ? t('Bật') : t('Tắt')} />
+      <FieldRow label={t('Dải biên độ ẩm')} value={`${fuzzy.fuzzy_humidity_band} %RH`} />
+      <FieldRow label={t('Dải biên nhiệt độ')} value={`${fuzzy.fuzzy_temp_band} °C`} />
+      <FieldRow label={t('Mức quạt khử ẩm')} value={`${fuzzy.fuzzy_fan_dry_level} %`} />
+      <FieldRow label={t('Chu kỳ điều khiển')} value={`${fuzzy.fuzzy_window_sec} ${t('giây')}`} />
+      <FieldRow label={t('Lọc nhiễu số đo')} value={fuzzy.fuzzy_input_filter ? t('Bật') : t('Tắt')} />
     </GroupBox>
   )
 }
@@ -179,11 +179,11 @@ function FuzzySection({ fuzzy }: { fuzzy: NonNullable<ConfigProfile['fuzzy_tunin
 function DetectionSection({ detection }: { detection: NonNullable<ConfigProfile['detection_tuning']> }) {
   return (
     <GroupBox title={t('Tham số phát hiện')}>
-      <FieldRow label={t('Biên độ ồn')} value={`${detection.noise_margin_db} dB`} />
-      <FieldRow label={t('Thời gian ồn tối thiểu')} value={`${detection.noise_min_sec} ${t('giây')}`} />
-      <FieldRow label={t('Giây bơm cộng dồn')} value={`${detection.pump_dry_on_sec} ${t('giây')}`} />
-      <FieldRow label={t('Độ ẩm phải tăng')} value={`${detection.pump_dry_min_rise_pct} %RH`} />
-      <FieldRow label={t('Mức âm giảm (loa)')} value={`${detection.speaker_drop_pct} %`} />
+      <FieldRow label={t('Mức ồn vượt nền')} value={`${detection.noise_margin_db} dB`} />
+      <FieldRow label={t('Thời gian ồn kéo dài tối thiểu')} value={`${detection.noise_min_sec} ${t('giây')}`} />
+      <FieldRow label={t('Thời gian bơm chạy không tăng ẩm')} value={`${detection.pump_dry_on_sec} ${t('giây')}`} />
+      <FieldRow label={t('Độ ẩm cần tăng tối thiểu')} value={`${detection.pump_dry_min_rise_pct} %RH`} />
+      <FieldRow label={t('Độ sụt âm lượng báo hỏng loa')} value={`${detection.speaker_drop_pct} %`} />
     </GroupBox>
   )
 }

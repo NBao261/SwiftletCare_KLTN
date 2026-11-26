@@ -34,8 +34,8 @@ type ActiveTab = 'reviews' | 'proposals';
 const REVIEW_STATUS_OPTIONS: SelectMenuOption<ParameterReviewStatus | 'ALL'>[] = [
   { value: 'ALL', label: 'Tất cả trạng thái' },
   { value: 'PENDING_REVIEW', label: 'Chờ duyệt' },
-  { value: 'ACCEPTED', label: 'Đã chấp thuận' },
-  { value: 'REVERTED', label: 'Đã hoàn nguyên' },
+  { value: 'ACCEPTED', label: 'Đã giữ' },
+  { value: 'REVERTED', label: 'Đã hoàn tác' },
   { value: 'ADJUSTED', label: 'Chuyên gia đã chỉnh' },
 ];
 
@@ -112,10 +112,10 @@ export default function DomainExpertReviewsPage() {
     try {
       setProcessingId(reviewId);
       await acceptMutation.mutateAsync(reviewId);
-      pushToast('Đã chấp thuận thay đổi tham số thành công.', 'success');
+      pushToast('Đã giữ thay đổi tham số.', 'success');
       void refetchReviews();
     } catch (error: unknown) {
-      pushToast(apiErrorMessage(error, 'Lỗi khi chấp thuận thay đổi'), 'error');
+      pushToast(apiErrorMessage(error, 'Không giữ được thay đổi. Thử lại.'), 'error');
     } finally {
       setProcessingId(null);
     }
@@ -125,10 +125,10 @@ export default function DomainExpertReviewsPage() {
     try {
       setProcessingId(reviewId);
       await revertMutation.mutateAsync(reviewId);
-      pushToast('Đã hoàn nguyên tham số về giá trị ban đầu thành công.', 'success');
+      pushToast('Đã hoàn tác, tham số về giá trị cũ.', 'success');
       void refetchReviews();
     } catch (error: unknown) {
-      pushToast(apiErrorMessage(error, 'Lỗi khi hoàn nguyên tham số'), 'error');
+      pushToast(apiErrorMessage(error, 'Không hoàn tác được. Thử lại.'), 'error');
     } finally {
       setProcessingId(null);
     }
@@ -142,7 +142,7 @@ export default function DomainExpertReviewsPage() {
       pushToast('Đã duyệt và áp dụng hệ số mờ đề xuất thành công.', 'success');
       void refetchProposals();
     } catch (error: unknown) {
-      pushToast(apiErrorMessage(error, 'Lỗi khi duyệt đề xuất hệ số'), 'error');
+      pushToast(apiErrorMessage(error, 'Không duyệt được đề xuất. Thử lại.'), 'error');
     } finally {
       setProcessingId(null);
     }
@@ -156,7 +156,7 @@ export default function DomainExpertReviewsPage() {
       void refetchProposals();
       return true;
     } catch (error: unknown) {
-      pushToast(apiErrorMessage(error, 'Lỗi khi từ chối đề xuất'), 'error');
+      pushToast(apiErrorMessage(error, 'Không từ chối được đề xuất. Thử lại.'), 'error');
       return false;
     } finally {
       setProcessingId(null);

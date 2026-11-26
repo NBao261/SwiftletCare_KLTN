@@ -67,7 +67,7 @@ const vi = {
   'drawer.compNoData': 'Không có chu kỳ để so sánh',
   'drawer.healthLabel': 'Chỉ số sức khoẻ',
   'drawer.healthGoodDays': '% ngày tốt',
-  'drawer.healthReturnRate': 'Tỷ lệ chim về TB',
+  'drawer.healthReturnRate': 'Tỷ lệ chim về trung bình',
   'drawer.healthTimeInRange': 'Thời gian trong ngưỡng',
   'drawer.healthNone': 'Chưa có dữ liệu sức khoẻ',
   'drawer.incomplete': 'Chu kỳ thiếu dữ liệu (<80% ngày được đánh giá)',

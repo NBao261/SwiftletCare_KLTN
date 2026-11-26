@@ -14,7 +14,7 @@ const vi = {
   'list.subtitleTechnician': 'Cảnh báo của các nhà bạn được giao. Xác nhận cảnh báo mới và ghi nguyên nhân tìm thấy tại chỗ.',
   'list.subtitleAdmin': 'Cảnh báo thiết bị của mọi trang trại: mất kết nối, cảm biến lỗi, khởi động lại bất thường. Chủ nhà yến và kỹ thuật viên xác nhận.',
   'list.filterStatus': 'Trạng thái cảnh báo',
-  'tab.open': 'Đang hiệu lực',
+  'tab.open': 'Đang mở',
   'tab.ACTIVE': 'Chờ xác nhận',
   'tab.ACKNOWLEDGED': 'Đã xác nhận',
   'tab.RESOLVED': 'Đã xử lý',
@@ -37,7 +37,7 @@ const vi = {
   'col.alert': 'Cảnh báo',
   'col.place': 'Nơi xảy ra',
   'col.status': 'Trạng thái',
-  'col.createdAt': 'Lúc',
+  'col.createdAt': 'Thời gian',
   'cell.wholeHouse': 'Cả nhà yến',
 
   'action.view': 'Xem chi tiết',

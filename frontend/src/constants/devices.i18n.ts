@@ -195,7 +195,7 @@ const vi = {
   'param.manualUntil': 'Điều khiển tay đến',
   'param.onHours': 'Giờ chạy tích luỹ',
   'param.hoursValue': '{n} giờ',
-  'param.switches': 'Số lần đóng cắt',
+  'param.switches': 'Số lần bật tắt',
   'param.sinceService': 'Từ lần bảo trì',
   'param.sinceServiceValue': '{hours} giờ · {switches} lần',
   'component.toggleTitle': 'Thiết bị của bộ điều khiển',

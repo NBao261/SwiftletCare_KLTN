@@ -148,8 +148,8 @@ test('B4 — duyệt thay đổi ngưỡng của chủ nhà yến (BR-22, EXPERT
 
   const crashes = await openAsExpert(page, '/domain-expert/reviews', { farmId });
   await expect(page.getByText('Thay đổi ngưỡng vi khí hậu').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Chấp thuận thay đổi' }).first().click();
-  await expect(page.getByText('Đã chấp thuận thay đổi tham số thành công.')).toBeVisible();
+  await page.getByRole('button', { name: 'Giữ thay đổi' }).first().click();
+  await expect(page.getByText('Đã giữ thay đổi tham số.')).toBeVisible();
 
   const accepted = await expertApi.data<Review[]>(
     await expertApi.get(`/expert-activity/reviews?farmId=${farmId}&zoneId=${zoneA}&status=ACCEPTED`),
@@ -190,7 +190,7 @@ test('B5 — tạo hồ sơ cấu hình, duyệt rồi lưu trữ (EXPERT-FR-014
 test('B6 — thêm luật bù phun sương theo thời tiết rồi xoá (ENV-FR-030, BR-38)', async ({ page, request }) => {
   const expertApi = await signIn(request, 'expert');
   const crashes = await openAsExpert(page, '/domain-expert/weather-rules', { farmId, houseId: houseA });
-  await expect(page.getByRole('heading', { name: 'Bù thời tiết' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Phun sương theo thời tiết' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Thêm luật' }).click();
   const form = page.getByRole('dialog');

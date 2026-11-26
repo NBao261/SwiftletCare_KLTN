@@ -31,9 +31,9 @@ const STATUS_TONE: Record<CoefficientProposalStatus, { label: string; tone: Badg
 const FUZZY_LABELS: Record<string, string> = translated({
   fuzzy_humidity_band: 'Dải biên độ ẩm (%RH)',
   fuzzy_temp_band: 'Dải biên nhiệt độ (°C)',
-  fuzzy_fan_dry_level: 'Mức quạt hút khử ẩm (%)',
+  fuzzy_fan_dry_level: 'Mức quạt khử ẩm (%)',
   fuzzy_window_sec: 'Chu kỳ điều khiển (giây)',
-  fuzzy_input_filter: 'Lọc nhiễu cảm biến',
+  fuzzy_input_filter: 'Lọc nhiễu số đo',
 });
 
 // Định dạng giá trị hệ số mờ hiển thị

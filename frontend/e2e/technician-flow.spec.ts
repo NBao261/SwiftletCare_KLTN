@@ -58,7 +58,7 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await expect(page).toHaveURL(/\/alerts$/);
 
   // Mọi việc của thợ ở nhà được giao (G-33); không có trang quyết định của chuyên gia, cài đặt hệ thống
-  for (const label of ['Cảnh báo', 'Tổng quan', 'Chim ra vào', 'Sức khoẻ & báo cáo', 'Phân tích', 'Công việc', 'Thiết bị', 'Trang trại', 'Thu hoạch', 'Tham số điều khiển', 'Đếm chim']) {
+  for (const label of ['Cảnh báo', 'Tổng quan', 'Chim ra vào', 'Sức khoẻ & báo cáo', 'Phân tích', 'Công việc', 'Thiết bị', 'Trang trại', 'Thu hoạch', 'Tham số điều khiển', 'Cài đặt đếm chim']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
   for (const label of ['Hàng đợi việc', 'Kiểm chứng cảnh báo', 'Luật khuyến nghị', 'Cài đặt']) {
@@ -202,7 +202,9 @@ test('T10 — tham số, lịch đếm, luật thời tiết chỉ đọc (G-33)
   for (const path of ['/domain-expert/tuning', '/domain-expert/counting-schedule', '/domain-expert/weather-rules']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(new RegExp(`${path}$`));
-    await expect(page.getByText('Chỉ xem', { exact: true }), path).toBeVisible();
+    // Huy hiệu quyền ở header: mở nút (i) thấy câu bắt đầu bằng "Chỉ xem."
+    await page.getByRole('banner').getByRole('button', { name: 'Giải thích' }).click();
+    await expect(page.getByText('Chỉ xem.', { exact: true }), path).toBeVisible();
   }
   await expect(page.getByRole('button', { name: 'Thêm luật' })).toHaveCount(0);
   expect(crashes, crashes.join('\n')).toHaveLength(0);

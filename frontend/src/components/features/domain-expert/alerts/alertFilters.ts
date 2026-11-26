@@ -19,7 +19,7 @@ export const TYPE_OPTS: Array<{ value: InferredAlertType | 'ALL'; label: string 
   { value: 'NOISE_ANOMALY', label: 'Tiếng ồn bất thường' },
   { value: 'SENSOR_ANOMALY', label: 'Cảm biến bất thường' },
   { value: 'FORECAST_BREACH', label: 'Sắp vượt ngưỡng' },
-  { value: 'LOW_RETURN_RATE', label: 'Giảm tỷ lệ chim về' },
+  { value: 'LOW_RETURN_RATE', label: 'Tỷ lệ chim về thấp' },
 ];
 
 // Cảnh báo suy luận chỉ ở mức MEDIUM/LOW, tức cấp P3 Trung bình và P4 Thấp của FE_Design 2.4

@@ -55,11 +55,11 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
         { label: 'Ngưỡng & hệ số mờ', path: '/domain-expert/tuning' },
         { label: 'Duyệt & đề xuất', path: '/domain-expert/reviews' },
         { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles' },
-        { label: 'Bù thời tiết', path: '/domain-expert/weather-rules' },
+        { label: 'Phun sương theo thời tiết', path: '/domain-expert/weather-rules' },
       ],
     },
     {
-      label: 'Đếm chim',
+      label: 'Cài đặt đếm chim',
       path: '/domain-expert/counting-schedule',
       icon: CrosshairIcon,
       tabs: [

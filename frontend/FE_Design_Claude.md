@@ -847,14 +847,14 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 | Tự động · Điều khiển tay | Automatic · Manual override | SCADA, "Logic mờ" làm nhãn chế độ | |
 | Trực tiếp | Live | realtime, thời gian thực | |
 | Ngưỡng | Threshold | | |
-| Hệ số mờ | Fuzzy coefficient | Fuzzy, hệ số Fuzzy, hệ số logic mờ | |
+| Hệ số mờ | Fuzzy coefficient | Fuzzy, hệ số Fuzzy, hệ số logic mờ, hệ số điều khiển (mờ) | Bốn hệ số: Dải biên độ ẩm · Dải biên nhiệt độ · Mức quạt khử ẩm · Chu kỳ điều khiển; một tên ở mọi màn |
 | Lọc nhiễu số đo | Reading noise filter | median + Kalman | |
-| Tham số phát hiện · Mức ồn vượt nền | Detection parameter · Noise above baseline | P90 | EXPERT-FR-008 |
+| Tham số phát hiện · Mức ồn vượt nền | Detection parameter · Noise above baseline | P90, tham số phát hiện lỗi | EXPERT-FR-008; năm tham số: Mức ồn vượt nền · Thời gian ồn kéo dài tối thiểu · Thời gian bơm chạy không tăng ẩm · Độ ẩm cần tăng tối thiểu · Độ sụt âm lượng báo hỏng loa |
 | Cảnh báo | Alert | | |
 | Xác nhận (cảnh báo) | Acknowledge | | Trạng thái: Mới · Tiếp nhận · Bác bỏ · Đã xử lý |
 | Cảnh báo suy luận | Inferred alert | AI | `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE` |
 | Kiểm chứng cảnh báo · Kết luận · Xác nhận đúng · Bác bỏ | Verdict · Conclusion · Confirm · Reject | thẩm định, phán quyết, đối soát | Việc của chuyên gia (EXPERT-FR-003), khác "Xác nhận (cảnh báo)" |
-| Duyệt thay đổi · Giữ · Hoàn tác | Review · Accept · Revert | thẩm định, hoàn nguyên | Chuyên gia duyệt thay đổi ngưỡng, hệ số của chủ nhà yến (EXPERT-FR-010) |
+| Duyệt thay đổi · Giữ · Hoàn tác | Review · Accept · Revert | thẩm định, hoàn nguyên, chấp thuận | Chuyên gia duyệt thay đổi ngưỡng, hệ số của chủ nhà yến (EXPERT-FR-010); trạng thái: Chờ duyệt · Đã giữ · Đã hoàn tác |
 | Đề xuất hệ số · Duyệt · Từ chối | Proposal · Approve · Reject | | EXPERT-FR-011 |
 | Bằng chứng | Evidence | | ALERT-FR-014 |
 | Mức độ: Khẩn cấp · Cao · Thường | Level: Urgent · High · Normal | CRITICAL (chữ enum) | 2.4 |
@@ -862,10 +862,10 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 | Trạng thái sức khoẻ: Tốt · Cần theo dõi · Cần xử lý · Không đủ dữ liệu | Good · Watch · Action needed · Insufficient data | | MF-06; là chỉ báo, không phải chẩn đoán |
 | Chỉ số sức khoẻ: Bình thường · Lệch nhẹ · Lệch rõ | Normal · Slight · Clear | | BR-28 |
 | Đánh giá ngày | Daily rating | chấm thực địa | EXPERT-FR-012 |
-| Đếm chim · Tỷ lệ chim về · Vòng đếm · Lịch đếm | Bird count · Return rate · Counting ring · Counting schedule | tỉ lệ, vạch đếm | |
+| Đếm chim · Tỷ lệ chim về · Vòng đếm · Lịch đếm | Bird count · Return rate · Counting ring · Counting schedule | tỉ lệ, vạch đếm | Menu Chuyên gia: "Cài đặt đếm chim" (Lịch đếm, Vòng đếm), để khỏi nhầm với trang "Chim ra vào" của chủ nhà yến |
 | Thu hoạch | Harvest | | |
 | Phiếu công việc · Tạo · Chưa đóng · Duyệt · Mở lại · Huỷ · Giao lại | Work order · Create · Open · Approve · Reopen · Cancel · Reassign | Work Order, mở phiếu | MF-02 |
-| Thời gian xác nhận TB · Thời gian xử lý TB | Mean time to acknowledge · Mean time to resolve | MTTA, MTTR | OPS-FR-009 |
+| Thời gian xác nhận trung bình · Thời gian xử lý trung bình | Mean time to acknowledge · Mean time to resolve | MTTA, MTTR, TB | OPS-FR-009; không viết tắt "TB" trên màn |
 | Vị trí (trang trại) · Vĩ độ · Kinh độ | Location · Latitude · Longitude | | Một trang trại là một địa điểm (FARM-FR-001) |
 
 **Tên loại cảnh báo** (`alertTypeDict`, nguồn duy nhất): Vượt ngưỡng môi trường · Thiết bị mất kết nối · Lỗi loa ru · Phun sương không hiệu quả · Tiếng ồn bất thường · Tỷ lệ chim về thấp · Camera đếm chim gặp sự cố · Thiết bị tự khởi động lại · Lỗi cảm biến · Lỗi đường truyền cảm biến · Cảm biến bất thường · Sắp vượt ngưỡng · Đến hạn bảo trì bơm/quạt · Bơm, quạt hoặc loa không chạy · Thiết bị chưa nhận cấu hình mới. Tên viết theo điều người nuôi thấy, không theo tên linh kiện (không "bus RS485", "cơ cấu chấp hành", "suy giảm").

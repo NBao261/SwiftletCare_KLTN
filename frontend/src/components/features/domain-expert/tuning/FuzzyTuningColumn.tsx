@@ -31,7 +31,7 @@ const ROWS: Array<{ key: NumericKey; label: string; step: number; decimals: numb
   { key: 'fuzzy_humidity_band', label: 'Dải biên độ ẩm', step: 0.5, decimals: 1 },
   { key: 'fuzzy_temp_band', label: 'Dải biên nhiệt độ', step: 0.5, decimals: 1 },
   { key: 'fuzzy_fan_dry_level', label: 'Mức quạt khử ẩm', step: 5, decimals: 0 },
-  { key: 'fuzzy_window_sec', label: 'Chu kỳ cửa sổ điều khiển', step: 10, decimals: 0 },
+  { key: 'fuzzy_window_sec', label: 'Chu kỳ điều khiển', step: 10, decimals: 0 },
 ]
 
 // Hệ số mờ của Zone và gợi ý từ dữ liệu; chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
@@ -68,7 +68,7 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
 
   return (
     <SectionCard
-      title={t('Hệ số điều khiển mờ')}
+      title={t('Hệ số mờ')}
       description={t('Lưu xong, cấu hình gửi xuống bộ điều khiển của Zone')}
       help={<TuningRangeList hints={ROWS.map(row => ({
         label: t(row.label),
@@ -108,9 +108,9 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
           <div className="min-w-0">
             <p className="flex items-center gap-1 text-sm font-medium text-charcoal">
               {t('Lọc nhiễu số đo')}
-              <InfoTip>{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít đóng cắt vì nhiễu. Tắt tạm để so sánh số lần đóng cắt mỗi giờ.')}</InfoTip>
+              <InfoTip>{t('Làm mượt nhiệt độ và độ ẩm trước khi đưa vào bộ điều khiển để rơ-le ít bật tắt vì nhiễu. Tắt tạm để so sánh số lần bật tắt mỗi giờ.')}</InfoTip>
             </p>
-            <p className="mt-0.5 text-small italic text-warmGray">{t('Làm mượt số đo để rơ-le ít đóng cắt vì nhiễu')}</p>
+            <p className="mt-0.5 text-small italic text-warmGray">{t('Làm mượt số đo để rơ-le ít bật tắt vì nhiễu')}</p>
           </div>
           <Toggle
             checked={form.fuzzy_input_filter}
