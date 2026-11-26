@@ -1,6 +1,6 @@
 import {
   BasketIcon, BirdIcon, ChartBarIcon, ClipboardTextIcon, ClockCounterClockwiseIcon, CloudArrowUpIcon, CpuIcon, CrosshairIcon,
-  FileTextIcon, GaugeIcon, GearSixIcon, HandPointingIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon, ScalesIcon,
+  FileTextIcon, GaugeIcon, GearSixIcon, HandPointingIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon,
   ScrollIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, UsersIcon, WarningIcon, WrenchIcon,
 } from '@phosphor-icons/react'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
@@ -25,7 +25,6 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
     { label: 'Chim ra vào', path: '/vision', icon: BirdIcon },
     { label: 'Sức khoẻ & báo cáo', path: '/health', icon: HeartbeatIcon },
     { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
-    { label: 'So sánh nhà', path: '/overview', icon: ScalesIcon },
   ],
   operations: [
     { label: 'Điều khiển tay', path: '/relay-control', icon: HandPointingIcon },

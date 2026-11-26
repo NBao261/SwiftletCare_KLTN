@@ -93,7 +93,6 @@ export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/audit-log', roles: ADMIN_ONLY },
   { path: '/system/device-stock', roles: ADMIN_ONLY },
   { path: '/analytics',        roles: FARM_WORK_ROLES },
-  { path: '/overview',         roles: FARM_SIDE_ROLES },
   { path: '/vision',           roles: FARM_WORK_ROLES },
   { path: '/health',           roles: FARM_WORK_ROLES },
   { path: '/work-orders',      roles: FARM_WORK_ROLES },
@@ -126,7 +125,6 @@ export type ScopeLevel = 'none' | 'farm' | 'house' | 'zone'
 const SCOPE_LEVEL: { path: string; level: ScopeLevel; depth?: ScopeDepth }[] = [
   // Tổng quan xem 1 Zone một lúc (camera của nhà chứa Zone đó)
   { path: '/dashboard',                           level: 'zone' },
-  { path: '/overview',                            level: 'farm' },
   { path: '/recommendations',                     level: 'farm' },
   { path: '/work-orders',                         level: 'farm' },
   { path: '/health',                              level: 'farm' },

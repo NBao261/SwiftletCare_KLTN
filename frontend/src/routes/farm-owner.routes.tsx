@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { Route } from 'react-router-dom'
+import { Navigate, Route } from 'react-router-dom'
 import RequireRole from '@/components/auth/RequireRole'
 import { DEVICE_SETUP_ROLES, FARM_SIDE_ROLES, FARM_WORK_ROLES, FARM_STRUCTURE_ROLES, HARVEST_ROLES, RELAY_CONTROL_ROLES } from '@/constants/roles'
 import { usePermission } from '@/hooks/common/usePermission'
@@ -20,7 +20,6 @@ const FarmOwnerRecommendationsPage = lazy(() => import('@/pages/farm-owner/FarmO
 const FarmOwnerHealthPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthPage'))
 const FarmOwnerHealthReportPage = lazy(() => import('@/pages/farm-owner/FarmOwnerHealthReportPage'))
 const FarmOwnerWorkOrdersPage = lazy(() => import('@/pages/farm-owner/FarmOwnerWorkOrdersPage'))
-const FarmOwnerOverviewPage = lazy(() => import('@/pages/farm-owner/FarmOwnerOverviewPage'))
 const TechnicianFarmsPage = lazy(() => import('@/pages/technician/TechnicianFarmsPage'))
 
 // /farms dùng chung URL nhưng Farm Technician có trang riêng (chỉ cấu trúc + thiết bị nhà được giao)
@@ -68,7 +67,7 @@ export const farmOwnerRoutes = (
       path="overview"
       element={
         <RequireRole allow={FARM_SIDE_ROLES}>
-          <FarmOwnerOverviewPage />
+          <Navigate to="/analytics?tab=houses" replace />
         </RequireRole>
       }
     />

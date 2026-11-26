@@ -50,7 +50,7 @@ describe('pickAutoScope', () => {
 
 describe('scopeLevelOf', () => {
   it('trang con theo bậc của trang cha', () => {
-    expect(scopeLevelOf('/overview')).toBe('farm')
+    expect(scopeLevelOf('/health')).toBe('farm')
     expect(scopeLevelOf('/domain-expert/tuning')).toBe('zone')
     expect(scopeLevelOf('/dashboard')).toBe('zone')
   })

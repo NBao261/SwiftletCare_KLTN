@@ -75,9 +75,9 @@
 
 | # | Thay đổi |
 |---|---|
-| 1 | **Menu Farm Owner 10 mục, 3 nhóm** (Theo dõi · Vận hành · Chuyên môn): Tổng quan (1 nhà một lúc: camera, cảm biến, điều khiển; So sánh nhà và Điều khiển tay là mục riêng); Công việc = Phiếu công việc · Bảo trì định kỳ · Khuyến nghị; Chuyên môn = 9 trang `/domain-expert/*`. Badge: Cảnh báo, Công việc (phiếu chờ duyệt), Chuyên môn (cảnh báo chờ kết luận ở trang trại chưa có chuyên gia, BR-22), gom ở `hooks/common/useMenuBadges`. Tab đang mở là tab có đường dẫn dài nhất chứa trang (`activeTabPath`), nên tab con không sáng cả tab cha. |
+| 1 | **Menu Farm Owner 10 mục, 3 nhóm** (Theo dõi · Vận hành · Chuyên môn): Tổng quan (1 nhà một lúc: camera, cảm biến, điều khiển; Điều khiển tay là mục riêng; So sánh nhà là nhóm thứ tư của Phân tích, `/overview` chuyển sang đó); Công việc = Phiếu công việc · Bảo trì định kỳ · Khuyến nghị; Chuyên môn = 9 trang `/domain-expert/*`. Badge: Cảnh báo, Công việc (phiếu chờ duyệt), Chuyên môn (cảnh báo chờ kết luận ở trang trại chưa có chuyên gia, BR-22), gom ở `hooks/common/useMenuBadges`. Tab đang mở là tab có đường dẫn dài nhất chứa trang (`activeTabPath`), nên tab con không sáng cả tab cha. |
 | 2 | **Tổng quan:** 4 ô KPI (Nhà cần chú ý · Cảnh báo chưa xử lý, dòng phụ số chờ xác nhận · Thiết bị mất kết nối (chỉ OFFLINE) · Phiếu chờ duyệt) · lưới thẻ nhà (số đo từng Zone tô theo ngưỡng kèm icon, chế độ tự động/tay, giai đoạn, trạng thái hôm nay, cảnh báo chưa xử lý và phiếu đang mở, chim về, ANALYTICS-FR-015; ô KPI và thẻ cùng lấy số từ overview) · Việc cần làm. Không ảnh, không dải tình trạng, không bảng cảnh báo lặp trang Cảnh báo. "Ổn định" chỉ khi nhà có ít nhất 1 bộ điều khiển, mọi bộ online và số đo trong ngưỡng (`houseLiveStatus`), ô "Nhà cần chú ý" đếm theo cùng luật. Dock điện thoại có mục "Thêm" (`Drawer side="bottom"`) mở các mục còn lại. |
-| 3 | **Một trang không lồng tab:** So sánh nhà chỉ còn bảng so sánh (tình hình từng nhà đã ở thẻ nhà của Tổng quan). |
+| 3 | **So sánh nhà** là nhóm thứ tư của Phân tích (`/analytics?tab=houses`): một ma trận, bấm tên cột để sắp xếp (tình hình từng nhà đã ở trang Tổng quan). |
 | 4 | **Thanh phạm vi chỉ ở header** ở mọi khổ màn; trang không vẽ bản sao `ScopeFilter` cho điện thoại. Điện thoại: khung lọc thành lưới 2 cột, hàng tab xuống dòng. |
 | 5 | **Biểu đồ:** đường đếm chim nối thẳng các điểm (`tension: 0`); so sánh Zone chỉ còn bảng (không cột từ 0); phân bổ loại tổ là thanh ngang một màu có số kg, % ghi bên cạnh (không vòng tổng 100 %). |
 
@@ -1328,7 +1328,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
    | Nhóm | Gồm | Dùng cho |
    |---|---|---|
-   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | So sánh nhà (`/overview`), chi tiết thiết bị theo nhà (`/devices/detail`) |
+   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | So sánh nhà (`/analytics?tab=houses`, `/overview` chuyển sang đó), chi tiết thiết bị theo nhà (`/devices/detail`) |
    | `FARM_WORK_ROLES` | Farm Owner · Domain Expert · Farm Technician | Màn của nhà yến cho cả ba vai trò trại: tổng quan, phân tích, đếm chim, sức khoẻ và đánh giá ngày, phiếu công việc, bảo trì, khuyến nghị, vòng đếm, tham số chỉ đọc. Kỹ thuật viên chỉ thấy nhà được giao; nút backend trả 403 thì ẩn bằng `usePermission` |
    | `RELAY_CONTROL_ROLES` | Farm Owner · Farm Technician | Điều khiển tay relay (`/relay-control`) |
    | `HARVEST_ROLES` | Farm Owner · Domain Expert · Farm Technician | Thu hoạch: Farm Owner ghi và xác nhận, kỹ thuật viên ghi lần chờ xác nhận, chuyên gia chỉ xem |

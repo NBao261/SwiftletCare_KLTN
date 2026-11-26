@@ -14,15 +14,18 @@ import EnvVariationCard from '@/components/features/farm-owner/analytics/EnvVari
 import FlockTrendCard from '@/components/features/farm-owner/analytics/FlockTrendCard';
 import ForecastCard from '@/components/features/farm-owner/analytics/ForecastCard';
 import HealthReportCard from '@/components/features/farm-owner/analytics/HealthReportCard';
+import HouseComparisonSection from '@/components/features/farm-owner/analytics/HouseComparisonSection';
 import RelayOverrideHistoryCard from '@/components/features/farm-owner/analytics/RelayOverrideHistoryCard';
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
 import { analyticsDict } from '@/constants/analytics.i18n';
+import { FARM_SIDE_ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useZone } from '@/hooks/shared/useFarms';
 import { cn } from '@/lib/cn';
 
-const TABS = ['env', 'birds', 'ops'] as const;
+const TABS = ['env', 'birds', 'ops', 'houses'] as const;
 type AnalyticsTab = typeof TABS[number];
 
 // 2 khung cạnh nhau trên màn rộng; thiếu 1 khung thì khung còn lại chiếm cả hàng
@@ -50,7 +53,10 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   const { data: zoneDetail } = useZone(zone?._id);
   // Tab nằm trên URL (?tab=birds) để quay lại đúng nhóm, mặc định Môi trường
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab: AnalyticsTab = TABS.find(value => value === searchParams.get('tab')) ?? 'env';
+  // So sánh nhà là của Chủ nhà yến và Chuyên gia (kỹ thuật viên không đọc tổng quan trang trại)
+  const canCompare = usePermission(...FARM_SIDE_ROLES);
+  const visibleTabs = TABS.filter(value => value !== 'houses' || canCompare);
+  const tab: AnalyticsTab = visibleTabs.find(value => value === searchParams.get('tab')) ?? 'env';
   const setTab = (value: AnalyticsTab) => setSearchParams(previous => {
     const next = new URLSearchParams(previous);
     if (value === 'env') next.delete('tab');
@@ -85,6 +91,9 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     );
   }
 
+  // So sánh nhà tính trong 1 trang trại: chưa chọn mà chỉ có 1 trang trại thì dùng luôn trang trại đó
+  const comparisonFarmId = scope.farmId || (farms.length === 1 ? farms[0]._id : '');
+
   // Thân trang theo phạm vi đang lọc
   let body: ReactNode = (
     <EmptyState
@@ -99,7 +108,9 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   );
 
   // Mỗi tab một nhóm khung; khung Zone khi lọc 1 Zone, đàn và điện năng khi lọc 1 nhà
-  if (zones.length > 0) {
+  if (tab === 'houses') {
+    body = <HouseComparisonSection farmId={comparisonFarmId} />;
+  } else if (zones.length > 0) {
     // Đếm chim là của cả nhà yến chứa Zone
     const birdHouseIds = zone ? [zone.house_id] : houseIds;
     const birdLabel = zone ? zone.houseName : scopeLabel;
@@ -154,12 +165,12 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     <div className="flex flex-col gap-5">
       {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
-        <ScopeFilter scope={scope} />
+        <ScopeFilter scope={scope} lockHouse={tab === 'houses'} />
       </HeaderActions>
 
-      {zones.length > 0 && (
+      {(zones.length > 0 || tab === 'houses') && (
         <div className="inline-flex gap-1 self-start rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
-          {TABS.map(value => (
+          {visibleTabs.map(value => (
             <button
               key={value}
               type="button"

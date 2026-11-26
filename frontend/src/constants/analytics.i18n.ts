@@ -16,6 +16,7 @@ const vi = {
   'tab.env': 'Môi trường',
   'tab.birds': 'Chim ra vào',
   'tab.ops': 'Vận hành thiết bị',
+  'tab.houses': 'So sánh nhà',
 
   // Dùng chung
   'common.retry': 'Thử lại',
@@ -257,6 +258,7 @@ const en: Record<AnalyticsKey, string> = {
   'tab.env': 'Environment',
   'tab.birds': 'Birds in & out',
   'tab.ops': 'Equipment operation',
+  'tab.houses': 'Compare houses',
 
   'common.retry': 'Retry',
   'common.allHouses': 'All houses',
