@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.32 (Review 2, final scope) |
-| Date | 26/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.26 (`docs/reports/report3-srs.md`) |
+| Document version | 2.2.33 (Review 2, final scope) |
+| Date | 27/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.2.27 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -405,6 +405,8 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Supply voltage of the demo loads (A-9) | backend `LOAD_SUPPLY_VOLTAGE` (`energy.service.ts`): 5 V misting, 12 V fan, as the controller board of Section 3 |
 | Recommendation expiry and effect window, rule inputs | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS`, `RULE_VALUE_LIMITS`, `RULE_WINDOW_MIN_DAYS`, `RULE_WINDOW_MAX_DAYS`, `RULE_WORK_ORDER_TITLE_MAX` (`utils/recommendationRule.util.ts`); daily 06:30 job `recommendationEffect.job.ts` |
 | Grace before an overdue plan escalates | backend `MAINTENANCE_GRACE_DAYS` |
+| Reminder of a due or overdue plan, every 1 day at 07:00 | backend `maintenance.service` (`remindDuePlans`, `last_reminder_at` on the plan) |
+| Photos required to report a preventive Work Order done | backend `MIN_PREVENTIVE_PHOTOS` in `workOrder.service` |
 | Same period of the previous year, complete cycle | backend `HARVEST_SAME_PERIOD_DAYS`, `HARVEST_CYCLE_MIN_COMPLETENESS` |
 | Gap between two telemetry samples | backend `MAX_GAP_MS` (`relayUsage.service.ts`), shared by the run hours and the energy estimate |
 | Farm overview and house comparison | backend `LATEST_RETURN_RATE_DAYS` (`farmOverview.service.ts`), `DEFAULT_COMPARISON_DAYS` (`farms.controller.ts`), `DEFAULT_ENERGY_DAYS` (`analytics.controller.ts`), `MAX_PERIOD_DAYS` (`utils/period.util.ts`) |
@@ -1908,6 +1910,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.33 | 27/11/2026 | Maintenance: the 07:00 run also reminds each due or overdue plan once a day (Report 3 4.2.27, OPS-FR-006); a preventive Work Order needs one photo to be reported done (OPS-FR-008) |
 | 2.2.32 | 26/11/2026 | The Farm Technician sets up, moves and removes devices of the assigned houses (Report 3 4.2.26, BM03 row 21): DF-9, D14, §5.4 technician client, the `/devices` route table, device lifecycle, AD-10 and AD-11 follow |
 | 2.2.31 | 26/11/2026 | Staging files in a Cloudflare R2 bucket through the S3 client instead of a backend volume: signed URLs that expire, files outside the VPS, `STORAGE_DRIVER=s3` and `MINIO_*` in the staging compose (Sections 3.1, 3.4, 11) |
 | 2.2.30 | 25/11/2026 | D22: IP camera address entered on the web and fetched by the AI node, AI node setup codes, video publishing with the node's own login; D5 and §6 follow; header baseline SRS 4.2.25 |
