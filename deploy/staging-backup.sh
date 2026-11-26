@@ -11,10 +11,18 @@ KEEP=${BACKUP_KEEP:-7}
 FILE="$DIR/swiftletcare-$(date +%F-%H%M).gz"
 mkdir -p "$DIR"
 
-# Mật khẩu đọc trong container, không hiện trên dòng lệnh của VPS
-docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging exec -T mongodb sh -c \
-  'mongodump --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db swiftletcare --archive --gzip' \
-  > "$FILE" || { rm -f "$FILE"; echo "Sao lưu thất bại: mongodump lỗi" >&2; exit 1; }
+# Cụm Atlas (MONGODB_URI có giá trị trong env): dump từ xa bằng ảnh mongo. Atlas có sao lưu riêng; bản này là bản
+# logic thứ hai để chép về máy. Chuỗi nối đi qua biến môi trường, không nằm trên dòng lệnh của VPS
+URI=$(sed -n 's/^MONGODB_URI=//p' deploy/.env.staging)
+if [ -n "$URI" ]; then
+  URI="$URI" docker run --rm -e URI mongo:7.0 sh -c 'mongodump --quiet --uri "$URI" --archive --gzip' \
+    > "$FILE" || { rm -f "$FILE"; echo "Sao lưu thất bại: mongodump lỗi" >&2; exit 1; }
+else
+  # Mật khẩu đọc trong container, không hiện trên dòng lệnh của VPS
+  docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging exec -T mongodb sh -c \
+    'mongodump --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db swiftletcare --archive --gzip' \
+    > "$FILE" || { rm -f "$FILE"; echo "Sao lưu thất bại: mongodump lỗi" >&2; exit 1; }
+fi
 # Dump lỗi hay rỗng thì bỏ file, để nó không chiếm chỗ của bản tốt trong KEEP bản giữ lại; cron gửi thư báo lỗi
 if [ ! -s "$FILE" ]; then
   rm -f "$FILE"

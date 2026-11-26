@@ -38,6 +38,8 @@ export const farmOwnerRoutes = (
         </RequireRole>
       }
     />
+    {/* Đường dẫn cũ của Điều khiển tay: link đã lưu vẫn mở được */}
+    <Route path="dashboard/scada" element={<Navigate to="/relay-control" replace />} />
     <Route
       path="relay-control"
       element={

@@ -20,13 +20,22 @@ let bucketReady = false
 
 const bucket = () => process.env.MINIO_BUCKET ?? 'swiftletcare-snapshots'
 
+// Cổng mặc định của giao thức không ghi vào endpoint: aws-sdk ký header Host kèm ":443", còn trình duyệt gửi Host không có
+// cổng, nên URL ký của R2/S3 bị từ chối (SignatureDoesNotMatch)
+export function s3Endpoint(): string {
+  const ssl = process.env.MINIO_USE_SSL === 'true'
+  const host = process.env.MINIO_ENDPOINT ?? 'localhost'
+  const port = process.env.MINIO_PORT?.trim() || '9000'
+  const isDefaultPort = port === (ssl ? '443' : '80')
+  return `${ssl ? 'https' : 'http'}://${host}${isDefaultPort ? '' : `:${port}`}`
+}
+
 async function s3(): Promise<S3> {
   if (!client) {
     process.env.AWS_SDK_JS_SUPPRESS_MAINTENANCE_MODE_MESSAGE ??= '1'
     const { default: S3Client } = await import('aws-sdk/clients/s3')
-    const protocol = process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'
     client = new S3Client({
-      endpoint: `${protocol}://${process.env.MINIO_ENDPOINT ?? 'localhost'}:${process.env.MINIO_PORT ?? '9000'}`,
+      endpoint: s3Endpoint(),
       accessKeyId: process.env.MINIO_ACCESS_KEY,
       secretAccessKey: process.env.MINIO_SECRET_KEY,
       s3ForcePathStyle: true,

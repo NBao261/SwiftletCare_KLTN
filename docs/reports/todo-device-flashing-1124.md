@@ -67,7 +67,7 @@ Màn Admin trên web theo bảng phân công là của Nhi: Bảo làm, Nhi duy�
 
 **Quyết định:** trang ghi luôn firmware vào chip bằng `esptool-js` (bản JavaScript chính thức của Espressif, làm đúng việc `esptool` của PlatformIO), file lấy từ **kho firmware riêng trên backend**.
 
-Vì sao không để file trên GitHub Releases: repo công khai, mà bản build chứa giá trị của `Secrets.h` (mật khẩu cổng cập nhật qua mạng LAN, Wi-Fi mặc định) → không được công khai. Kho trên backend chỉ Administrator tải lên và tải về; file nằm trong kho file của backend (MinIO, hoặc thư mục `STORAGE_DRIVER=local` trên staging, khoá `firmware/…`), backend đọc và trả qua route có đăng nhập; `/files` của chế độ local từ chối mọi đường dẫn vào `firmware/`.
+Vì sao không để file trên GitHub Releases: repo công khai, mà bản build chứa giá trị của `Secrets.h` (mật khẩu cổng cập nhật qua mạng LAN, Wi-Fi mặc định) → không được công khai. Kho trên backend chỉ Administrator tải lên và tải về; file nằm trong kho file của backend (MinIO, hoặc bucket Cloudflare R2 (`STORAGE_DRIVER=s3`) trên staging, và thư mục `STORAGE_DRIVER=local` khi bỏ trống biến đó, khoá `firmware/…`), backend đọc và trả qua route có đăng nhập; `/files` của chế độ local từ chối mọi đường dẫn vào `firmware/`.
 
 ### 6.1. Ảnh cài đặt (factory image)
 

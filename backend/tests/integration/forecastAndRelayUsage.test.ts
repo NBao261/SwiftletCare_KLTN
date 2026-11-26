@@ -164,6 +164,8 @@ describe('relay usage (ALERT-FR-016)', () => {
     expect(alert.severity).toBe('LOW')
     expect(alert.message).toContain('ESP32-B-1')
     expect(alert.message).toContain('bơm phun sương')
+    expect(alert.title).toMatch(/ · ESP32-B-1$/)
+    expect(alert.title).not.toContain('—')
     expect(alert.metadata).toMatchObject({ loads: [{ relay: 'misting', hours: 500 }] })
     let saved = (await SensorNode.findById(node._id).lean())!
     expect(saved.relay_usage.misting.since_service_hours).toBeGreaterThan(500) // không reset lúc báo

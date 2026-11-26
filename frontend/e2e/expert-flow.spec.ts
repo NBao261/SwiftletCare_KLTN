@@ -71,11 +71,11 @@ test('B2 — kiểm chứng cảnh báo suy luận: bác bỏ thiếu lý do b�
   await expect(page.getByRole('tab', { name: /Chờ kiểm chứng/ })).toBeVisible();
 
   // Bác bỏ phải có lý do: thiếu ghi chú thì nút lưu khoá; ngăn kéo điền lại ghi chú cũ nên xoá trước khi kiểm
-  await page.getByRole('button', { name: 'Bác bỏ - Báo động giả' }).click();
+  await page.getByRole('radio', { name: 'Bác bỏ - Báo động giả' }).click();
   await page.locator('#expert-note').fill('');
   await expect(page.getByRole('button', { name: 'Lưu kết luận' })).toBeDisabled();
 
-  await page.getByRole('button', { name: 'Xác nhận sự cố thật' }).click();
+  await page.getByRole('radio', { name: 'Xác nhận sự cố thật' }).click();
   await page.locator('#expert-note').fill('E2E: mức ồn cao hơn nền, đúng là sự cố thật');
   const saving = page.waitForResponse(
     response => response.url().includes(`/alerts/${noise._id}/verdict`) && response.request().method() === 'PUT',

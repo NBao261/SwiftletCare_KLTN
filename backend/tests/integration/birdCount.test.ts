@@ -491,7 +491,7 @@ describe('nút AI: heartbeat, offline, vision/alert (THREAT-FR-010)', () => {
   it('vision/alert: nút AI báo được EDGE_AI_DEGRADED gắn nhà, loại khác bị từ chối', async () => {
     const { camera, house } = await seed()
     const alert = await ingestDeviceAlert({ deviceId: camera.device_id, type: 'EDGE_AI_DEGRADED', message: 'FPS 6' })
-    expect(alert).toMatchObject({ type: 'EDGE_AI_DEGRADED', node_id: camera._id, house_id: house._id, title: `EDGE_AI_DEGRADED tại ${house.name}` })
+    expect(alert).toMatchObject({ type: 'EDGE_AI_DEGRADED', node_id: camera._id, house_id: house._id, title: `Camera đếm chim gặp sự cố tại ${house.name}` })
     await expect(ingestDeviceAlert({ deviceId: camera.device_id, type: 'MISTING_INEFFECTIVE' })).rejects.toThrow()
   })
 

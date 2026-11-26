@@ -19,6 +19,7 @@ import { presignedGetUrl } from '@/config/minio.config'
 import { photoUrls } from '@/services/workOrder.service'
 import type { SiteCause } from '@/models/workOrder.model'
 import logger from '@/utils/logger.util'
+import { ALERT_TYPE_LABEL } from '@/utils/displayLabel.util'
 import type { DwelledBreach } from '@/utils/breachDwell.util'
 import type {
   AlertType, AlertSeverity, AlertStatus, AlertVerdictResult, CurrentUser, FarmMemberRole, Thresholds, TelemetryPayload,
@@ -196,6 +197,12 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
   return alert
 }
 
+// Firmware chỉ gửi message: tiêu đề dùng tên loại người đọc được, không để lộ mã loại
+function deviceAlertTitle(message: Record<string, unknown>, type: AlertType, place: string): string {
+  const sent = typeof message.title === 'string' ? message.title.trim() : ''
+  return sent || `${ALERT_TYPE_LABEL[type]} tại ${place}`
+}
+
 // Nhận diện qua deviceId trong payload, không qua topic
 export async function ingestDeviceAlert(message: Record<string, unknown>): Promise<IAlert | null> {
   const deviceId = message.deviceId as string | undefined
@@ -235,12 +242,11 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
     }
     // Giá trị lạ thì bỏ
     if (type === 'ACTUATOR_FAULT') common.details = actuatorFaultDetails(message)
-    // Firmware không gửi title
     const zone = await Zone.findById(node.zone_id).select('farm_id name').lean()
     if (!zone) throw NotFoundError(`Thiết bị "${deviceId}" chưa gắn Zone hợp lệ`)
     return createAlert({
       ...common, farmId: String(zone.farm_id), zoneId: String(zone._id), nodeId: String(node._id),
-      title: (message.title as string | undefined) ?? `${type} tại ${zone.name}`,
+      title: deviceAlertTitle(message, type as AlertType, zone.name),
     })
   }
 
@@ -253,7 +259,7 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
   if (!house) throw NotFoundError(`Camera "${deviceId}" chưa gắn House hợp lệ`)
   return createAlert({
     ...common, farmId: String(house.farm_id), houseId: String(house._id), nodeId: String(camera._id),
-    title: (message.title as string | undefined) ?? `${type} tại ${house.name}`,
+    title: deviceAlertTitle(message, type as AlertType, house.name),
   })
 }
 
