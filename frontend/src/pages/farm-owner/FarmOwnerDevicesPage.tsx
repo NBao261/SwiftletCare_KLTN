@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { PlusIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
@@ -80,10 +81,18 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
       {/* Khung lọc trên header, dưới xl xuống hàng riêng */}
       <HeaderActions>
         <ScopeFilter scope={scope} />
-        {canSetUp && <Button size="sm" onClick={() => navigate('/devices/onboarding')}>{t('list.setup')}</Button>}
       </HeaderActions>
 
-      <SectionCard description={t('list.short')} help={t('list.help')}>
+      <SectionCard
+        description={t('list.short')}
+        help={t('list.help')}
+        action={canSetUp && (
+          <Button size="sm" onClick={() => navigate('/devices/onboarding')}>
+            <PlusIcon size={14} weight="bold" />
+            {t('list.setup')}
+          </Button>
+        )}
+      >
         {body}
       </SectionCard>
       {/* thiết bị gỡ nhầm khôi phục được trong 24 giờ */}

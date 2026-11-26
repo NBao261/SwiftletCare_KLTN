@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { PlusIcon } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
 import { useScopeFilter } from "@/hooks/shared/useScopeFilter";
@@ -131,17 +132,24 @@ export default function TechnicianDevicesPage() {
     <div className="flex flex-col gap-6">
       {/* Khung lọc nằm trên header từ sm trở lên như các trang Farm Owner; mobile header chật nên đặt đầu trang */}
       <HeaderActions>
-        <div className="hidden items-center gap-2 sm:flex">
+        <div className="hidden sm:block">
           <ScopeFilter scope={scope} />
-          <Button size="sm" onClick={() => navigate("/devices/onboarding")}>{t("list.setup")}</Button>
         </div>
       </HeaderActions>
-      <div className="flex flex-wrap items-center gap-2 sm:hidden">
+      <div className="sm:hidden">
         <ScopeFilter scope={scope} />
-        <Button size="sm" onClick={() => navigate("/devices/onboarding")}>{t("list.setup")}</Button>
       </div>
 
       <Card size="lg" className="pb-10 flex flex-col gap-5">
+        {/* Việc chính của trang: lắp thêm thiết bị cho nhà được giao */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-body text-graphite">{t("list.short")}</p>
+          <Button size="sm" onClick={() => navigate("/devices/onboarding")}>
+            <PlusIcon size={14} weight="bold" />
+            {t("list.setup")}
+          </Button>
+        </div>
+
         {loading && <LoadingSkeleton count={2} className="h-40 w-full" />}
 
         {!loading && failed && (
