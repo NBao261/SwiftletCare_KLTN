@@ -8,7 +8,7 @@ import AcknowledgeAlertModal from '@/components/features/farm-owner/alerts/Ackno
 import AlertDetailDrawer from '@/components/features/farm-owner/alerts/AlertDetailDrawer';
 import OnsiteCheckModal from '@/components/features/farm-owner/alerts/OnsiteCheckModal';
 import AlertTable, { type AlertAction } from '@/components/features/farm-owner/alerts/AlertTable';
-import { Button, EmptyState, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
+import { Button, ClearFiltersButton, EmptyState, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
 import { alertsDict } from '@/constants/alerts.i18n';
 import { alertTypeDict } from '@/constants/enumLabels.i18n';
 import { NO_VALUE } from '@/constants/display';
@@ -17,18 +17,20 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useCameraNodes } from '@/hooks/farm-owner/useFarmOwnerDashboard';
-import { ALERT_PAGE_SIZE, useAlertsList, usePendingAlertTotal } from '@/hooks/shared/useAlerts';
+import { ALERT_PAGE_SIZE, useAlertsList } from '@/hooks/shared/useAlerts';
 import { useSensorNodes, useSystemNodeStatus } from '@/hooks/shared/useDevices';
 import { useAllZones } from '@/hooks/shared/useFarms';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
+import { cn } from '@/lib/cn';
 import { nodeLocation } from '@/lib/deviceLocation';
 import { lastPage } from '@/lib/helpers';
 import type { Alert, AlertStatus, AlertType, SeverityLevel } from '@/types';
 import type { InferredAlertType } from '@/types/expert/alerts.types';
 
-const ALERT_STATUSES: AlertStatus[] = ['ACTIVE', 'ACKNOWLEDGED', 'DISMISSED', 'RESOLVED'];
 // 'open' = còn hiệu lực (ACTIVE, ACKNOWLEDGED), hiện tách khỏi DISMISSED và RESOLVED
 type StatusFilter = 'open' | 'all' | AlertStatus;
+// Tab trạng thái: việc cần làm đứng trước, trạng thái đã đóng đứng sau
+const STATUS_TABS: StatusFilter[] = ['open', 'ACTIVE', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED', 'all'];
 type LevelFilter = 'all' | SeverityLevel;
 type VerdictFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
 const ALERT_TYPES = Object.keys(alertTypeDict.vi) as AlertType[];
@@ -50,18 +52,18 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
   const subtitleKey = isAdmin ? 'list.subtitleAdmin' : isTechnician ? 'list.subtitleTechnician' : 'list.subtitle';
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
-  const pendingCount = usePendingAlertTotal();
-  // Câu số chờ xác nhận chỉ hiện khi đã có số; Admin không xác nhận cảnh báo nên dùng câu trung tính
-  let pendingKey: 'list.noPending' | 'list.pending' | 'list.pendingAdmin' = 'list.pending';
-  if (pendingCount === 0) pendingKey = 'list.noPending';
-  else if (isAdmin) pendingKey = 'list.pendingAdmin';
-  const pendingText = pendingCount === undefined ? '' : ` ${t(pendingKey, { n: pendingCount })}`;
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | AlertType>('all');
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
   // Kết luận chuyên gia chỉ có ở cảnh báo suy luận: chọn loại khác thì bỏ lọc kết luận
   const verdictApplies = typeFilter === 'all' || isInferred(typeFilter);
   const verdict = verdictApplies && verdictFilter !== 'all' ? verdictFilter : undefined;
+  const changedFilters = Number(levelFilter !== 'all') + Number(typeFilter !== 'all') + Number(verdictFilter !== 'all' && verdictApplies && !isAdmin);
+  const clearFilters = () => {
+    setLevelFilter('all');
+    setTypeFilter('all');
+    setVerdictFilter('all');
+  };
   // lọc theo trang trại, nhà, Zone (Admin không có cấu trúc farm nên không có bộ lọc phạm vi)
   const scope = useScopeFilter();
   const place = isAdmin ? {} : {
@@ -69,6 +71,8 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
     ...(scope.houseId && { houseId: scope.houseId }),
     ...(scope.zone && { zoneId: scope.zone._id }),
   };
+  // Số chờ xác nhận ghi trên tab theo đúng phạm vi đang lọc (số trên menu bên trái là của cả hệ thống)
+  const { total: pendingCount } = useAlertsList({ status: 'ACTIVE', ...place, limit: 1 });
   // Đổi bộ lọc thì về trang 1
   const filterKey = `${statusFilter}|${levelFilter}|${typeFilter}|${verdict ?? ''}|${JSON.stringify(place)}`;
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
@@ -153,19 +157,33 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
           <ScopeFilter scope={scope} />
         </HeaderActions>
       )}
+      {/* Tab trạng thái như trang Sức khoẻ; số chờ xác nhận ghi ngay trên tab */}
+      <div className="max-w-full self-start overflow-x-auto">
+        <div className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('list.filterStatus')}>
+          {STATUS_TABS.map(value => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={statusFilter === value}
+              onClick={() => setStatusFilter(value)}
+              className={cn(
+                'inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
+                statusFilter === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
+              )}
+            >
+              {t(`tab.${value}`)}
+              {value === 'ACTIVE' && !!pendingCount && (
+                <span className="min-w-5 rounded-full bg-safetyOrange px-1.5 text-center text-xs font-bold leading-5 text-white tabular-nums">{pendingCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Một card: tên trang đã ở header nên card không lặp tiêu đề */}
-      <SectionCard description={`${t(subtitleKey)}${pendingText}`}>
+      <SectionCard description={`${t(subtitleKey)}`}>
         <div className="flex flex-wrap items-center gap-3">
-          <SelectMenu
-            ariaLabel={t('list.filterStatus')}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
-              { value: 'open', label: t('filter.open') },
-              { value: 'all', label: t('filter.all') },
-              ...ALERT_STATUSES.map(item => ({ value: item, label: t(`status.${item}`) })),
-            ]}
-          />
           <SelectMenu
             ariaLabel={t('list.filterLevel')}
             value={levelFilter}
@@ -197,6 +215,7 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
               ]}
             />
           )}
+          {changedFilters > 0 && <ClearFiltersButton tone="danger" count={changedFilters} className="h-9" onClick={clearFilters} />}
         </div>
 
         {isLoading ? (

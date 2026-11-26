@@ -47,8 +47,8 @@ export const alertTypeDict: Dictionary<AlertType> = {
 
 // Trạng thái xử lý cảnh báo
 export const alertStatusDict: Dictionary<AlertStatus> = {
-  vi: { ACTIVE: 'Mới', ACKNOWLEDGED: 'Tiếp nhận', DISMISSED: 'Bác bỏ', RESOLVED: 'Đã xử lý' },
-  en: { ACTIVE: 'New', ACKNOWLEDGED: 'Received', DISMISSED: 'Dismissed', RESOLVED: 'Resolved' },
+  vi: { ACTIVE: 'Chờ xác nhận', ACKNOWLEDGED: 'Đã xác nhận', DISMISSED: 'Bác bỏ', RESOLVED: 'Đã xử lý' },
+  en: { ACTIVE: 'Awaiting acknowledgement', ACKNOWLEDGED: 'Acknowledged', DISMISSED: 'Dismissed', RESOLVED: 'Resolved' },
 };
 
 // Trạng thái thiết bị: ERROR/DEGRADED đã bỏ theo

@@ -80,7 +80,7 @@ test('T2 — cảnh báo của nhà được giao mở được ngăn chi tiết
   await expect(page.getByRole('heading', { name: 'Lỗi cảm biến' })).toBeVisible();
 
   // Ngăn chi tiết đọc đúng cảnh báo đang mở: trạng thái của nó khớp dữ liệu máy chủ
-  const statusLabel = alert.status === 'ACTIVE' ? 'Mới' : 'Tiếp nhận';
+  const statusLabel = alert.status === 'ACTIVE' ? 'Chờ xác nhận' : 'Đã xác nhận';
   await expect(page.getByText(statusLabel, { exact: true }).first()).toBeVisible();
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
