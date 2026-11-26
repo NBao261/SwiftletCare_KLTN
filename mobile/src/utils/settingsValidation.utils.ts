@@ -178,6 +178,12 @@ export function isNumberDraftChanged<K extends string>(
   return keys.some(key => parseNumberInput(draft[key]) !== (original[key] ?? null))
 }
 
+// Hai ô vĩ độ, kinh độ thành toạ độ khi cả hai hợp lệ (để đặt ghim bản đồ); còn ô trống hoặc sai thì null
+export function parseCoordinatesDraft(draft: NumberDraft<keyof Coordinates>): Coordinates | null {
+  if (hasDraftErrors(validateNumberDraft(draft, COORDINATE_RULES))) return null
+  return parseNumberDraft(draft, ['lat', 'lng'])
+}
+
 // Có lỗi nào trong bản nháp không
 export function hasDraftErrors<K extends string>(errors: DraftErrors<K>): boolean {
   return Object.values(errors).some(Boolean)
