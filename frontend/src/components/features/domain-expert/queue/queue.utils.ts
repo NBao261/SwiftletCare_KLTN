@@ -1,6 +1,6 @@
 import type { ExpertQueueGroup, ExpertQueueItem, ExpertQueueKind } from '@/types/expert/queue.types'
 
-// 4 ô tóm tắt đầu trang, mỗi ô gom các loại việc cùng một kiểu quyết định
+// 4 tab đầu trang, mỗi tab gom các loại việc cùng một kiểu quyết định
 export type QueueSection = 'verdicts' | 'reviews' | 'proposals' | 'conclusions'
 
 export const SECTION_KINDS: Record<QueueSection, ExpertQueueKind[]> = {
@@ -12,6 +12,18 @@ export const SECTION_KINDS: Record<QueueSection, ExpertQueueKind[]> = {
 
 // Thứ tự các khung trong trang
 export const KIND_ORDER: ExpertQueueKind[] = Object.values(SECTION_KINDS).flat()
+
+export type QueueTab = 'all' | QueueSection
+
+// Các khung việc của một tab: chỉ khung còn việc, theo thứ tự trang; việc Chủ nhà yến đã nhắc đứng trước
+export function groupsForTab(groups: ExpertQueueGroup[], tab: QueueTab): ExpertQueueGroup[] {
+  const kinds = tab === 'all' ? KIND_ORDER : SECTION_KINDS[tab]
+  const byKind = new Map(groups.map(group => [group.kind, group]))
+  return kinds
+    .map(kind => byKind.get(kind))
+    .filter((group): group is ExpertQueueGroup => Boolean(group && group.total > 0))
+    .map(group => ({ ...group, items: [...group.items].sort((a, b) => Number(b.reminded) - Number(a.reminded)) }))
+}
 
 export function sectionTotal(groups: ExpertQueueGroup[], section: QueueSection): number {
   const kinds = SECTION_KINDS[section]

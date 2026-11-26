@@ -1,8 +1,9 @@
-// Trang chủ Chuyên gia: mọi việc đang chờ của trại đang chọn, 4 ô tóm tắt và một khung cho mỗi loại việc
+// Trang chủ Chuyên gia: việc đang chờ của trại đang chọn; hàng tab lọc theo kiểu quyết định, mỗi loại việc một khung, bấm cả hàng để mở
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChecksIcon, ClipboardTextIcon, FileTextIcon, LightbulbFilamentIcon, ShieldCheckIcon } from '@phosphor-icons/react'
-import KpiTile from '@/components/common/KpiTile'
-import { KIND_ORDER, sectionTotal, targetOf, type QueueSection } from '@/components/features/domain-expert/queue/queue.utils'
+import { CaretRightIcon, ClipboardTextIcon } from '@phosphor-icons/react'
+import StatusTabs from '@/components/common/StatusTabs'
+import { groupsForTab, sectionTotal, targetOf, type QueueSection, type QueueTab } from '@/components/features/domain-expert/queue/queue.utils'
 import { Badge, Button, EmptyState, LoadingSkeleton, SectionCard } from '@/components/ui'
 import { NO_VALUE } from '@/constants/display'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
@@ -25,11 +26,11 @@ const kindTitle = (kind: ExpertQueueKind): string => ({
   season_conclusion: t('Mùa vụ chờ kết luận'),
 })[kind]
 
-const SECTIONS: Array<{ key: QueueSection; label: () => string; sub: () => string; icon: typeof ShieldCheckIcon }> = [
-  { key: 'verdicts', label: () => t('Kết luận cảnh báo'), sub: () => t('cảnh báo suy luận'), icon: ShieldCheckIcon },
-  { key: 'reviews', label: () => t('Duyệt thay đổi'), sub: () => t('tham số và hệ số mờ'), icon: ChecksIcon },
-  { key: 'proposals', label: () => t('Duyệt đề xuất'), sub: () => t('luật phun sương, hồ sơ, luật khuyến nghị'), icon: LightbulbFilamentIcon },
-  { key: 'conclusions', label: () => t('Viết kết luận'), sub: () => t('ngày đánh giá khác, báo cáo, mùa vụ'), icon: FileTextIcon },
+const SECTIONS: Array<{ key: QueueSection; label: () => string }> = [
+  { key: 'verdicts', label: () => t('Kết luận cảnh báo') },
+  { key: 'reviews', label: () => t('Duyệt thay đổi') },
+  { key: 'proposals', label: () => t('Duyệt đề xuất') },
+  { key: 'conclusions', label: () => t('Viết kết luận') },
 ]
 
 // Ngày lệch trả 'YYYY-MM-DD', các việc khác trả thời điểm
@@ -53,25 +54,32 @@ function QueueGroupCard({ group }: { group: ExpertQueueGroup }) {
         </Link>
       )}
     >
-      <div className="divide-y divide-warmGray/10">
+      <ul className="-my-2 divide-y divide-warmGray/10">
         {group.items.map(item => (
-          <div key={item.id} className="flex items-center gap-3 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-2 truncate text-sm font-medium text-charcoal">
-                <span className="truncate">{item.title}</span>
-                {item.reminded && <Badge tone="warning">{t('Chủ nhà yến đã nhắc')}</Badge>}
-              </p>
-              <p className="truncate text-small text-warmGray">{item.house_name ?? NO_VALUE} · {whenOf(item)}</p>
-            </div>
-            <Button variant="secondary" size="sm" onClick={() => open(item)}>{t('Mở')}</Button>
-          </div>
+          <li key={item.id}>
+            <button
+              type="button"
+              onClick={() => open(item)}
+              className="-mx-2 flex min-h-14 w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-warmGray/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-700"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-charcoal">{item.title}</span>
+                <span className="mt-0.5 flex items-center gap-2 text-small text-warmGray">
+                  {item.reminded && <Badge tone="warning" className="shrink-0 whitespace-nowrap">{t('Chủ nhà yến đã nhắc')}</Badge>}
+                  <span className="truncate">{item.house_name ?? NO_VALUE} · {whenOf(item)}</span>
+                </span>
+              </span>
+              <CaretRightIcon className="h-4 w-4 shrink-0 text-warmGray" aria-hidden />
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </SectionCard>
   )
 }
 
 export default function DomainExpertQueuePage() {
+  const [tab, setTab] = useState<QueueTab>('all')
   const farmId = useZoneStore(state => state.selectedFarmId)
   const queue = useExpertQueue(farmId)
   const apiErrorMessage = useApiErrorMessage()
@@ -80,9 +88,7 @@ export default function DomainExpertQueuePage() {
   if (queue.isLoading) {
     return (
       <div className="mx-auto w-full max-w-screen-xl space-y-5">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {SECTIONS.map(section => <LoadingSkeleton key={section.key} className="h-28 w-full rounded-2xl" />)}
-        </div>
+        <LoadingSkeleton className="h-11 w-full max-w-xl rounded-full" />
         <LoadingSkeleton count={3} className="h-14 w-full rounded-2xl" />
       </div>
     )
@@ -98,31 +104,24 @@ export default function DomainExpertQueuePage() {
   }
 
   const groups = queue.data.groups
-  const byKind = new Map(groups.map(group => [group.kind, group]))
-  const pending = KIND_ORDER.map(kind => byKind.get(kind)).filter((group): group is ExpertQueueGroup => Boolean(group && group.total > 0))
+  const total = SECTIONS.reduce((sum, section) => sum + sectionTotal(groups, section.key), 0)
+  const visible = groupsForTab(groups, tab)
 
   return (
     <div className="mx-auto w-full max-w-screen-xl space-y-5">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {SECTIONS.map(section => {
-          const total = sectionTotal(groups, section.key)
-          return (
-            <KpiTile
-              key={section.key}
-              icon={section.icon}
-              label={section.label()}
-              value={total}
-              sub={section.sub()}
-              tone={total > 0 ? 'orange' : 'neutral'}
-              className="h-full"
-            />
-          )
-        })}
-      </div>
+      <StatusTabs
+        ariaLabel={t('Lọc việc theo loại')}
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: 'all', label: t('Tất cả'), badge: total },
+          ...SECTIONS.map(section => ({ id: section.key, label: section.label(), badge: sectionTotal(groups, section.key) })),
+        ]}
+      />
 
-      {pending.length === 0
+      {visible.length === 0
         ? <EmptyState icon={<ClipboardTextIcon className="h-8 w-8" />} title={t('Không có việc gì đang chờ')} />
-        : pending.map(group => <QueueGroupCard key={group.kind} group={group} />)}
+        : visible.map(group => <QueueGroupCard key={group.kind} group={group} />)}
     </div>
   )
 }
