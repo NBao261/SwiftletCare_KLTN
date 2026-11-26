@@ -117,7 +117,7 @@ async function raiseMaintenanceDueIfDue(node: ISensorNode): Promise<boolean> {
     zoneId: String(node.zone_id),
     nodeId: String(node._id),
     type: 'MAINTENANCE_DUE',
-    title: `Đến hạn bảo trì ${due.map(r => RELAY_LABEL[r]).join(', ')} — ${node.device_id}`,
+    title: `Đến hạn bảo trì ${due.map(r => RELAY_LABEL[r]).join(', ')} · ${node.device_id}`,
     message: loads.map(l => `${RELAY_LABEL[l.relay]} của ${node.device_id} (${zone.name}) đã chạy ${l.hours} giờ / ` +
       `${l.switches.toLocaleString('vi-VN')} lần đóng cắt kể từ lần bảo trì trước (mốc ${l.limit_hours} giờ hoặc ` +
       `${l.limit_switches.toLocaleString('vi-VN')} lần)`).join('; ') + '. Xác nhận cảnh báo sau khi bảo trì để đếm lại từ 0.',

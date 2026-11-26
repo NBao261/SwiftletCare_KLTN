@@ -1,4 +1,7 @@
-import { formatVnDateTime, ROLE_LABEL, SEVERITY_LABEL } from '@/utils/displayLabel.util'
+import { formatVnDateTime, HOUSE_STAGE_LABEL, PARAMETER_LABEL, ROLE_LABEL, SEVERITY_LABEL } from '@/utils/displayLabel.util'
+import { DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_HEALTH_LEVELS } from '@/utils/detectionTuning.util'
+import { DEFAULT_FUZZY_TUNING } from '@/utils/fuzzyTuning.util'
+import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 
 describe('displayLabel.util', () => {
   it('tên role tiếng Việt như web, không lộ mã enum', () => {
@@ -20,5 +23,16 @@ describe('displayLabel.util', () => {
     expect(text).toContain('05:05')
     expect(text).toContain('20/11/2026')
     expect(text).not.toContain('T')
+  })
+
+  it('mọi tham số có thể đổi đều có tên tiếng Việt cho thông báo', () => {
+    const keys = [DEFAULT_THRESHOLDS, DEFAULT_FUZZY_TUNING, DEFAULT_DETECTION_TUNING, DEFAULT_BIRD_COUNT_TUNING, DEFAULT_HEALTH_LEVELS]
+      .flatMap(defaults => Object.keys(defaults))
+    expect(keys.filter(key => !Object.hasOwn(PARAMETER_LABEL, key))).toEqual([])
+    expect(Object.values(PARAMETER_LABEL).every(label => !/_/.test(label))).toBe(true)
+  })
+
+  it('giai đoạn nhà như thẻ giai đoạn trên web', () => {
+    expect(HOUSE_STAGE_LABEL).toEqual({ ATTRACTING: 'Đang dẫn dụ', OCCUPIED: 'Đã có chim ở' })
   })
 })

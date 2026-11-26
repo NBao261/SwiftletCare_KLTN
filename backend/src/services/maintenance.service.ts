@@ -211,7 +211,7 @@ async function checkCountedPlan(plan: IMaintenancePlan, now: Date): Promise<numb
 
     const zoneName = zones.find(z => String(z._id) === String(node.zone_id))?.name ?? ''
     const shown = plan.basis === 'RUN_HOURS' ? Math.round(counter) : counter
-    const title = `Đến hạn bảo trì ${EQUIPMENT_LABEL[plan.equipment]} — ${node.device_id}`
+    const title = `Đến hạn bảo trì ${EQUIPMENT_LABEL[plan.equipment]} · ${node.device_id}`
     const message = `${EQUIPMENT_LABEL[plan.equipment]} của ${node.device_id} (${zoneName}) đã ${shown} ${UNIT[plan.basis]} ` +
       `kể từ lần bảo trì trước (kế hoạch: mỗi ${plan.interval} ${UNIT[plan.basis]}).`
     const details = { plan_id: String(plan._id), load, counter: shown, interval: plan.interval, basis: plan.basis }
@@ -234,7 +234,7 @@ async function checkCalendarPlan(plan: IMaintenancePlan, now: Date): Promise<num
   if (await WorkOrder.exists({ plan_id: plan._id, is_open: true })) return 0
   await markDue(plan, now)
   const house = await House.findById(plan.house_id).select('name').lean()
-  const title = `Đến hạn ${EQUIPMENT_LABEL[plan.equipment]} — ${house?.name ?? ''}`
+  const title = `Đến hạn ${EQUIPMENT_LABEL[plan.equipment]} · ${house?.name ?? ''}`
   const message = `Kế hoạch ${EQUIPMENT_LABEL[plan.equipment]} của ${house?.name ?? 'nhà'} đến hạn (mỗi ${plan.interval} ngày).`
   const details = { plan_id: String(plan._id), interval: plan.interval, basis: plan.basis }
   const alert = await createAlert({
