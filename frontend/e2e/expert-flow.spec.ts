@@ -226,9 +226,10 @@ test('B6 — thêm luật bù phun sương theo thời tiết rồi xoá (ENV-FR
 
 test('B7 — lịch đếm chim: thêm khung tạm vào bản nháp rồi huỷ, vòng đếm mở được (VISION-FR-018, 019)', async ({ page }) => {
   const crashes = await openAsExpert(page, '/domain-expert/counting-schedule', { farmId, houseId: houseB });
-  await expect(page.getByRole('heading', { name: /Hồ sơ theo mùa/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Hồ sơ theo mùa/ })).toBeVisible();
 
-  // Thêm một khung tạm vào bản nháp: hiện hàng giờ sáng/chiều và nút lưu
+  // Thêm một khung tạm vào bản nháp (tab Khung tạm): hiện hàng giờ sáng/chiều và nút lưu
+  await page.getByRole('tab', { name: /Khung tạm/ }).click();
   await page.getByRole('button', { name: 'Thêm khung tạm' }).click();
   await expect(page.getByRole('button', { name: 'Lưu lịch' })).toBeVisible();
   await page.getByRole('button', { name: 'Huỷ thay đổi' }).click();
@@ -237,7 +238,7 @@ test('B7 — lịch đếm chim: thêm khung tạm vào bản nháp rồi huỷ,
   // Vòng đếm là tab thứ hai của mục Đếm chim
   await page.getByRole('link', { name: 'Vòng đếm' }).click();
   await expect(page).toHaveURL(/\/domain-expert\/counting-ring$/);
-  await expect(page.getByRole('heading', { name: 'Vòng đếm camera' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vòng đếm', exact: true })).toBeVisible();
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 

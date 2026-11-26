@@ -130,6 +130,7 @@ const enExpert: Record<string, string> = {
   'Đã xác nhận sự cố thật': 'Confirmed as a real incident',
   'Đã bác bỏ báo động giả': 'Rejected as a false alarm',
   'Xem': 'View',
+  'Xem thêm {{n}} lần': 'Show {{n}} more',
   '{{n}}/{{max}} luật': '{{n}}/{{max}} rules',
   'Lọc hồ sơ theo trạng thái': 'Filter profiles by status',
   'Mặc định: {{value}}': 'Default: {{value}}',
