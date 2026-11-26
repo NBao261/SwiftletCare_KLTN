@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import { Button, ConfirmModal, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { DownloadSimpleIcon, PlusIcon } from '@phosphor-icons/react';
+import StatusTabs from '@/components/common/StatusTabs';
+import { Button, Card, ConfirmModal, EmptyState, LoadingSkeleton, SectionCard } from '@/components/ui';
 import HarvestCyclesCard from '@/components/features/farm-owner/harvest/HarvestCyclesCard';
 import HarvestDetailModal from'@/components/features/farm-owner/harvest/HarvestDetailModal';
 import HarvestStatsCards from '@/components/features/farm-owner/harvest/HarvestStatsCards';
@@ -95,6 +97,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   const apiErrorMessage = useApiErrorMessage();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [tab, setTab] = useState<'runs' | 'cycles'>('runs');
   // Khoá lần thu (nhóm các loại yến) đang mở chi tiết / sửa / chờ xoá
   const [detailGroupKey, setDetailGroupKey] = useState<string | null>(null);
   const [editGroupKey, setEditGroupKey] = useState<string | null>(null);
@@ -120,6 +123,8 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   // Sản lượng chỉ tính lô đã xác nhận; bảng và CSV vẫn có lô chờ xác nhận
   const confirmedBatches = useMemo(() => scopedBatches.filter(batch => batch.status !== 'DRAFT'), [scopedBatches]);
   const confirmedGroups = useMemo(() => groupHarvests(confirmedBatches), [confirmedBatches]);
+  // Số lần thu còn lô chờ Farm Owner xác nhận, ghi trên tab
+  const pendingRunCount = useMemo(() => groups.filter(group => group.pendingIds.length > 0).length, [groups]);
 
   if (scope.farms.length === 0) {
     return (
@@ -202,40 +207,61 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
         <ScopeFilter scope={scope} lockZone />
       </HeaderActions>
 
-      <HarvestStatsCards
-        groups={confirmedGroups}
-        zones={zones}
-        farmNames={scope.farmNames}
-      />
+      <Card size="lg">
+        <HarvestStatsCards groups={confirmedGroups} zones={zones} farmNames={scope.farmNames} />
+      </Card>
 
-      {/* Màn xl khoá chiều cao 2 khung, màn hẹp xếp chồng */}
-      {/* Hàng lưới đặt cứng minmax(0,1fr): nội dung dài không kéo hàng cao quá 556px, bảng tự cuộn bên trong */}
-      <div className="grid grid-cols-1 gap-6 xl:h-[556px] xl:grid-cols-12 xl:grid-rows-[minmax(0,1fr)]">
-        <div className="min-w-0 xl:col-span-8 xl:h-full xl:min-h-0">
+      {/* Một thẻ hai tab: các đợt thu (ghi, xác nhận, sửa) và chu kỳ thu hoạch do backend đóng khi xác nhận */}
+      <SectionCard
+        description={t('table.subtitle')}
+        action={(
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={() => exportCsv(allBatches, houseNameByZone, personNames, t)} disabled={groups.length === 0}>
+              <DownloadSimpleIcon size={14} weight="bold" />
+              {t('page.export')}
+            </Button>
+            {canWrite && (
+              <Button size="sm" onClick={() => setIsCreateOpen(true)} disabled={Boolean(createBlockedReason)} title={createBlockedReason}>
+                <PlusIcon size={14} weight="bold" />
+                {t('page.create')}
+              </Button>
+            )}
+          </div>
+        )}
+      >
+        <StatusTabs
+          variant="underline"
+          ariaLabel={t('tab.aria')}
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { id: 'runs', label: t('tab.runs'), badge: isOwner ? pendingRunCount : undefined },
+            { id: 'cycles', label: t('tab.cycles') },
+          ]}
+        />
+        {tab === 'runs' ? (
           <HarvestTable
             groups={groups}
             zones={scope.zones}
-            houses={scope.houseId ? [] : scope.houses}
             creatorName={creatorName}
             onOpenDetail={group => setDetailGroupKey(group.key)}
             onEdit={canWrite ? group => setEditGroupKey(group.key) : undefined}
             onDelete={canWrite ? group => setDeleteGroupKey(group.key) : undefined}
             canChange={canChange}
             onConfirm={isOwner ? group => setConfirmGroupKey(group.key) : undefined}
-            onCreate={canWrite ? () => setIsCreateOpen(true) : undefined}
             createBlockedReason={createBlockedReason}
-            onExport={() => exportCsv(allBatches, houseNameByZone, personNames, t)}
+            canCreate={canWrite}
           />
-        </div>
-        <div className="min-w-0 xl:col-span-4 xl:h-full xl:min-h-0">
-          <NestTypeBreakdownCard batches={confirmedBatches} />
-        </div>
+        ) : (
+          <HarvestCyclesCard key={`${farmId}-${scope.houseId}`} farmId={farmId} houseId={scope.houseId} zones={zones} embedded />
+        )}
+      </SectionCard>
+
+      {/* Biểu đồ theo kỳ và phân bổ loại tổ cạnh nhau */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <HarvestYearChart batches={confirmedBatches} />
+        <NestTypeBreakdownCard batches={confirmedBatches} />
       </div>
-
-      <HarvestYearChart batches={confirmedBatches} />
-
-      {/* chu kỳ do backend đóng khi xác nhận lần thu */}
-      <HarvestCyclesCard key={`${farmId}-${scope.houseId}`} farmId={farmId} houseId={scope.houseId} zones={zones} />
 
       {/* Popup chỉ dựng khi mở nên mỗi lần mở là form mới */}
       {isCreateOpen && !createBlockedReason && <HarvestFormModal scope={scope} creatorName={user?.full_name ?? NO_VALUE} onClose={() => setIsCreateOpen(false)} />}

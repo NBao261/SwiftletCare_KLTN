@@ -7,6 +7,8 @@ export interface StatItem {
   unit?: string
   // Dòng phụ dưới số
   sub?: string
+  // Dòng ghi chú thứ hai, nhạt hơn dòng phụ (VD so với kỳ trước)
+  note?: string
   // Số đang báo vấn đề: cam kèm dòng phụ, không chỉ màu
   isWarning?: boolean
 }
@@ -26,6 +28,7 @@ export default function StatStrip({ items }: { items: StatItem[] }): JSX.Element
             {item.unit && <span className="ml-1 text-small font-medium text-warmGray">{item.unit}</span>}
           </dd>
           {item.sub && <dd className="mt-1.5 text-small font-medium text-warmGray">{item.sub}</dd>}
+          {item.note && <dd className="mt-0.5 text-small text-graphite">{item.note}</dd>}
         </div>
       ))}
     </dl>
