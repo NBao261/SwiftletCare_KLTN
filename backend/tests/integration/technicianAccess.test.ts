@@ -198,12 +198,12 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
     await tech$.put(`/devices/camera-nodes/${camera2._id}/counting-ring`, ring).expect(403)
   })
 
-  it('does not set up, move or remove devices, nor manage audio tracks', async () => {
+  it('does not manage audio tracks, and sets up devices only in an assigned house (technicianDeviceSetup.test.ts)', async () => {
     const { house, zone2, node, tech, owner$, tech$ } = await seedFarmWithTechnician()
     await owner$.put(assignPath(house._id, tech.user._id)).expect(200)
 
+    // zone2 thuộc nhà không giao cho thợ
     await tech$.put(`/devices/sensor-nodes/${node._id}/reassign-zone`, { newZoneId: String(zone2._id) }).expect(403)
-    await tech$.post(`/devices/sensor-nodes/${node._id}/decommission`, { reason: 'x' }).expect(403)
     await tech$.post('/devices/sensor-nodes/register', { device_id: 'X', zone_id: String(zone2._id), secret_key: 'k' }).expect(403)
     await tech$.delete(`/devices/sensor-nodes/${node._id}/audio-tracks/${node._id}`).expect(403)
   })
