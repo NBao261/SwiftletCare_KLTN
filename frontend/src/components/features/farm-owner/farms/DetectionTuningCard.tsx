@@ -19,7 +19,7 @@ export default function DetectionTuningCard({ tuning }: { tuning?: DetectionTuni
   const { t, num } = useTranslation(farmDict)
 
   return (
-    <FarmFrame title={t('tuning.title')} description={t('tuning.desc')}>
+    <FarmFrame title={t('tuning.title')} help={t('tuning.desc')}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {PARAMS.map(param => {
           const value = tuning?.[param.key]

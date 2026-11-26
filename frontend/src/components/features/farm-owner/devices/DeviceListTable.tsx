@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { CpuIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, CpuIcon, VideoCameraIcon } from '@phosphor-icons/react';
 
 import SimulatedBadge from '@/components/common/SimulatedBadge';
 import StatusDot from '@/components/common/StatusDot';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import type { DeviceRow } from '@/components/features/farm-owner/devices/deviceInventory';
-import { Button, type DataTableColumn } from '@/components/ui';
+import { type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { devicesDict } from '@/constants/devices.i18n';
 import { NO_VALUE } from '@/constants/display';
@@ -90,15 +90,10 @@ export default function DeviceListTable({ rows, hasAnyDevice, onOpen }: DeviceLi
       key: 'actions',
       header: '',
       align: 'right',
-      className: 'w-[8%] whitespace-nowrap',
-      render: row => (
-        // Bấm nút không kích hoạt thêm lần mở của dòng
-        <div className="flex justify-end" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
-          <Button size="sm" variant="secondary" onClick={() => onOpen(row)}>{t('action.detail')}</Button>
-        </div>
-      ),
+      className: 'w-[4%]',
+      render: () => <CaretRightIcon size={16} weight="bold" aria-hidden className="ml-auto text-warmGray" />,
     },
-  ], [t, ago, dateTime, onOpen]);
+  ], [t, ago, dateTime]);
 
   return (
     <FixedRowsTable
@@ -119,9 +114,6 @@ export default function DeviceListTable({ rows, hasAnyDevice, onOpen }: DeviceLi
             {t(row.device.type === 'sensor' ? 'cell.kitKind' : 'cell.cameraKind')} · {row.house.name} · {row.zone?.name ?? t('cell.wholeHouse')}
             {row.device.lastHeartbeat ? ` · ${ago(row.device.lastHeartbeat)}` : ''}
           </p>
-          <div className="flex justify-end" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
-            <Button size="sm" variant="secondary" onClick={() => onOpen(row)}>{t('action.detail')}</Button>
-          </div>
         </div>
       )}
     />

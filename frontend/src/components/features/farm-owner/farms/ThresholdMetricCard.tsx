@@ -16,22 +16,11 @@ interface ThresholdMetricCardProps {
 // 1 chỉ số của Zone
 export default function ThresholdMetricCard({ meta, value, range, isAnomaly }: ThresholdMetricCardProps) {
   const { t, num } = useTranslation(farmDict)
-  const Icon = meta.icon
   const hasValue = value !== undefined && !Number.isNaN(value)
 
   return (
     <div className={cn('rounded-2xl border p-4', isAnomaly ? 'border-climateOrange/40 bg-climateOrange/[0.06]' : 'border-warmGray/15 bg-white')}>
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <span className="label-caption">{t(meta.labelKey)}</span>
-        <span
-          className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
-            isAnomaly ? 'bg-climateOrange text-white' : 'bg-warmGray/10 text-charcoal',
-          )}
-        >
-          <Icon size={14} weight="bold" />
-        </span>
-      </div>
+      <p className="label-caption mb-2">{t(meta.labelKey)}</p>
 
       <div className={cn('text-2xl font-extrabold leading-none tracking-tight', !hasValue ? 'text-warmGray' : isAnomaly ? 'text-climateOrange' : 'text-charcoal')}>
         {hasValue ? num(value, meta.decimals) : NO_VALUE}

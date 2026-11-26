@@ -140,7 +140,6 @@ const vi = {
   'metrics.alerts': '{n} cảnh báo',
   'metrics.withinTarget': '{pct}% xác nhận trong {target} phút',
   'metrics.openWorkOrders': 'Phiếu công việc chưa đóng',
-  'metrics.viewAll': 'Xem phiếu công việc',
   'metrics.loadFailed': 'Không tải được số liệu xử lý sự cố',
 
   ...prefixLabels('status.', workOrderStatusDict.vi),
@@ -283,7 +282,6 @@ const en: Record<WorkOrderKey, string> = {
   'metrics.alerts': '{n} alerts',
   'metrics.withinTarget': '{pct}% acknowledged within {target} min',
   'metrics.openWorkOrders': 'Open work orders',
-  'metrics.viewAll': 'View work orders',
   'metrics.loadFailed': 'Could not load the incident figures',
 
   ...prefixLabels('status.', workOrderStatusDict.en),
