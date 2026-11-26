@@ -75,7 +75,7 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
         <Input
           id="wr-offset"
           type="number"
-          label={t('Mức bù phun (−10…+10, ≠ 0)')}
+          label={t('Mức bù phun (từ −10 đến +10, khác 0)')}
           value={draft.offset_pct ?? ''}
           onChange={event => setDraft(current => ({ ...current, offset_pct: event.target.value === '' ? undefined : Number(event.target.value) }))}
           disabled={disabled}

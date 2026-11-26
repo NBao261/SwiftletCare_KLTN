@@ -22,6 +22,8 @@ export const CHART_COLORS = {
   accentDeep: '#89A022',
   // accent-900: đoạn "Yến huyết" của biểu đồ sản lượng (HarvestYearChart)
   accentMoss: '#414C10',
+  // Chim về buổi chiều (BirdDailyCharts): cặp với climateOrange qua kiểm tra màu của skill dataviz (CVD ΔE 11,6)
+  accentOlive: '#6B7F18',
 } as const
 
 // Màu token với độ trong suốt (0–1) cho nền dải ngưỡng, vùng tô: chỉ nhận màu hex 6 ký tự trong CHART_COLORS

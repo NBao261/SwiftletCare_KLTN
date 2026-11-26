@@ -1,8 +1,9 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import { Button, LoadingSkeleton, SectionCard } from '@/components/ui'
 import TuningStepperInput from './TuningStepperInput'
-import TuningRangeTip from './TuningRangeTip'
+import { TuningRangeList } from './TuningRangeTip'
 import type { TuningBlockHandle } from './tuning.utils'
 import type { ExpertThresholds } from '@/types/expert.types'
 import { t } from '@/i18n'
@@ -64,36 +65,24 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
     cancel: () => { setForm(base); setError(null) },
   }))
 
-  if (isLoading) return (
-    <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-5 animate-pulse space-y-4 h-full">
-      {Array.from({ length: 7 }).map((_, i) => <div key={i} className="h-12 bg-neutral-100 rounded-xl" />)}
-    </div>
-  )
+  if (isLoading) return <LoadingSkeleton count={7} className="h-12 w-full" />
 
   return (
     <>
-      <div className="h-full flex flex-col justify-between bg-white rounded-2xl p-5 border border-stone-200/80 shadow-2xs">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100">
-          <div>
-            <h3 className="flex items-center gap-1 text-base font-bold text-charcoal">
-              {t('2. Ngưỡng vi khí hậu & khí độc')}
-              <TuningRangeTip hints={FIELDS.map(field => {
-                const limit = THRESHOLD_LIMITS[field.key]
-                return { label: t(field.label), range: `Phạm vi: ${limit.min}–${limit.max} ${t(limit.unit)}` }
-              })} />
-            </h3>
-            <p className="text-small text-warmGray mt-0.5">{t('Tiêu chuẩn vi khí hậu môi trường nuôi')}</p>
-          </div>
-          <button type="button" onClick={() => setResetOpen(true)}
-            className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-stone-500 hover:bg-warmGray/10 hover:text-charcoal whitespace-nowrap shrink-0 transition-colors max-sm:h-11">
-            <RotateCcw className="w-3.5 h-3.5" />
-            {t('Khôi phục mặc định')}
-          </button>
-        </div>
-
-        {/* Fields */}
-        <fieldset disabled={isSaving} className="flex-1 py-1 divide-y divide-stone-100">
+      <SectionCard
+        title={t('Ngưỡng vi khí hậu & khí độc')}
+        description={t('Tiêu chuẩn vi khí hậu môi trường nuôi')}
+        help={<TuningRangeList hints={FIELDS.map(field => {
+          const limit = THRESHOLD_LIMITS[field.key]
+          return { label: t(field.label), range: `Phạm vi: ${limit.min}–${limit.max} ${t(limit.unit)}` }
+        })} />}
+        action={(
+          <Button variant="icon" size="sm" onClick={() => setResetOpen(true)} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>
+            <ArrowCounterClockwiseIcon size={16} weight="bold" />
+          </Button>
+        )}
+      >
+        <fieldset disabled={isSaving} className="divide-y divide-warmGray/10">
           {FIELDS.map(field => {
             const limit = THRESHOLD_LIMITS[field.key]
             return (
@@ -104,8 +93,8 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
         </fieldset>
 
         {/* Lỗi kiểm ngưỡng; nút Lưu chung ở thanh dính đáy của trang */}
-        {error && <p className="mt-auto pt-4 border-t border-stone-100 text-xs text-red-600">{error}</p>}
-      </div>
+        {error && <p className="text-xs text-alertRed">{error}</p>}
+      </SectionCard>
 
       <ConfirmModal
         open={resetOpen}

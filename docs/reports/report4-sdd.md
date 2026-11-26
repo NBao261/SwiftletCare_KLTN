@@ -8,9 +8,9 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.32 (Review 2, final scope) |
-| Date | 23/11/2026 |
-| Requirements baseline | Report 3 – SRS 4.2.25 (`docs/reports/report3-srs.md`) |
+| Document version | 2.2.34 (Review 2, final scope) |
+| Date | 27/11/2026 |
+| Requirements baseline | Report 3 – SRS 4.2.27 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
 All diagrams in this document are written in Mermaid and kept in the repository with the text. The API contract is `docs/api/api-spec.yaml` (OpenAPI 3.0, served at `/api-docs`); the database script is `docs/database/init.mongo.js`.
@@ -134,7 +134,7 @@ Redis is started by `docker-compose.yml` but no module uses it yet (reserved); i
 | DF-6 | Bird counts | Camera RTSP → AI node → MQTT `swiftletcare/dev/{deviceId}/vision/bird-count` (session every 30 s, 5-minute buckets, QoS 1) → backend resolves the camera's house → `BIRD_COUNT_UPDATE` | Counts belong to the house (Report 3 §2.8) |
 | DF-7 | Live video | AI node publishes annotated stream to MediaMTX → viewer gets a 60-second token from the API → MediaMTX asks `POST /internal/stream-auth` → WebRTC (web) or HLS (mobile) | Video never passes through the backend |
 | DF-8 | Expert loop | Daily, weekly and monthly house health reports and inferred alerts → expert verdict, tuning, conclusion → notifications to the Farm Owner | EXPERT-FR-003…011 |
-| DF-9 | Device setup | Administrator adds the device to the stock (label and broker credential issued) → device flashed with its ID and credential → Farm Owner scans the label and the floor code in the mobile app → `POST /devices/sensor-nodes/register` (device `PENDING`) → Wi-Fi entered in AP mode → first heartbeat on the device's own topics → backend sets `ONLINE` and publishes the zone's configuration retained → heartbeat reports the configuration version → app shows "configuration applied" | Nothing about the farm is typed on or stored in the device (FARM-FR-003c); a move only changes the zone in the database and republishes the configuration, online or offline |
+| DF-9 | Device setup | Administrator adds the device to the stock (label and broker credential issued) → device flashed with its ID and credential → Farm Owner, or the Farm Technician of the house, scans the label and the floor code in the mobile app → `POST /devices/sensor-nodes/register` (device `PENDING`) → Wi-Fi entered in AP mode → first heartbeat on the device's own topics → backend sets `ONLINE` and publishes the zone's configuration retained → heartbeat reports the configuration version → app shows "configuration applied" | Nothing about the farm is typed on or stored in the device (FARM-FR-003c); a move only changes the zone in the database and republishes the configuration, online or offline |
 | DF-10 | Daily health assessment (MF-06) | After the evening return-rate check: per house, environment in range (telemetry of each zone), air-quality hours and noise episodes (alerts, dismissed ones excluded), return-rate drop (counts), completeness per source and the day's rain → levels of the house (BR-28) → status with reasons (BR-29, 30) → `househealthdays` (current status) → daily report → in-app notification → each assessor rates the day before seeing the status; the status shown is stored with the rating (BR-31) | Late data and later verdicts recompute the current status only; weekly and monthly reports aggregate the stored days; the field evaluation reads the snapshots (ANALYTICS-FR-014) |
 | DF-11 | Weather | Hourly job → Open-Meteo by farm coordinates → `weatherobservations` → charts and DF-10 | Only coordinates leave the system; used only by BR-30 and for display (C-6) |
 | DF-12 | Weather compensation | Hourly job (minute 10, its own Open-Meteo request) → forecast of the next 2 h × active rules of the house (ENV-FR-030) → offset and expiry (BR-38) → retained `…/{deviceId}/compensation` of every controller of the house → controller adds it to the misting demand | 0 after the expiry or 2 h offline; never ventilation (C-6) |
@@ -227,7 +227,7 @@ Every AI output merged into `develop` passes code review and CI first (guideline
 | D11 | Actuator current sensing | None (infer from humidity); Hall-effect IC (ACS712); clamp-on current transformer with an external ADC; **low-side shunt with an external ADC** | **Shunt + ADS1115**: the test house is borrowed and cannot be rewired, so the controller drives the team's own 5 V misting unit and 12 V fan, and a current transformer senses only alternating current; on its ±0.256 V range the ADS1115 reads the 0.09 A fan across 0.1 Ω (about 9 mV) without an amplifier, while the ESP32's own ADC is not linear enough. A house with mains loads would use clamp-on current transformers on the same ADC. Normal current is learned per load, so no threshold is invented for an unknown pump or fan | THREAT-FR-014, BR-32 |
 | D12 | Outdoor conditions | Outdoor sensor node; **weather API**; none | **Weather API (Open-Meteo)** by farm coordinates: no hardware, includes rainfall, which a node does not measure easily and which explains low return rates; it is a regional estimate, so it is context only. An outdoor node stays optional | ANALYTICS-FR-013, BR-30, C-6 |
 | D13 | Report files | Server-side PDF; **PDF in the web client, CSV from the API** | **`jspdf` in the web client** (already a dependency) renders the report the API returns, so the file shows the same figures as the screen; the CSV of daily indicators is produced by the API so every client gets the same columns | EXPERT-FR-013 |
-| D14 | Who works on the houses | Maintenance tickets with routing by region, SLA and KPIs for a service company; Technician on every farm, devices only; no technician: the Farm Owner does everything; **Farm Technician of the owner, assigned to houses** | **A Farm Technician employed by the owner and assigned to houses** (BM03 rows 9 and 13): the owner visits only every few days, so alerts, repairs, inspections and daily ratings need someone on site; the technician acts only on the assigned houses and never edits parameters, sets up devices or invites members. Device setup stays with the Farm Owner (SF-01) and remote commands with the Administrator, who is not a farm member, sees no environmental data and whose every command is audited and notified. Regions, queues, chat and external providers stay out (Report 3, Section 8) | Report 3 Sections 2.3, 2.4; AUTH-FR-013, FARM-FR-009, 013 |
+| D14 | Who works on the houses | Maintenance tickets with routing by region, SLA and KPIs for a service company; Technician on every farm, devices only; no technician: the Farm Owner does everything; **Farm Technician of the owner, assigned to houses** | **A Farm Technician employed by the owner and assigned to houses** (BM03 rows 9 and 13): the owner visits only every few days, so alerts, repairs, inspections and daily ratings need someone on site; the technician acts only on the assigned houses and never edits parameters or invites members. Device setup, move and removal (SF-01) are done by the Farm Owner or by the Farm Technician of the house, because the person who holds the device on site is the technician (BM03 row 21; the camera address, floor codes and houses and zones stay with the Farm Owner); remote commands stay with the Administrator, who is not a farm member, sees no environmental data and whose every command is audited and notified. Regions, queues, chat and external providers stay out (Report 3, Section 8) | Report 3 Sections 2.3, 2.4; AUTH-FR-013, FARM-FR-009, 013 |
 | D15 | Manual override against the controller's checks | Manual override above everything; protections above manual; **manual above the software checks, with limits** | **Manual override passes the fuzzy output, the misting latch and the sensor safe state, within limits:** these checks infer a fault from humidity or from a missing reading, so they must not lock out the owner who sees the house; the electrical protection stays in the house's panel (C-7). A remote pump ON lasts at most 30 min and needs a confirmation while a sensor or misting alert is open, so a forgotten command cannot run the pump for hours on a faulty sensor; each relay has its own expiry | ENV-FR-016…018, BR-08, BR-19, BR-20, C-7 |
 | D16 | Daily status when data arrives late | Freeze the day at the first rating; recompute and overwrite; **keep both** | **A current status that follows the data and an evaluation snapshot per rating that never changes:** operations see the best status, while the agreement measure (NFR-14) compares each rating with exactly what the assessor saw | ANALYTICS-FR-012, 014, EXPERT-FR-012, BR-31 |
 | D17 | How an incident ends | Alert acknowledged and closed by hand; ticket with an SLA contract; **Work Order closed by the data** | **A Work Order closed only after the data stay recovered for 10 min (BR-41) and the Farm Owner approves**: a repair is judged by the house, not by the person who did it; a recurrence during verification reopens it; response targets are internal goals that drive the escalation (BR-40), not contracts | OPS-FR-001…004, ALERT-FR-017 |
@@ -346,7 +346,7 @@ Farm location (FARM-FR-001): the web farm form shows an OpenStreetMap map (`leaf
 
 Device setup (SF-01): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key (and, for flashing, the broker credential) only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; the web setup screen does not scan: it takes the label's QR text pasted or the device ID and activation key typed (FARM-FR-003), and shows the same three setup steps as the mobile app (registered, online, zone configuration applied).
 
-**Farm Technician client.** The web application and the mobile application both carry every task of the Farm Technician in Report 3, Section 2.4, on its assigned houses: the dashboard, analytics, bird counts and live stream, the counting rings, alerts with acknowledgement, on-site cause and on-site checks, Work Orders with checklists and up to five photos, maintenance plans and recommendations to read, the daily rating, harvest entry, manual override and restart, the devices with the speaker schedule and lullaby tracks to read, the zone parameters, counting schedule and weather rules to read, its duty shifts, the in-app notifications and its settings; actions the API refuses to the technician are not shown. The mobile application adds what the house needs on the spot: the camera for photos and QR codes, and push notifications. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
+**Farm Technician client.** The web application and the mobile application both carry every task of the Farm Technician in Report 3, Section 2.4, on its assigned houses: the dashboard, analytics, bird counts and live stream, the counting rings, alerts with acknowledgement, on-site cause and on-site checks, Work Orders with checklists and up to five photos, maintenance plans and recommendations to read, the daily rating, harvest entry, manual override and restart, the devices with the speaker schedule and lullaby tracks to read, the setup, move and removal of the devices of its houses, the zone parameters, counting schedule and weather rules to read, its duty shifts, the in-app notifications and its settings; actions the API refuses to the technician are not shown. The mobile application adds what the house needs on the spot: the camera for photos and QR codes, and push notifications. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
 
 ### 5.5 Engineering Constants in the Code
 
@@ -405,6 +405,8 @@ Each constant of Report 3, Section 4.5 has one home in the code. A change of val
 | Supply voltage of the demo loads (A-9) | backend `LOAD_SUPPLY_VOLTAGE` (`energy.service.ts`): 5 V misting, 12 V fan, as the controller board of Section 3 |
 | Recommendation expiry and effect window, rule inputs | backend `RECOMMENDATION_EXPIRY_DAYS`, `RECOMMENDATION_EFFECT_DAYS`, `RULE_VALUE_LIMITS`, `RULE_WINDOW_MIN_DAYS`, `RULE_WINDOW_MAX_DAYS`, `RULE_WORK_ORDER_TITLE_MAX` (`utils/recommendationRule.util.ts`); daily 06:30 job `recommendationEffect.job.ts` |
 | Grace before an overdue plan escalates | backend `MAINTENANCE_GRACE_DAYS` |
+| Reminder of a due or overdue plan, every 1 day at 07:00 | backend `maintenance.service` (`remindDuePlans`, `last_reminder_at` on the plan) |
+| Photos required to report a preventive Work Order done | backend `MIN_PREVENTIVE_PHOTOS` in `workOrder.service` |
 | Same period of the previous year, complete cycle | backend `HARVEST_SAME_PERIOD_DAYS`, `HARVEST_CYCLE_MIN_COMPLETENESS` |
 | Gap between two telemetry samples | backend `MAX_GAP_MS` (`relayUsage.service.ts`), shared by the run hours and the energy estimate |
 | Farm overview and house comparison | backend `LATEST_RETURN_RATE_DAYS` (`farmOverview.service.ts`), `DEFAULT_COMPARISON_DAYS` (`farms.controller.ts`), `DEFAULT_ENERGY_DAYS` (`analytics.controller.ts`), `MAX_PERIOD_DAYS` (`utils/period.util.ts`) |
@@ -1034,7 +1036,7 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/auth` | Login, refresh, logout, first-sign-in password change, password reset, account creation from an invitation link, notification preferences, Telegram link, deletion request (no public sign-up) |
 | `/farms` | Farms, members, houses (edit, soft delete, stage, technicians and roster, weather compensation rules), zones (edit, soft delete), thresholds and reset, fuzzy tuning, detection tuning, bird-count tuning |
 | `/invitations` | Accept, decline |
-| `/devices` | Sensor nodes (register and move, also by the Farm Owner for SF-01; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
+| `/devices` | Sensor nodes (register, move and remove, by the Farm Owner or the Farm Technician of the house for SF-01; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
 | `/telemetry` | Latest and history |
 | `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
 | `/analytics` | Charts (with the farm's hourly outdoor weather on the same buckets, ANALYTICS-FR-013), comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
@@ -1153,7 +1155,7 @@ stateDiagram-v2
   DECOMMISSIONED --> [*] : 24 h passed
 ```
 
-Registration is done by the Farm Owner (SF-01). A restore is refused (409) when another device replaced it or its ID was registered again (Report 3, Section 6.6). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
+Registration, move and removal are done by the Farm Owner or by the Farm Technician of the house (SF-01); the technician's requests are checked against the assigned houses of the device and of the zone (AUTH-FR-013), and each one is audited and notified in the app to the Farm Owners. A restore is refused (409) when another device replaced it or its ID was registered again (Report 3, Section 6.6). A device still `PENDING` 15 min after registration stays `PENDING` and its registrant is notified (FARM-FR-012).
 
 ### 8.7 Controller — misting protection (SM-07)
 
@@ -1744,21 +1746,21 @@ flowchart TB
 
 The comparison shows relations between the yield and the health of the cycle, not causes.
 
-### 9.10 SF-01 Device setup by the Farm Owner (AD-10)
+### 9.10 SF-01 Device setup by the Farm Owner or the Farm Technician (AD-10)
 
 ```mermaid
 flowchart TB
   subgraph A[Administrator - before delivery]
     A1[Add device to stock] --> A2[Print label:<br/>QR with device ID + key]
   end
-  subgraph O[Farm Owner - mobile app]
+  subgraph O[Farm Owner or Farm Technician - mobile app]
     O1[Scan device label] --> O2[Scan floor code<br/>or pick zone]
     O3[Join the device's setup Wi-Fi,<br/>enter farm Wi-Fi]
     O4[See online,<br/>configuration applied]
   end
   subgraph B[Backend]
-    B1{Key valid, device not<br/>in service, zone accessible?} -- no --> B2[Reject 400 / 409 / 403]
-    B1 -- yes --> B3[Register PENDING, audit]
+    B1{Key valid, device not<br/>in service, zone accessible<br/>and, for a technician, assigned?} -- no --> B2[Reject 400 / 409 / 403]
+    B1 -- yes --> B3[Register PENDING, audit,<br/>notify the Farm Owners if a technician]
     B9[Still PENDING after 15 min:<br/>notify registrant]
     B4[First heartbeat on the<br/>device's own topics] --> B6[ONLINE, publish zone<br/>configuration retained]
     B7{Reported version =<br/>zone version?} -- yes --> B8[Configuration applied]
@@ -1777,7 +1779,7 @@ flowchart TB
   B8 --> O4
 ```
 
-Moving a controller to another floor: scan the new floor's code; the backend changes the zone in the database and republishes the new zone's configuration, which an online controller applies at once and an offline one at its next connection.
+Moving a controller to another floor, and removing it, are done by the same two people with the same checks (a technician only inside the assigned houses): scan the new floor's code; the backend changes the zone in the database and republishes the new zone's configuration, which an online controller applies at once and an offline one at its next connection.
 
 ### 9.11 SF-02 Remote device maintenance (AD-11)
 
@@ -1788,7 +1790,7 @@ flowchart TB
     T1 --> T2{Remote fix?}
     T2 -- yes --> T3[Restart, push configuration or OTA]
     T0 --> T5[New firmware: rollout to chosen controllers,<br/>test controller first - D21]
-    T2 -- no --> T4[Ask the Farm Owner to replace it<br/>or set it up again - SF-01]
+    T2 -- no --> T4[Ask the Farm Owner or the house's technician<br/>to replace it or set it up again - SF-01]
   end
   subgraph B[Backend]
     B1{Administrator, or Farm Owner<br/>restart; device online?} -- no --> B2[Reject 403 / 409]
@@ -1908,6 +1910,8 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.34 | 27/11/2026 | Maintenance: the 07:00 run also reminds each due or overdue plan once a day (Report 3 4.2.27, OPS-FR-006); a preventive Work Order needs one photo to be reported done (OPS-FR-008) |
+| 2.2.33 | 26/11/2026 | The Farm Technician sets up, moves and removes devices of the assigned houses (Report 3 4.2.26, BM03 row 21): DF-9, D14, §5.4 technician client, the `/devices` route table, device lifecycle, AD-10 and AD-11 follow |
 | 2.2.32 | 26/11/2026 | Staging database on MongoDB Atlas instead of the MongoDB container: `MONGODB_URI` in the staging compose, Atlas snapshots plus a logical dump by the backup script (Sections 3.1, 3.4, 11) |
 | 2.2.31 | 26/11/2026 | Staging files in a Cloudflare R2 bucket through the S3 client instead of a backend volume: signed URLs that expire, files outside the VPS, `STORAGE_DRIVER=s3` and `MINIO_*` in the staging compose (Sections 3.1, 3.4, 11) |
 | 2.2.30 | 25/11/2026 | D22: IP camera address entered on the web and fetched by the AI node, AI node setup codes, video publishing with the node's own login; D5 and §6 follow; header baseline SRS 4.2.25 |

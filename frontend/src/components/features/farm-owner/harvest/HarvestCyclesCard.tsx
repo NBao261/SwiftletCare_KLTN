@@ -29,6 +29,8 @@ interface HarvestCyclesCardProps {
   houseId: string;
   // Zone trong phạm vi đang lọc, để hiện tên nhà (và Zone khi nhà có nhiều Zone)
   zones: AllZone[];
+  // true: nằm trong thẻ có tab, không tự vẽ khung và tiêu đề
+  embedded?: boolean;
 }
 
 // Farm Owner trên farm có chuyên gia nhắc chuyên gia viết kết luận một chu kỳ đã đóng (mỗi chu kỳ một lần)
@@ -44,7 +46,7 @@ function CycleReminder({ cycle }: { cycle: HarvestCycle }): JSX.Element | null {
 }
 
 // chu kỳ thu hoạch theo zone: sản lượng, so sánh, sức khỏe, kết luận mùa vụ (chỉ xem)
-export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyclesCardProps): JSX.Element {
+export default function HarvestCyclesCard({ farmId, houseId, zones, embedded = false }: HarvestCyclesCardProps): JSX.Element {
   const { t, date, num, exact } = useTranslation(harvestDict);
   const apiErrorMessage = useApiErrorMessage();
   // Trang về 1 khi đổi farm/nhà: trang Thu hoạch gắn key theo phạm vi lọc nên khung dựng lại
@@ -136,11 +138,13 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
   }
 
   return (
-    <Card size="lg" className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-h2 text-charcoal">{t('cycle.title')}</h2>
-        <p className="mt-1 text-sm text-warmGray">{t('cycle.subtitle')}</p>
-      </div>
+    <Wrapper embedded={embedded}>
+      {!embedded && (
+        <div>
+          <h2 className="text-h2 text-charcoal">{t('cycle.title')}</h2>
+          <p className="mt-1 text-sm text-warmGray">{t('cycle.subtitle')}</p>
+        </div>
+      )}
 
       {body}
 
@@ -220,8 +224,13 @@ export default function HarvestCyclesCard({ farmId, houseId, zones }: HarvestCyc
           </div>
         )}
       </Drawer>
-    </Card>
+    </Wrapper>
   );
+}
+
+// Khung thẻ khi đứng một mình; nằm trong thẻ khác thì chỉ xếp dọc
+function Wrapper({ embedded, children }: { embedded: boolean; children: ReactNode }): JSX.Element {
+  return embedded ? <div className="flex flex-col gap-4">{children}</div> : <Card size="lg" className="flex flex-col gap-4">{children}</Card>;
 }
 
 // Thay đổi % có dấu: tăng xanh, giảm đỏ; không so được thì "_"

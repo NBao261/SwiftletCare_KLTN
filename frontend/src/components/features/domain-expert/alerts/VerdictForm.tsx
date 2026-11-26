@@ -1,4 +1,4 @@
-import { Info, ShieldAlert } from 'lucide-react'
+import { InfoIcon, ShieldWarningIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import type { InferredAlertItem } from '@/types/expert.types'
 import { formatDate } from '@/lib/helpers'
@@ -14,142 +14,92 @@ interface Props {
   onNoteChange: (n: string) => void
 }
 
-function RadioCard({
-  value, selected, onClick, title, subtitle,
-}: {
+// Hai lựa chọn kết luận: nút chọn một, có chữ gợi ý ngắn bên dưới
+function ChoiceButton({ value, selected, onClick, title, hint }: {
   value: 'CONFIRMED' | 'REJECTED'
   selected: boolean
   onClick: () => void
   title: string
-  subtitle: string
+  hint: string
 }) {
   const isConfirmed = value === 'CONFIRMED'
   return (
     <button
       type="button"
+      role="radio"
+      aria-checked={selected}
       onClick={onClick}
       className={cn(
-        'relative flex flex-col gap-1 p-4 rounded-xl border-2 text-left transition-all duration-150 cursor-pointer',
-        selected && isConfirmed ? 'border-red-400 bg-red-50 shadow-sm' : '',
-        selected && !isConfirmed ? 'border-neutral-400 bg-neutral-50 shadow-sm' : '',
-        !selected ? 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50/50' : '',
+        'flex flex-col items-start gap-0.5 rounded-xl border px-3.5 py-2.5 text-left transition-colors',
+        selected && isConfirmed && 'border-alertRed bg-alertRed/10',
+        selected && !isConfirmed && 'border-charcoal bg-warmGray/10',
+        !selected && 'border-warmGray/20 bg-white hover:border-charcoal/40',
       )}
     >
-      <span className={cn(
-        'absolute top-3 right-3 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors',
-        selected && isConfirmed ? 'border-red-500 bg-red-500' : '',
-        selected && !isConfirmed ? 'border-neutral-600 bg-neutral-600' : '',
-        !selected ? 'border-neutral-300' : '',
-      )}>
-        {selected && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
-      </span>
-      <span className="text-sm font-semibold text-[#27231F] pr-6">{title}</span>
-      <span className="text-xs text-[#878380] mt-0.5">{subtitle}</span>
+      <span className="text-sm font-semibold text-charcoal">{title}</span>
+      <span className="text-xs text-warmGray">{hint}</span>
     </button>
   )
 }
 
+// Kết luận của chuyên gia: chọn sự cố thật hay báo động giả, ghi chú (bắt buộc khi bác bỏ)
 export default function VerdictForm({ alert, verdict, note, onVerdictChange, onNoteChange }: Props) {
   const existingVerdict = alert?.expert_verdict
   const isDismissed = alert?.status === 'DISMISSED' || existingVerdict?.result === 'REJECTED'
   const authorName = typeof existingVerdict?.by === 'object' ? existingVerdict.by?.full_name : t('Chuyên gia')
   const authorRole = existingVerdict?.role === 'FARM_OWNER' ? t('Chủ nhà yến (làm thay chuyên gia)') : t('Chuyên gia')
-
-  const previousStatusLabel =
-    alert?.previous_status === 'ACKNOWLEDGED'
-      ? t('Chủ nhà đã nhận')
-      : t('Đang mở')
+  const previousStatusLabel = alert?.previous_status === 'ACKNOWLEDGED' ? t('Chủ nhà đã nhận') : t('Đang mở')
+  const isNoteMissing = verdict === 'REJECTED' && !note.trim()
 
   return (
-    <div className="space-y-4">
-      {/* Thông tin bác bỏ hiện tại nếu cảnh báo đang DISMISSED */}
+    <div className="flex flex-col gap-3">
+      {/* Cảnh báo đã bị bác bỏ: một dòng ai bác bỏ và khi nào; lý do nằm sẵn trong ô ghi chú bên dưới */}
       {isDismissed && (
-        <div className="rounded-xl border border-neutral-300 bg-neutral-50/80 p-3.5 space-y-2 text-xs">
-          <div className="flex items-center gap-2 text-neutral-800 font-semibold">
-            <ShieldAlert className="w-4 h-4 text-warmGray" />
-            <span>{t('Cảnh báo đã bị bác bỏ')}</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-warmGray text-small pl-6">
-            <div>
-              <span className="text-neutral-500">{t('Người bác bỏ:')}</span>{' '}
-              <strong className="text-charcoal">{authorName}</strong> ({authorRole})
-            </div>
-            <div>
-              <span className="text-neutral-500">{t('Thời điểm:')}</span>{' '}
-              <strong className="text-charcoal">{existingVerdict?.at ? formatDate(existingVerdict.at) : '—'}</strong>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-neutral-500">{t('Trạng thái trước khi bác bỏ:')}</span>{' '}
-              <span className="font-semibold text-charcoal">{previousStatusLabel}</span>
-            </div>
-            {existingVerdict?.note && (
-              <div className="sm:col-span-2 bg-white p-2.5 rounded-lg border border-neutral-200">
-                <span className="text-neutral-500 block mb-0.5 font-medium">{t('Lý do bác bỏ:')}</span>
-                <p className="text-charcoal italic leading-relaxed">"{existingVerdict.note}"</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <p className="flex items-start gap-2 rounded-xl bg-warmGray/10 px-3 py-2 text-small text-graphite">
+          <ShieldWarningIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-warmGray" />
+          <span>
+            {t('Đã bác bỏ bởi {{name}} ({{role}}) lúc {{time}}', { name: authorName ?? '', role: authorRole, time: existingVerdict?.at ? formatDate(existingVerdict.at) : '—' })}
+          </span>
+        </p>
       )}
 
-      {/* Thông báo khôi phục trạng thái khi đổi sang CONFIRMED */}
+      {/* Đổi sang xác nhận thì cảnh báo trở lại trạng thái cũ */}
       {isDismissed && verdict === 'CONFIRMED' && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3 flex gap-2.5 text-xs text-blue-900">
-          <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <strong>{t('Khôi phục trạng thái:')}</strong> {t('Đổi sang')} <em>{t('Xác nhận sự cố thật')}</em> {t('sẽ khôi phục cảnh báo về trạng thái')}{' '}
-            <strong>{previousStatusLabel}</strong> {t('và gửi lại thông báo cho Chủ nhà yến.')}
-          </p>
-        </div>
+        <p className="flex items-start gap-2 rounded-xl border border-infoBlue/20 bg-infoBlue/5 px-3 py-2 text-small text-graphite">
+          <InfoIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-infoBlue" />
+          <span>{t('Xác nhận sẽ khôi phục cảnh báo về trạng thái "{{status}}" và gửi lại thông báo cho Chủ nhà yến.', { status: previousStatusLabel })}</span>
+        </p>
       )}
 
-      {/* Radio cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <RadioCard
-          value="CONFIRMED" selected={verdict === 'CONFIRMED'}
-          onClick={() => onVerdictChange('CONFIRMED')}
-          title={t('Xác nhận sự cố thật')}
-          subtitle={t('Sự cố thực tế gây ảnh hưởng đến đàn chim hoặc vi khí hậu')}
+      <div role="radiogroup" aria-label={t('Kết luận của chuyên gia')} className="grid grid-cols-2 gap-2.5">
+        <ChoiceButton
+          value="CONFIRMED" selected={verdict === 'CONFIRMED'} onClick={() => onVerdictChange('CONFIRMED')}
+          title={t('Xác nhận sự cố thật')} hint={t('Ảnh hưởng đàn chim hoặc vi khí hậu')}
         />
-        <RadioCard
-          value="REJECTED" selected={verdict === 'REJECTED'}
-          onClick={() => onVerdictChange('REJECTED')}
-          title={t('Bác bỏ - Báo động giả')}
-          subtitle={t('Nhiễu cảm biến hoặc dao động tự nhiên của môi trường')}
+        <ChoiceButton
+          value="REJECTED" selected={verdict === 'REJECTED'} onClick={() => onVerdictChange('REJECTED')}
+          title={t('Bác bỏ - Báo động giả')} hint={t('Nhiễu cảm biến hoặc dao động tự nhiên')}
         />
       </div>
 
-      {/* Ghi chú chuyên môn */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-semibold text-[#27231F]" htmlFor="expert-note">
-            {t('Ghi chú chuyên môn')}
-          </label>
-          {verdict === 'REJECTED' && (
-            <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-              {t('Bắt buộc nhập lý do bác bỏ')}
-            </span>
-          )}
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <label className="text-sm font-semibold text-charcoal" htmlFor="expert-note">{t('Ghi chú chuyên môn')}</label>
+          {isNoteMissing
+            ? <span className="text-xs font-semibold text-alertRed">{t('Bắt buộc nhập lý do bác bỏ')}</span>
+            : <span className="text-xs text-warmGray">{t('{{n}}/{{max}} ký tự', { n: note.length, max: MAX_NOTE })}</span>}
         </div>
         <textarea
           id="expert-note"
-          rows={4}
+          rows={2}
           maxLength={MAX_NOTE}
           placeholder={verdict === 'REJECTED'
             ? t('Nhập rõ lý do vì sao đây là báo động giả (bắt buộc)...')
             : t('Nhập nhận xét kỹ thuật, bằng chứng thêm hoặc hướng xử lý...')}
           value={note}
-          onChange={e => onNoteChange(e.target.value)}
-          className="w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-[#27231F] placeholder-[#B8B4B0] focus:outline-none focus:ring-2 focus:ring-[#B5D32C] focus:border-transparent transition-all"
+          onChange={event => onNoteChange(event.target.value)}
+          className="w-full resize-none rounded-xl border border-warmGray/20 bg-warmGray/5 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-warmGray/70 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent-600"
         />
-        <div className="flex items-start justify-between mt-1.5 gap-2">
-          <p className="text-small text-[#878380] italic leading-relaxed flex-1">
-            {t('Lưu ý: bác bỏ cảnh báo sẽ đóng cảnh báo và lưu lại lý do. Xác nhận lại sẽ khôi phục trạng thái ban đầu.')}
-          </p>
-          <span className="text-xs text-[#878380] flex-shrink-0">
-            {t('{{n}}/{{max}} ký tự', { n: note.length, max: MAX_NOTE })}
-          </span>
-        </div>
       </div>
     </div>
   )

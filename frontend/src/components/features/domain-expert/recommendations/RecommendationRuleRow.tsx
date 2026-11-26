@@ -1,4 +1,4 @@
-import { Pencil } from 'lucide-react'
+import { PencilSimpleIcon } from '@phosphor-icons/react'
 import { Badge, Button, Toggle } from '@/components/ui'
 import { recommendationsDict } from '@/constants/recommendations.i18n'
 import { useTranslation } from '@/hooks/common/useTranslation'
@@ -22,7 +22,7 @@ export default function RecommendationRuleRow({ rule, disabled, toggleDisabled, 
   const text = useRecommendationText()
 
   return (
-    <div className={cn('flex items-start gap-3 rounded-2xl border px-4 py-3', rule.active ? 'border-warmGray/15 bg-white' : 'border-warmGray/10 bg-warmGray/5')}>
+    <div className={cn('flex items-start gap-3 py-3.5', !rule.active && 'opacity-60')}>
       <Toggle
         checked={rule.active}
         onChange={onToggle}
@@ -30,7 +30,7 @@ export default function RecommendationRuleRow({ rule, disabled, toggleDisabled, 
         aria-label={t(rule.active ? 'rules.turnOff' : 'rules.turnOn')}
       />
       <div className="min-w-0 flex-1 space-y-1">
-        <p className={cn('flex flex-wrap items-center gap-2 text-small font-semibold', rule.active ? 'text-charcoal' : 'text-warmGray')}>
+        <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-charcoal">
           {rule.name}
           {rule.pending_approval && <Badge tone="warning">{t('rules.pending')}</Badge>}
         </p>
@@ -38,9 +38,8 @@ export default function RecommendationRuleRow({ rule, disabled, toggleDisabled, 
         <p className="text-small text-graphite">{text.action(rule.action)}</p>
         <p className="break-words text-caption italic text-warmGray">{t('rules.source', { source: rule.source })}</p>
       </div>
-      <Button variant="secondary" size="sm" onClick={onEdit} disabled={disabled || editDisabled} className="shrink-0">
-        <Pencil className="h-3.5 w-3.5" aria-hidden />
-        {t('rules.edit')}
+      <Button variant="icon" size="sm" onClick={onEdit} disabled={disabled || editDisabled} className="shrink-0" aria-label={t('rules.edit')} title={t('rules.edit')}>
+        <PencilSimpleIcon size={16} />
       </Button>
     </div>
   )

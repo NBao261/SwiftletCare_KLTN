@@ -1,3 +1,5 @@
+import { CaretRightIcon } from '@phosphor-icons/react';
+
 import SelectMenu from '@/components/ui/SelectMenu';
 import { cn } from '@/lib/cn';
 import { dashboardDict } from '@/constants/dashboard.i18n';
@@ -6,7 +8,7 @@ import type { ScopeFilterState } from '@/hooks/shared/useScopeFilter';
 
 interface ScopeFilterProps {
   scope: ScopeFilterState;
-  // Trang chỉ tính theo nhà (VD Giám sát đàn chim): ô Zone luôn khoá xám ở "Tất cả Zone"
+  // Trang chỉ tính theo nhà (VD Chim ra vào): ô Zone luôn khoá xám ở "Tất cả Zone"
   lockZone?: boolean;
   // Trang chỉ tính theo trang trại (VD Tổng quan trại): ô Nhà và ô Zone luôn khoá
   lockHouse?: boolean;
@@ -16,6 +18,11 @@ interface ScopeFilterProps {
 
 // Ô khoá: nền xám, không bấm được
 const LOCKED_CLASS = 'cursor-not-allowed border-warmGray/15 bg-warmGray/10 text-warmGray hover:border-warmGray/15';
+
+// Dấu › giữa các ô: trang trại › nhà › Zone, ẩn trên điện thoại vì 3 ô xếp lưới
+function Separator(): JSX.Element {
+  return <CaretRightIcon size={12} weight="bold" aria-hidden className="shrink-0 text-warmGray/60 max-sm:hidden" />;
+}
 
 // Luôn đủ 3 ô (ô chưa chọn được thì khoá), chấm cam ở nơi có sự cố
 export default function ScopeFilter({ scope, lockZone = false, lockHouse = false, depth = 'zone' }: ScopeFilterProps): JSX.Element {
@@ -54,8 +61,10 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         options={farmOptions}
         onChange={scope.setFarmId}
         warningLabel={t('scope.warning')}
-        className="h-9 w-44 justify-between max-sm:col-span-2 max-sm:w-full"
+        highlightFiltered={false}
+        className="h-9 w-48 justify-between max-sm:col-span-2 max-sm:w-full"
       />
+      {depth !== 'farm' && <Separator />}
       {depth !== 'farm' && <SelectMenu
         ariaLabel={t('page.houseLabel')}
         value={isHouseLocked ? '' : scope.houseId}
@@ -63,8 +72,10 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         onChange={scope.setHouseId}
         warningLabel={t('scope.warning')}
         disabled={isHouseLocked}
-        className={cn('h-9 w-40 justify-between max-sm:w-full', isHouseLocked && LOCKED_CLASS)}
+        highlightFiltered={false}
+        className={cn('h-9 w-44 justify-between max-sm:w-full', isHouseLocked && LOCKED_CLASS)}
       />}
+      {depth === 'zone' && <Separator />}
       {depth === 'zone' && <SelectMenu
         ariaLabel={t('scope.zoneLabel')}
         value={isZoneLocked ? '' : scope.zone?._id ?? ''}
@@ -72,6 +83,7 @@ export default function ScopeFilter({ scope, lockZone = false, lockHouse = false
         onChange={scope.setZoneId}
         warningLabel={t('scope.warning')}
         disabled={isZoneLocked}
+        highlightFiltered={false}
         className={cn('h-9 w-36 justify-between max-sm:w-full', isZoneLocked && LOCKED_CLASS)}
       />}
     </div>

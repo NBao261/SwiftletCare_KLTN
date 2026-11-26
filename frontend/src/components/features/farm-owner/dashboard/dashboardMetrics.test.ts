@@ -91,6 +91,13 @@ describe('mergeBirdCountRecords', () => {
     ])
   })
 
+  it('marks a merged day as missing a session when any house misses it', () => {
+    const complete = { ...record('2026-10-01', 100, 80), has_morning: true, has_evening: true }
+    const noEvening = { ...record('2026-10-01', 0), has_evening: false }
+    expect(mergeBirdCountRecords([[complete], [noEvening]])[0]).toMatchObject({ has_evening: false })
+    expect(mergeBirdCountRecords([[complete]])[0]).not.toHaveProperty('has_evening')
+  })
+
   it('returns an empty list when no zone has data', () => {
     expect(mergeBirdCountRecords([])).toEqual([])
     expect(mergeBirdCountRecords([[], []])).toEqual([])

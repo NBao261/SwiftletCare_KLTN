@@ -13,7 +13,7 @@ const vi = {
   'notif.empty': 'Chưa có thông báo nào',
   'notif.severity': 'Mức độ',
   'notif.status': 'Trạng thái',
-  'notif.acknowledgedAt': 'Tiếp nhận lúc',
+  'notif.acknowledgedAt': 'Xác nhận lúc',
   'notif.note': 'Ghi chú',
   'notif.openDetail': 'Mở trang chi tiết cảnh báo',
   'notif.viewAll': 'Xem tất cả thông báo →',

@@ -13,7 +13,7 @@ import { useSensorNodes } from '@/hooks/shared/useDevices';
 import { cn } from '@/lib/cn';
 import type { RelayOverrideLog, Role } from '@/types';
 
-// Bảng đủ rộng cho 4 cột trong nửa khung
+// Dưới độ rộng này bảng cuộn ngang thay vì bóp 4 cột
 const TABLE_MIN_WIDTH = 560;
 
 // Huy hiệu cùng cỡ badge chung (FE_Design 1.1)
@@ -128,7 +128,7 @@ export default function RelayOverrideHistoryCard({ zoneIds }: RelayOverrideHisto
   }
 
   return (
-    <FarmFrame title={t('override.title')} description={t('override.subtitle')} className="h-full">
+    <FarmFrame title={t('override.title')} description={t('override.subtitle')}>
       {body}
     </FarmFrame>
   );

@@ -22,6 +22,7 @@ const VI: Record<HealthReasonCode, Phrase> = {
       const missing = {
         MORNING: 'thiếu phiên sáng', EVENING: 'thiếu phiên chiều', NO_DEPARTURES: 'phiên sáng không có chim ra',
         INCOMPLETE: 'phiên đếm không đầy đủ vì camera đếm chim mất kết nối',
+        NO_CAMERA: 'nhà chưa có Camera đếm chim',
       }
       return `Thiếu dữ liệu đàn chim: ${missing[v.missing as keyof typeof missing] ?? ''}`
     }
@@ -49,6 +50,7 @@ const EN: Record<HealthReasonCode, Phrase> = {
       const missing = {
         MORNING: 'no morning session', EVENING: 'no evening session', NO_DEPARTURES: 'no birds left in the morning session',
         INCOMPLETE: 'counting session incomplete, the AI node was offline',
+        NO_CAMERA: 'the house has no bird-counting camera',
       }
       return `Missing flock data: ${missing[v.missing as keyof typeof missing] ?? ''}`
     }

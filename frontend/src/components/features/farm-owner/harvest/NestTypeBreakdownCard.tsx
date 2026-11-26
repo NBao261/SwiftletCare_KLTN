@@ -5,7 +5,6 @@ import { harvestDict } from '@/constants/harvest.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
 import type { HarvestBatch } from '@/types';
-import { NO_VALUE } from '@/constants/display';
 
 // Mỗi loại một thanh ngang, % ghi bên cạnh
 export default function NestTypeBreakdownCard({ batches }: { batches: HarvestBatch[] }): JSX.Element {
@@ -19,14 +18,6 @@ export default function NestTypeBreakdownCard({ batches }: { batches: HarvestBat
         <h2 className="text-h2 text-charcoal">{t('breakdown.title')}</h2>
         <p className="mt-1 text-body text-graphite">{t('breakdown.subtitle')}</p>
       </div>
-
-      {/* Tổng khối lượng mọi đợt thu */}
-      <p className="leading-none">
-        <span className={cn('text-3xl font-extrabold tabular-nums', isEmpty ? 'text-warmGray' : 'text-charcoal')}>
-          {isEmpty ? NO_VALUE : num(totalKilograms, KILOGRAM_DIGITS)}
-        </span>
-        <span className="ml-2 text-small font-medium text-warmGray">{isEmpty ? t('breakdown.noData') : `kg · ${t('breakdown.totalItem')}`}</span>
-      </p>
 
       <ul className="flex flex-col gap-4" aria-label={t('breakdown.chartAria')}>
         {shares.map(share => (

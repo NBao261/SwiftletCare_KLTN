@@ -1,52 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
-import { ListIcon, PlusIcon, SquaresFourIcon, WarningCircleIcon } from '@phosphor-icons/react'
-import { Button, EmptyState, FilterChip, SearchInput } from '@/components/ui'
-import StableHeight from '@/components/ui/StableHeight'
-import Pagination from '@/components/ui/Pagination'
+import { PlusIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
-import HouseCard from '@/components/features/farm-owner/farms/HouseCard'
 import HouseTable from '@/components/features/farm-owner/farms/HouseTable'
 import AddHouseModal from '@/components/features/farm-owner/farms/AddHouseModal'
 import ApplyProfileModal from '@/components/features/farm-owner/farms/ApplyProfileModal'
 import FarmFormModal from '@/components/features/farm-owner/farms/FarmFormModal'
-import FarmGroupRow from '@/components/features/farm-owner/farms/FarmGroupRow'
+import FarmBlock from '@/components/features/farm-owner/farms/FarmBlock'
 import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
-import { summarizeScope } from '@/components/features/farm-owner/farms/farmStructure'
 import { farmHousePath, farmZonePath, useFarmsScopeRouting, useScopeFilter } from '@/hooks/shared/useScopeFilter'
 import { isUpFromChildState } from '@/lib/navigationState'
 import { useDeleteFarm, useFarms } from '@/hooks/shared/useFarms'
 import { usePinnedHouses } from '@/hooks/farm-owner/usePinnedHouses'
 import { useFarmStructure, useHouseStaff } from '@/hooks/farm-owner/useFarmStructure'
-import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { useScrollToTop } from '@/hooks/common/useScrollToTop'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { usePermission } from '@/hooks/common/usePermission'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
-import { cn } from '@/lib/cn'
 import { NO_VALUE } from '@/constants/display'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toastStore'
 import type { Farm } from '@/types'
-import type { HouseHealth, HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
+import type { HouseNode } from '@/components/features/farm-owner/farms/farmStructure'
 
-// Khung kết quả cao cố định để đổi chế độ không làm trang đổi chiều cao
-const RESULTS_MIN_HEIGHT = 740
-// Lưới 2 cột × 2 hàng card trong mỗi trang trại; nhiều hơn thì phân trang thay vì kéo dài khung
-const GRID_PAGE_SIZE = 4
-
-type Filter = 'all' | HouseHealth
-
-const NO_IDS = new Set<string>()
-type View = 'grid' | 'list'
-
-// Trang trại theo khung lọc, bấm farm xổ các nhà
+// Trang trại theo khung lọc, mỗi farm một thẻ kèm bảng nhà yến
 export default function FarmOwnerFarmsPage() {
-  const { t, num } = useTranslation(farmDict)
+  const { t } = useTranslation(farmDict)
   useScrollToTop()
   const navigate = useNavigate()
   const { data: farms } = useFarms()
@@ -83,37 +66,23 @@ export default function FarmOwnerFarmsPage() {
   const canCreateFarm = usePermission('FARM_OWNER')
   const canAddHouse = canCreateFarm
 
-  const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<Filter>('all')
-  const [view, setView] = useState<View>('grid')
-  // Trang lưới của từng trang trại
-  const [gridPageByFarm, setGridPageByFarm] = useState<Record<string, number>>({})
-  // Popup thêm nhà: null = đóng, '' = chưa chọn farm, có id = chọn sẵn farm đó
+  // Popup thêm nhà: null = đóng, có id = chọn sẵn farm đó
   const [addHouseFarmId, setAddHouseFarmId] = useState<string | null>(null)
   const [showCreateFarm, setShowCreateFarm] = useState(false)
   const [editFarm, setEditFarm] = useState<Farm | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Farm | null>(null)
   // farm đang mở popup áp hồ sơ cấu hình
   const [applyProfileFarm, setApplyProfileFarm] = useState<Farm | null>(null)
-  // Farm người dùng bấm xổ khi đang xem tất cả trang trại (mặc định thu hết)
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
-  // Đang tìm hoặc lọc thì farm có kết quả tự xổ, trừ farm vừa thu lại
-  const [collapsed, setCollapsed] = useState<{ key: string; ids: Set<string> }>({ key: '', ids: new Set() })
-  const isFiltering = search.trim() !== '' || filter !== 'all'
-  const isAutoExpand = isFiltering || scope.farmId !== ''
-  const autoExpandKey = `${search.trim()}|${filter}|${scope.farmId}|${scope.houseId}`
-  const collapsedIds = collapsed.key === autoExpandKey ? collapsed.ids : NO_IDS
   const isPrimaryOf = (farm: Farm) => farm.owner_id === currentUserId
 
-  // Số nhà, thiết bị và nhà đang cảnh báo của từng farm (chặn xoá farm còn thiết bị)
+  // Số nhà và thiết bị của từng farm (chặn xoá farm còn thiết bị)
   const statsByFarm = useMemo(() => {
-    const stats = new Map<string, { houses: number; devices: number; alertHouses: number }>()
+    const stats = new Map<string, { houses: number; devices: number }>()
     for (const node of structure.houses) {
-      const current = stats.get(node.farm._id) ?? { houses: 0, devices: 0, alertHouses: 0 }
+      const current = stats.get(node.farm._id) ?? { houses: 0, devices: 0 }
       stats.set(node.farm._id, {
         houses: current.houses + 1,
         devices: current.devices + node.counts.total,
-        alertHouses: current.alertHouses + (node.health === 'ALERT' ? 1 : 0),
       })
     }
     return stats
@@ -124,67 +93,25 @@ export default function FarmOwnerFarmsPage() {
     () => structure.houses.filter(node => (!scope.farmId || node.farm._id === scope.farmId) && (!scope.houseId || node.house._id === scope.houseId)),
     [structure.houses, scope.farmId, scope.houseId],
   )
-  const scopeZoneNode = scope.zone ? structure.zoneById.get(scope.zone._id) : undefined
-  const scopeTotals = useMemo(() => summarizeScope(scopedHouses, scopeZoneNode), [scopedHouses, scopeZoneNode])
-
-  // Đếm theo tình trạng + lọc/tìm kiếm trong cùng 1 lượt duyệt
-  const { visible, counts } = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-    const counts = { all: 0, ALERT: 0, NORMAL: 0, EMPTY: 0 }
-    const visible: HouseNode[] = []
-    for (const node of scopedHouses) {
-      counts.all += 1
-      counts[node.health] += 1
-      if (filter !== 'all' && node.health !== filter) continue
-      if (keyword) {
-        const staff = staffByHouse.get(node.house._id)?.name ?? ''
-        const haystack = `${node.house.name} ${node.farm.name} ${node.farm.address} ${staff}`.toLowerCase()
-        if (!haystack.includes(keyword)) continue
-      }
-      visible.push(node)
-    }
-    // Nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm): chia 2 nhóm bằng 2 lượt lọc, vẫn O(n)
-    const pinnedFirst = [...visible.filter(node => pinned.has(node.house._id)), ...visible.filter(node => !pinned.has(node.house._id))]
-    return { visible: pinnedFirst, counts }
-  }, [scopedHouses, search, filter, staffByHouse, pinned])
-
-  // Nhà đang hiện của từng farm (giữ thứ tự nhà ghim lên đầu)
+  // Nhà đang hiện của từng farm, nhà ghim sao lên đầu (giữ thứ tự cũ trong từng nhóm)
   const visibleByFarm = useMemo(() => {
     const map = new Map<string, HouseNode[]>()
-    for (const node of visible) map.set(node.farm._id, [...(map.get(node.farm._id) ?? []), node])
+    const pinnedFirst = [...scopedHouses.filter(node => pinned.has(node.house._id)), ...scopedHouses.filter(node => !pinned.has(node.house._id))]
+    for (const node of pinnedFirst) map.set(node.farm._id, [...(map.get(node.farm._id) ?? []), node])
     return map
-  }, [visible])
+  }, [scopedHouses, pinned])
   // Farm tạo trước đứng trên, tạo sau nằm cuối (mã Mongo tăng theo thời gian tạo)
   const sortedFarms = useMemo(() => [...(farms ?? [])].sort((left, right) => left._id.localeCompare(right._id)), [farms])
-  // Farm đang lọc ở khung lọc; đang tìm / lọc tình trạng / chọn 1 nhà thì chỉ hiện farm có nhà khớp
+  // Farm đang lọc ở khung lọc; chọn 1 nhà thì chỉ hiện farm có nhà đó
   const shownFarms = useMemo(
-    () => sortedFarms.filter(farm => (!scope.farmId || farm._id === scope.farmId) && ((!isFiltering && !scope.houseId) || visibleByFarm.has(farm._id))),
-    [sortedFarms, scope.farmId, scope.houseId, isFiltering, visibleByFarm],
+    () => sortedFarms.filter(farm => (!scope.farmId || farm._id === scope.farmId) && (!scope.houseId || visibleByFarm.has(farm._id))),
+    [sortedFarms, scope.farmId, scope.houseId, visibleByFarm],
   )
 
   const openHouse = useCallback(
     (node: HouseNode) => navigate(`/farms/${node.farm._id}/houses/${node.house._id}`),
     [navigate],
   )
-
-  // Bật / tắt 1 phần tử trong tập (trả tập mới)
-  function toggleIn(set: Set<string>, id: string): Set<string> {
-    const next = new Set(set)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    return next
-  }
-
-  // Tất cả trang trại: thu hết, bấm farm nào mở farm đó; chọn farm / tìm / lọc thì farm có kết quả tự mở
-  function isFarmExpanded(farmId: string): boolean {
-    if (isAutoExpand) return !collapsedIds.has(farmId)
-    return expandedIds.has(farmId)
-  }
-
-  function toggleFarm(farmId: string): void {
-    if (isAutoExpand) setCollapsed({ key: autoExpandKey, ids: toggleIn(collapsedIds, farmId) })
-    else setExpandedIds(current => toggleIn(current, farmId))
-  }
 
   function handleDeleteFarm(): void {
     if (!deleteTarget) return
@@ -198,43 +125,6 @@ export default function FarmOwnerFarmsPage() {
         setDeleteTarget(null)
       },
     })
-  }
-
-  // Nhà yến của 1 farm theo chế độ xem: lưới 4 card / trang hoặc bảng
-  function renderHouses(farmId: string): JSX.Element {
-    const houses = visibleByFarm.get(farmId) ?? []
-    if (view === 'list') {
-      return <HouseTable houses={houses} staffByHouse={staffByHouse} pinned={pinned} showYield={canViewHarvest} onTogglePin={togglePin} onOpen={openHouse} />
-    }
-    // Kẹp trang lưới theo số trang còn lại khi lọc / tìm kiếm làm ít đi
-    const page = Math.min(gridPageByFarm[farmId] ?? 1, Math.max(1, Math.ceil(houses.length / GRID_PAGE_SIZE)))
-    const pageRows = houses.slice((page - 1) * GRID_PAGE_SIZE, page * GRID_PAGE_SIZE)
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {pageRows.map(row => (
-            <HouseCard
-              key={row.house._id}
-              node={row}
-              staff={staffByHouse.get(row.house._id)}
-              pinned={pinned.has(row.house._id)}
-              showYield={canViewHarvest}
-              onTogglePin={() => togglePin(row.house._id)}
-              onOpen={() => openHouse(row)}
-            />
-          ))}
-        </div>
-        {houses.length > GRID_PAGE_SIZE && (
-          <Pagination
-            page={page}
-            limit={GRID_PAGE_SIZE}
-            total={houses.length}
-            onChange={nextPage => setGridPageByFarm(current => ({ ...current, [farmId]: nextPage }))}
-            variant="full"
-          />
-        )}
-      </div>
-    )
   }
 
   if (isError) {
@@ -278,88 +168,39 @@ export default function FarmOwnerFarmsPage() {
         <ScopeFilter scope={routedScope} />
       </HeaderActions>
 
-      <FarmFrame
-        title={t('list.title')}
-        description={t('list.desc', { farms: num(shownFarms.length), n: num(scopeTotals.houses) })}
-        action={(canCreateFarm || canAddHouse) && (
-          <div className="flex flex-wrap items-center gap-2">
-            {canCreateFarm && (
-              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => setShowCreateFarm(true)}>
-                <PlusIcon size={14} weight="bold" />
-                {t('empty.createFarm')}
-              </Button>
-            )}
-            {canAddHouse && (
-              <Button size="sm" className="h-9 text-xs" onClick={() => setAddHouseFarmId('')}>
-                <PlusIcon size={14} weight="bold" />
-                {t('toolbar.addHouse')}
-              </Button>
-            )}
-          </div>
-        )}
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-[220px] max-w-sm flex-1">
-            <SearchInput placeholder={t('toolbar.search')} value={search} onChange={setSearch} />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <FilterChip active={filter === 'all'} label={`${t('filter.all')} ${num(counts.all)}`} onClick={() => setFilter('all')} />
-            <FilterChip active={filter === 'ALERT'} label={`${t('health.alert')} ${num(counts.ALERT)}`} onClick={() => setFilter('ALERT')} />
-            <FilterChip active={filter === 'NORMAL'} label={`${t('health.normal')} ${num(counts.NORMAL)}`} onClick={() => setFilter('NORMAL')} />
-            <FilterChip active={filter === 'EMPTY'} label={`${t('health.empty')} ${num(counts.EMPTY)}`} onClick={() => setFilter('EMPTY')} />
-          </div>
-          <div className="ml-auto flex items-center gap-1 rounded-full bg-warmGray/10 p-1" role="group" aria-label={t('toolbar.view')}>
-            {([['grid', SquaresFourIcon, 'toolbar.grid'], ['list', ListIcon, 'toolbar.list']] as const).map(([key, ViewIcon, label]) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={view === key}
-                onClick={() => setView(key)}
-                className={cn(
-                  'flex h-8 items-center gap-1.5 rounded-full px-3 text-small font-semibold transition-colors',
-                  view === key ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-                )}
-              >
-                <ViewIcon size={14} weight="bold" />
-                {t(label)}
-              </button>
-            ))}
-          </div>
+      {canCreateFarm && (
+        <div className="flex justify-end">
+          <Button variant="secondary" size="sm" onClick={() => setShowCreateFarm(true)}>
+            <PlusIcon size={14} weight="bold" />
+            {t('empty.createFarm')}
+          </Button>
         </div>
+      )}
 
-        <StableHeight minHeight={RESULTS_MIN_HEIGHT}>
-          {shownFarms.length === 0 ? (
-            <EmptyState title={t('empty.noMatchTitle')} description={t('empty.noMatchDesc')} />
-          ) : (
-            // Mỗi trang trại 1 hàng, bấm để xổ các nhà yến bên trong
-            <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white shadow-card">
-              {shownFarms.map(farm => {
-                const stats = statsByFarm.get(farm._id) ?? { houses: 0, devices: 0, alertHouses: 0 }
-                return (
-                  <FarmGroupRow
-                    key={farm._id}
-                    farm={farm}
-                    houseCount={stats.houses}
-                    deviceCount={stats.devices}
-                    alertHouseCount={stats.alertHouses}
-                    isExpanded={isFarmExpanded(farm._id)}
-                    isPrimary={isPrimaryOf(farm)}
-                    canEdit={canCreateFarm}
-                    canAddHouse={canAddHouse}
-                    onToggle={() => toggleFarm(farm._id)}
-                    onEdit={() => setEditFarm(farm)}
-                    onDelete={() => setDeleteTarget(farm)}
-                    onAddHouse={() => setAddHouseFarmId(farm._id)}
-                    onApplyProfile={canCreateFarm && stats.houses > 0 ? () => setApplyProfileFarm(farm) : undefined}
-                  >
-                    {renderHouses(farm._id)}
-                  </FarmGroupRow>
-                )
-              })}
-            </div>
-          )}
-        </StableHeight>
-      </FarmFrame>
+      {shownFarms.length === 0 ? (
+        <EmptyState title={t('empty.noMatchTitle')} description={t('empty.noMatchDesc')} />
+      ) : (
+        shownFarms.map(farm => {
+          const stats = statsByFarm.get(farm._id) ?? { houses: 0, devices: 0 }
+          return (
+            <FarmBlock
+              key={farm._id}
+              farm={farm}
+              houseCount={stats.houses}
+              deviceCount={stats.devices}
+              isPrimary={isPrimaryOf(farm)}
+              canEdit={canCreateFarm}
+              canAddHouse={canAddHouse}
+              onEdit={() => setEditFarm(farm)}
+              onDelete={() => setDeleteTarget(farm)}
+              onAddHouse={() => setAddHouseFarmId(farm._id)}
+              onApplyProfile={canCreateFarm && stats.houses > 0 ? () => setApplyProfileFarm(farm) : undefined}
+            >
+              <HouseTable houses={visibleByFarm.get(farm._id) ?? []} staffByHouse={staffByHouse} pinned={pinned} showYield={canViewHarvest} onTogglePin={togglePin} onOpen={openHouse} />
+            </FarmBlock>
+          )
+        })
+      )}
 
       {addHouseFarmId !== null && (
         <AddHouseModal open onClose={() => setAddHouseFarmId(null)} farms={farms} existingHouses={existingHouses} initialFarmId={addHouseFarmId} />

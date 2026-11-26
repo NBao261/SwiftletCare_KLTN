@@ -1,6 +1,6 @@
 // Chuyên gia, Farm Owner và Kỹ thuật viên (nhà được giao) vẽ vòng đếm, trên web như trên mobile
 import { useState, useEffect } from 'react'
-import { Crosshair, History, AlertTriangle } from 'lucide-react'
+import { Crosshair, AlertTriangle } from 'lucide-react'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import SectionCard from '@/components/ui/SectionCard'
@@ -38,10 +38,8 @@ export default function DomainExpertCountingRingPage() {
   const cameraOptions: SelectMenuOption<string>[] = list.map(item => ({ value: item._id, label: item.device_id }))
 
   return (
-    <div className="mx-auto w-full max-w-screen-xl space-y-5">
+    <div className="flex w-full flex-col gap-6">
       <SectionCard
-        icon={<Crosshair className="w-5 h-5" />}
-        title={t('Vòng đếm camera')}
         description={t('Chim bay qua vòng quanh lỗ ra vào mới được đếm')}
         help={t('Vẽ tối đa 4 vòng khép kín quanh miệng lỗ ra vào trên khung hình trực tiếp. Mỗi vòng đếm cả chim vào lẫn chim ra, chỉ chim bay qua vòng mới được đếm.')}
         action={
@@ -59,7 +57,7 @@ export default function DomainExpertCountingRingPage() {
         {isLoading && <LoadingSkeleton count={1} className="aspect-video w-full rounded-2xl" />}
 
         {isError && !isLoading && (
-          <div className="flex items-start gap-2 p-3.5 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+          <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3.5 py-2.5 text-sm text-alertRed">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{t('Không tải được danh sách camera. Thử lại.')}</span>
           </div>
@@ -81,7 +79,7 @@ export default function DomainExpertCountingRingPage() {
       </SectionCard>
 
       {!isLoading && !isError && camera && (camera.counting_ring_history?.length ?? 0) > 0 && (
-        <SectionCard icon={<History className="w-5 h-5" />} title={t('Lịch sử vòng đếm')}>
+        <SectionCard title={t('Lịch sử vòng đếm')}>
           <CountingRingHistory camera={camera} />
         </SectionCard>
       )}

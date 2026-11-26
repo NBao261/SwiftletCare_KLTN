@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowRightIcon, CubeIcon, SlidersHorizontalIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { PlusIcon, SlidersHorizontalIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, EmptyState } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
@@ -12,7 +12,7 @@ import { useOpenZoneTuning } from '@/hooks/shared/useOpenZoneTuning'
 import DetectionTuningCard from '@/components/features/farm-owner/farms/DetectionTuningCard'
 import StructureEditModal from '@/components/features/farm-owner/farms/StructureEditModal'
 import ActionsMenu from '@/components/ui/ActionsMenu'
-import { ZONE_METRICS, thresholdRange, type MetricMeta, CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { ZONE_METRICS, thresholdRange, type MetricMeta } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { detectBreaches, type DeviceRow, type ZoneMetrics } from '@/components/features/farm-owner/farms/farmStructure'
 import { useFarmStructure } from '@/hooks/farm-owner/useFarmStructure'
 import { useTelemetry } from '@/hooks/farm-owner/useTelemetry'
@@ -27,19 +27,22 @@ import ScopeFilter from '@/components/common/ScopeFilter'
 import HeaderActions from '@/components/layouts/HeaderActions'
 import { useFarmsScopeRouting, useScopeFilter } from '@/hooks/shared/useScopeFilter'
 import { UP_FROM_CHILD_STATE } from '@/lib/navigationState'
+import { DEVICE_SETUP_PATH, type DeviceSetupState } from '@/components/features/farm-owner/onboarding/deviceSetupState'
+import { DEVICE_SETUP_ROLES } from '@/constants/roles'
 import { printQrLabels, zoneCode } from '@/lib/qrCode'
 
 // Chi tiết 1 Zone: số đo realtime so ngưỡng
 export default function FarmOwnerFarmZoneDetailPage() {
   const { farmId, houseId, zoneId } = useParams<{ farmId: string; houseId: string; zoneId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t, ago } = useTranslation(farmDict)
   useScrollToTop(zoneId)
   const { structure, isLoading, isError, canViewHarvest, refetch } = useFarmStructure()
   const node = zoneId ? structure.zoneById.get(zoneId) : undefined
   const live = useTelemetry(zoneId)
   const isFarmOwner = usePermission('FARM_OWNER')
-  const setZone = useZoneStore(state => state.setZone)
+  const canSetUpDevice = usePermission(...DEVICE_SETUP_ROLES)
   const setScopePath = useZoneStore(state => state.setScopePath)
   // Khung lọc khớp Zone đang xem; đổi lựa chọn thì sang trang đúng cấp
   const scope = useScopeFilter()
@@ -83,10 +86,12 @@ export default function FarmOwnerFarmZoneDetailPage() {
   if (isLoading) return <LoadingSkeleton count={3} className="h-40 w-full" />
   if (!node) return <EmptyState title={t('zone.notFound')} description={t('zone.notFoundDesc')} />
 
-  const { zone, farm } = node
+  const { zone } = node
   const health = breaches.length > 0 || node.alerts.length > 0 || node.counts.offline > 0 ? 'ALERT' : 'NORMAL'
-  const zoneNameById = new Map([[zone._id, zone.name]])
   const lastBatch = node.lastBatch
+  // Tên Zone đã là "Tầng N" thì không ghi lại tầng
+  const floorLabel = t('zone.floor', { n: zone.floor })
+  const houseLine = zone.name.trim() === floorLabel ? node.house.name : `${node.house.name} · ${floorLabel}`
 
   // Trạng thái tín hiệu theo nguồn số đo
   const liveLabel = live.isLive
@@ -95,11 +100,6 @@ export default function FarmOwnerFarmZoneDetailPage() {
       ? `${t('zone.stale')} · ${ago(d.timestamp)}`
       : d.timestamp ? t('zone.lastReading', { ago: ago(d.timestamp) }) : t('zone.noSignal')
 
-  // Mở Tổng quan / Thiết bị đúng Zone này: ghi Zone đang xem (khung lọc đã khớp Zone theo URL)
-  const goTo = (path: string) => {
-    setZone(farm._id, farm.name, zone._id, zone.name)
-    navigate(path)
-  }
   const metricProps = (m: MetricMeta) => ({
     meta: m,
     value: metrics[m.key],
@@ -116,27 +116,20 @@ export default function FarmOwnerFarmZoneDetailPage() {
         title={<>{zone.name}<HealthBadge health={health} /></>}
         description={
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-warmGray">
-            <span>{node.house.name} · {t('zone.floor', { n: zone.floor })}</span>
-            <span>{t('card.devicesOnline', { online: node.counts.online, total: node.counts.total })}</span>
+            <span>{houseLine}</span>
             <span className="flex items-center gap-1.5">
               <span className={cn('h-2 w-2 rounded-full', live.isLive ? 'animate-pulse bg-success' : 'bg-gray-400')} />
               {liveLabel}
             </span>
+            {canViewHarvest && lastBatch && <span>{t('zone.harvestLine', { nests: lastBatch.nest_count, grams: lastBatch.weight_grams })}</span>}
           </div>
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
             {isFarmOwner && (
-              <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} disabled={!openZoneTuning} onClick={() => node && openZoneTuning?.(node.zone._id)}>
+              <Button variant="secondary" size="sm" disabled={!openZoneTuning} onClick={() => node && openZoneTuning?.(node.zone._id)}>
                 <SlidersHorizontalIcon size={14} />
                 {t('zone.thresholds')}
-              </Button>
-            )}
-            {isFarmOwner && (
-              <Button size="sm" className="h-9 text-xs" onClick={() => goTo('/dashboard')}>
-                <CubeIcon size={14} />
-                {t('zone.controller')}
-                <ArrowRightIcon size={12} weight="bold" />
               </Button>
             )}
             {isFarmOwner && (
@@ -150,7 +143,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
                       lines: [
                         { text: 'SwiftletCare', strong: true },
                         { text: node.house.name },
-                        { text: `${t('zone.floor', { n: zone.floor })} · ${zone.name}`, strong: true },
+                        { text: `${floorLabel} · ${zone.name}`, strong: true },
                         { text: t('zone.floorCodeHint') },
                       ],
                     }]),
@@ -164,7 +157,7 @@ export default function FarmOwnerFarmZoneDetailPage() {
         }
       />
 
-      <FarmFrame title={t('zone.metricsTitle')} description={t('zone.metricsDesc')}>
+      <FarmFrame title={t('zone.metricsTitle')} help={t('zone.metricsDesc')}>
         {live.isError && !live.hasEverReceived ? (
           <EmptyState title={t('zone.noData')} description={t('zone.noDataDesc')} />
         ) : (
@@ -179,25 +172,17 @@ export default function FarmOwnerFarmZoneDetailPage() {
 
       <FarmFrame
         title={t('zone.devicesTitle', { n: node.devices.length })}
-        description={t('zone.devicesDesc')}
+        help={t('zone.devicesDesc')}
+        action={canSetUpDevice && farmId && houseId && zoneId && (
+          // Mở thiết lập với vị trí của Zone này đã chọn sẵn
+          <Button size="sm" onClick={() => navigate(DEVICE_SETUP_PATH, { state: { location: { farmId, houseId, zoneId }, returnTo: location.pathname } satisfies DeviceSetupState })}>
+            <PlusIcon size={14} weight="bold" />
+            {t('zone.setupDevice')}
+          </Button>
+        )}
       >
-        <DeviceListTable devices={node.devices} zoneNameById={zoneNameById} onSelect={setSelected} />
+        <DeviceListTable devices={node.devices} onSelect={setSelected} />
       </FarmFrame>
-
-      {canViewHarvest && (
-        <FarmFrame
-          title={t('zone.harvestTitle')}
-          description={lastBatch
-            ? t('zone.lastHarvest', { zone: zone.name, nests: lastBatch.nest_count, grams: lastBatch.weight_grams })
-            : t('zone.noHarvest', { zone: zone.name })}
-          action={
-            <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/harvests')}>
-              {t('zone.viewHarvest')}
-              <ArrowRightIcon size={12} weight="bold" />
-            </Button>
-          }
-        />
-      )}
 
       <DeviceDetailDrawer device={selected} zoneNode={{ ...node, metrics, breaches }} onClose={() => setSelected(null)} />
       {editMode && <StructureEditModal kind="zone" mode={editMode} id={node.zone._id} onDeleted={() => navigate(`/farms/${farmId}/houses/${houseId}`)} name={node.zone.name} deviceCount={node.counts.total} existingNames={structure.houseById.get(node.house._id)?.zones.map(item => item.zone.name) ?? []} onClose={() => setEditMode(null)} />}

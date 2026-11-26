@@ -412,7 +412,7 @@ const en: Record<string, string> = {
   'Tất cả hành động': 'All actions',
   'Lọc theo khoảng thời gian': 'Filter by time range',
   'Tất cả thời gian': 'All time',
-  'Ô "người thực hiện" chỉ liệt kê {{shown}}/{{total}} tài khoản đầu tiên (giới hạn 1 trang của /admin/users).': 'The "actor" list only shows the first {{shown}}/{{total}} accounts (one-page limit of /admin/users).',
+  'Ô "người thực hiện" chỉ liệt kê {{shown}}/{{total}} tài khoản đầu tiên.': 'The "actor" list only shows the first {{shown}}/{{total}} accounts (one-page limit of /admin/users).',
   'Hành động': 'Action',
   'Người thực hiện': 'Actor',
   'Không tìm thấy nhật ký phù hợp': 'No matching log entries',
@@ -489,7 +489,7 @@ const en: Record<string, string> = {
   // Cấu hình mặc định
   'Mặc định gốc': 'Factory default',
   'Đã tuỳ chỉnh': 'Customised',
-  'Khác với mặc định kỹ thuật gốc': 'Differs from the factory default',
+  'Khác với mặc định ban đầu': 'Differs from the factory default',
   'Chỉnh sửa': 'Edit',
   'Ngưỡng môi trường mặc định': 'Default environment thresholds',
   'Tạo chủ nhà yến': 'Create Farm Owner',

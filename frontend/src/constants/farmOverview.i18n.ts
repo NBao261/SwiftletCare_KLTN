@@ -3,21 +3,17 @@ import type { Dictionary } from '@/lib/i18n';
 // Từ điển trang Tổng quan trại (/overview)
 const vi = {
   // Đầu trang
-  'page.loadFailed': 'Không tải được danh sách trang trại',
   'page.retry': 'Thử lại',
-  'page.noFarmTitle': 'Chưa có trang trại',
-  'page.noFarmDesc': 'Tạo trang trại và nhà yến ở mục Trang trại để xem tổng quan.',
-  'page.goFarms': 'Đi tới Trang trại',
   'page.pickFarmTitle': 'Chọn một trang trại',
-  'page.pickFarmHint': 'Tổng quan và so sánh tính trong từng trang trại. Chọn trang trại ở khung lọc phía trên.',
+  'page.pickFarmHint': 'Chọn một trang trại ở khung lọc phía trên để so sánh các nhà của trang trại đó.',
 
   // Tab Các nhà
-  'reason.NOT_COMPUTED': 'Chưa có',
 
   // Tab So sánh nhà
-  'comparison.subtitle': 'Chọn chỉ số ở ô "Sắp theo" để sắp các nhà. Bảng không có điểm tổng hay xếp hạng.',
+  'comparison.subtitle': 'Bấm tên cột để sắp xếp. Không có điểm tổng hay xếp hạng, mỗi chỉ số đọc riêng.',
+  'comparison.title': 'So sánh các nhà yến',
   'comparison.periodLabel': 'Khoảng',
-  'comparison.period': 'Khoảng: {n} ngày',
+  'comparison.period': '{n} ngày',
   'comparison.range': 'Số liệu từ {from} tới {to}',
   'comparison.errorTitle': 'Không tải được bảng so sánh',
   'comparison.emptyTitle': 'Trang trại chưa có nhà yến',
@@ -33,9 +29,6 @@ const vi = {
   'col.mttr_min': 'Thời gian xử lý trung bình',
   'col.energy_kwh': 'Điện năng (ước tính)',
   'col.last_cycle_yield_g': 'Sản lượng chu kỳ gần nhất',
-  'sort.label': 'Sắp theo',
-  'sort.asc': 'Tăng dần',
-  'sort.desc': 'Giảm dần',
   'group.environment': 'Môi trường',
   'group.flock': 'Đàn chim',
   'group.alerts': 'Cảnh báo',
@@ -58,19 +51,15 @@ const vi = {
 export type FarmOverviewKey = keyof typeof vi;
 
 const en: Record<FarmOverviewKey, string> = {
-  'page.loadFailed': 'Could not load the farms',
   'page.retry': 'Retry',
-  'page.noFarmTitle': 'No farm yet',
-  'page.noFarmDesc': 'Create a farm and its houses under Farms to see the overview.',
-  'page.goFarms': 'Go to Farms',
   'page.pickFarmTitle': 'Choose a farm',
-  'page.pickFarmHint': 'The overview and the comparison are per farm. Choose a farm in the filter above.',
+  'page.pickFarmHint': 'Choose a farm in the filter above to compare its houses.',
 
-  'reason.NOT_COMPUTED': 'Not available yet',
 
-  'comparison.subtitle': 'Choose a figure under "Sort by" to order the houses. The table has no total score or ranking.',
+  'comparison.subtitle': 'Click a column name to sort. There is no total score or ranking: each figure is read on its own.',
+  'comparison.title': 'Compare the houses',
   'comparison.periodLabel': 'Period',
-  'comparison.period': 'Period: {n} days',
+  'comparison.period': '{n} days',
   'comparison.range': 'Figures from {from} to {to}',
   'comparison.errorTitle': 'Could not load the comparison',
   'comparison.emptyTitle': 'This farm has no swiftlet house yet',
@@ -86,9 +75,6 @@ const en: Record<FarmOverviewKey, string> = {
   'col.mttr_min': 'Mean time to resolve',
   'col.energy_kwh': 'Energy (estimated)',
   'col.last_cycle_yield_g': 'Last cycle yield',
-  'sort.label': 'Sort by',
-  'sort.asc': 'Ascending',
-  'sort.desc': 'Descending',
   'group.environment': 'Environment',
   'group.flock': 'Flock',
   'group.alerts': 'Alerts',

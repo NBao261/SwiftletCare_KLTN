@@ -35,7 +35,7 @@ export default function InvitationPage() {
       <div className="flex min-h-screen items-center justify-center px-4">
         <Card size="lg" className="w-full max-w-md text-center">
           <h1 className="text-xl font-bold text-charcoal">Lời mời không tồn tại</h1>
-          <p className="mt-2 text-sm text-warmGray">Đường link có thể sai hoặc lời mời đã bị xoá.</p>
+          <p className="mt-2 text-sm text-warmGray">Đường dẫn có thể sai hoặc lời mời đã bị xoá.</p>
           <Link to="/login" className="mt-6 inline-block font-semibold text-charcoal underline">Về trang đăng nhập</Link>
         </Card>
       </div>
@@ -65,7 +65,7 @@ export default function InvitationPage() {
     createAccount.mutate({ token, full_name: fullName.trim(), password }, {
       // Tài khoản mới đã vào farm của lời mời; backend không trả token → đăng nhập với email điền sẵn
       onSuccess: () => {
-        push('Đã tạo tài khoản, hãy đăng nhập')
+        push('Đã tạo tài khoản, đăng nhập để tiếp tục')
         navigate(`/login?email=${encodeURIComponent(invitation.invited_email)}`)
       },
       // 409 lời mời đã dùng/hết hạn hoặc email đã có tài khoản, 404 farm đã xoá: backend trả message tiếng Việt

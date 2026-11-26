@@ -86,7 +86,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
   const mistingSign = mistingDelta !== null && mistingDelta > 0 ? '+' : ''
 
   return (
-    <div className="rounded-2xl border border-accent-600/40 bg-lime-300 p-5 space-y-4">
+    <div className="space-y-4 rounded-2xl border border-accent-600/40 bg-accent-50 p-4">
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-accent-900" />
@@ -116,7 +116,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {CHIPS.map(chip => (
           <SuggestionChip key={chip.key} label={t(chip.label)} unit={t(chip.unit)} current={current?.[chip.key]} next={suggested[chip.key]} />
         ))}

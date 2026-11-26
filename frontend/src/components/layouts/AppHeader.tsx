@@ -28,6 +28,7 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
 // `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung
 export default function AppHeader({ menuSections, elevated = false }: { menuSections: MenuSection[]; elevated?: boolean }) {
   const setHeaderSlot = useHeaderSlotStore(state => state.setSlot)
+  const setTitleSlot = useHeaderSlotStore(state => state.setTitleSlot)
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const page = usePageTitle(menuSections)
@@ -79,6 +80,8 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
             </CrumbTag>
           )
         })}
+        {/* Chỗ cho huy hiệu của trang, cạnh tên trang; trống thì ẩn */}
+        <div ref={setTitleSlot} className="flex shrink-0 items-center self-center empty:hidden" />
       </nav>
 
       {/* Thanh phạm vi: từ xl cùng hàng tên trang, dưới xl xuống hàng riêng */}

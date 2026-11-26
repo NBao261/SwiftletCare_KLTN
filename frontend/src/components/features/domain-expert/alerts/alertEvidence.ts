@@ -85,15 +85,15 @@ export function buildTelemetryEvidenceSource(
     const peakTime = safeFormatHM(peakSample?.timestamp ?? alert.created_at)
 
     return {
-      title: t('Nguồn 1: cảm biến âm thanh (số đo thực tế)'),
+      title: t('Cảm biến âm thanh'),
       badge1: t('Số mẫu: {{n}}', { n: validSamples.length }),
-      badge2: t('TB mẫu: {{value}} dB', { value: avgSound }),
+      badge2: t('Trung bình: {{value}} dB', { value: avgSound }),
       highlight: t('Đỉnh: {{value}} dB', { value: maxSound }),
       unit: ' dB',
       domain: [bottomDomain, topDomain],
       ticks: generateTicks(bottomDomain, topDomain, 5),
       refY: avgSound,
-      refLabel: t('TB: {{value}}', { value: `${avgSound} dB` }),
+      refLabel: t('Trung bình: {{value}}', { value: `${avgSound} dB` }),
       data,
       anomalyTag: `${peakTime} · ${maxSound} dB (${t('đỉnh đo được trong khung giờ')})`,
     }
@@ -163,7 +163,7 @@ export function buildTelemetryEvidenceSource(
   })
 
   return {
-    title: t('Nguồn 1: cảm biến {{metric}} (số đo thực tế)', { metric: titleMetric }),
+    title: t('Cảm biến {{metric}}', { metric: titleMetric }),
     badge1: t('Số mẫu: {{n}}', { n: validSamples.length }),
     badge2: t('Khoảng: {{value}}', { value: `${minVal} – ${maxVal}${unit}` }),
     highlight: t('Lệch đỉnh: {{value}}', { value: `${peakVal}${unit}` }),
@@ -171,9 +171,9 @@ export function buildTelemetryEvidenceSource(
     domain: [domainMin, domainMax],
     ticks: generateTicks(domainMin, domainMax, 5),
     refY: Math.round(avgVal * 10) / 10,
-    refLabel: t('TB: {{value}}', { value: `${Math.round(avgVal * 10) / 10}${unit}` }),
+    refLabel: t('Trung bình: {{value}}', { value: `${Math.round(avgVal * 10) / 10}${unit}` }),
     data,
-    anomalyTag: `${peakTime} · ${peakVal}${unit} (${t('lệch {{value}} so với TB', { value: `${maxDev.toFixed(1)}${unit}` })})`,
+    anomalyTag: `${peakTime} · ${peakVal}${unit} (${t('lệch {{value}} so với trung bình', { value: `${maxDev.toFixed(1)}${unit}` })})`,
   }
 }
 
@@ -214,7 +214,7 @@ export function buildBirdCountEvidenceSource(
   const closestTime = safeFormatHM(closestBucket.bucket_start)
 
   return {
-    title: t('Nguồn 2: số chim ra, vào mỗi 5 phút'),
+    title: t('Số chim ra, vào (mỗi 5 phút)'),
     badge1: t('Chim vào: {{n}} con', { n: totalEntry }),
     badge2: t('Chim ra: {{n}} con', { n: totalExit }),
     highlight: t('Tại mốc: {{n}} vào', { n: closestBucket.entry_count }),
@@ -222,7 +222,7 @@ export function buildBirdCountEvidenceSource(
     domain: [0, domainMax],
     ticks: generateTicks(0, domainMax, 5),
     refY: Math.round(avgEntry),
-    refLabel: t('TB: {{value}}', { value: Math.round(avgEntry) }),
+    refLabel: t('Trung bình: {{value}}', { value: Math.round(avgEntry) }),
     data,
     anomalyTag: `${closestTime} · ${t('{{in}} vào / {{out}} ra', { in: closestBucket.entry_count, out: closestBucket.exit_count })}`,
     barColor: '#8BAF2A',

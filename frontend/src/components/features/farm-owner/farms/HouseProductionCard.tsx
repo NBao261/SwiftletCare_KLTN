@@ -1,10 +1,5 @@
-import { ArrowRightIcon } from '@phosphor-icons/react'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui'
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame'
-import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants'
-import { GRAM_DIGITS, KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants'
-import { cn } from '@/lib/cn'
+import { KILOGRAM_DIGITS } from '@/components/features/farm-owner/harvest/harvest.constants'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { vnYearMonth } from '@/lib/helpers'
@@ -14,14 +9,13 @@ import { NO_VALUE } from '@/constants/display'
 
 interface HouseProductionCardProps {
   node: HouseNode
-  // 3 đợt thu hoạch gần nhất của nhà (đã lọc theo zone của nhà)
+  // Các đợt thu gần nhất của nhà (mới → cũ), chỉ lấy đợt đầu cho dòng "Thu gần nhất"
   recent: HarvestBatch[]
 }
 
 // Không hiện mã truy xuất
 export default function HouseProductionCard({ node, recent }: HouseProductionCardProps) {
-  const { t, num, exact, day } = useTranslation(farmDict)
-  const navigate = useNavigate()
+  const { t, num, day } = useTranslation(farmDict)
   const { month, year } = vnYearMonth(new Date())
   const avgPerNest = node.monthNests > 0 ? (node.monthKg * 1000) / node.monthNests : undefined
   const last = recent[0]
@@ -37,28 +31,9 @@ export default function HouseProductionCard({ node, recent }: HouseProductionCar
         </p>
       </div>
 
-      <div className="rounded-xl bg-warmGray/5 px-3 py-2.5">
-        <p className="label-caption">{t('prod.last')}</p>
-        <p className="mt-0.5 text-small font-semibold text-charcoal">{last ? `${day(last.harvest_date)} · ${zoneName(last.zone_id)}` : NO_VALUE}</p>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <p className="label-caption">{t('prod.recent')}</p>
-        {recent.length === 0 && <p className="text-small text-warmGray">{t('prod.none')}</p>}
-        {recent.map(batch => (
-          <div key={batch._id} className="flex items-center justify-between gap-2 rounded-xl border border-warmGray/15 px-3 py-2">
-            <div className="min-w-0">
-              <p className="truncate text-small font-semibold text-charcoal">{day(batch.harvest_date)} · {zoneName(batch.zone_id)}</p>
-              <p className="text-caption text-warmGray">{exact(batch.weight_grams, GRAM_DIGITS)} g · {num(batch.nest_count)} {t('prod.nestUnit')}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <Button variant="secondary" size="sm" className={cn('h-9 w-full text-xs', CAPSULE_ACTION_CLASS)} onClick={() => navigate('/harvests')}>
-        {t('prod.viewAll')}
-        <ArrowRightIcon size={12} weight="bold" />
-      </Button>
+      <p className="text-small text-warmGray">
+        {t('prod.last')}: <span className="font-semibold text-charcoal">{last ? `${day(last.harvest_date)} · ${zoneName(last.zone_id)}` : NO_VALUE}</span>
+      </p>
     </FarmFrame>
   )
 }

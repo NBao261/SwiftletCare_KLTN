@@ -6,7 +6,8 @@ import RecommendationDetailDrawer from '@/components/features/farm-owner/recomme
 import RecommendationTable from '@/components/features/farm-owner/recommendations/RecommendationTable';
 import { ruleOf } from '@/components/features/farm-owner/recommendations/recommendations.constants';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
+import StatusTabs from '@/components/common/StatusTabs';
+import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard } from '@/components/ui';
 import { recommendationsDict } from '@/constants/recommendations.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -14,12 +15,12 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { RECOMMENDATIONS_PAGE_SIZE, useRecommendationActions, useRecommendations } from '@/hooks/farm-owner/useRecommendations';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useToastStore } from '@/stores/toastStore';
-import type { Recommendation, RecommendationStatus } from '@/types';
+import type { Recommendation } from '@/types';
 import { REJECT_REASON_MAX_LENGTH } from '@/validations/common/recommendationRule.validation';
 
-const STATUSES: RecommendationStatus[] = ['OPEN', 'ACCEPTED', 'MEASURED', 'REJECTED', 'EXPIRED'];
-// 'all' = mọi trạng thái
-type StatusFilter = 'all' | RecommendationStatus;
+// Tab trạng thái: chờ quyết định trước, 'all' = mọi trạng thái
+const STATUS_TABS = ['OPEN', 'ACCEPTED', 'MEASURED', 'REJECTED', 'EXPIRED', 'all'] as const;
+type StatusFilter = (typeof STATUS_TABS)[number];
 
 // Khung viền đứt khi rỗng, như trang Lịch bảo trì
 function EmptyFrame({ title, hint }: { title: string; hint: string }): JSX.Element {
@@ -53,6 +54,8 @@ export default function FarmOwnerRecommendationsPage(): JSX.Element {
     { ...scopeQuery, ...(statusFilter !== 'all' && { status: statusFilter }), page, limit: RECOMMENDATIONS_PAGE_SIZE },
     hasScope,
   );
+  // Số khuyến nghị chờ quyết định ghi trên tab đầu, theo đúng phạm vi đang lọc
+  const openCount = useRecommendations({ ...scopeQuery, status: 'OPEN', page: 1, limit: 1 }, hasScope);
   // Quyết định xong làm trang cuối hết mục: lùi về trang cuối còn mục, để không kẹt ở khung rỗng
   const lastPage = Math.max(1, Math.ceil(list.total / RECOMMENDATIONS_PAGE_SIZE));
   useEffect(() => {
@@ -127,22 +130,15 @@ export default function FarmOwnerRecommendationsPage(): JSX.Element {
         <ScopeFilter scope={scope} lockZone />
       </HeaderActions>
 
-      <SectionCard
-        className="flex-1"
-        description={t('page.short')}
-        help={t('page.subtitle')}
-        action={(
-          <SelectMenu
-            ariaLabel={t('page.statusLabel')}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
-              ...STATUSES.map(status => ({ value: status, label: t(`status.${status}`) })),
-              { value: 'all' as const, label: t('page.allStatuses') },
-            ]}
-          />
-        )}
-      >
+      <SectionCard className="flex-1" description={t('page.short')} help={t('page.subtitle')}>
+        <StatusTabs
+          variant="underline"
+          ariaLabel={t('page.statusLabel')}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          tabs={STATUS_TABS.map(id => ({ id, label: id === 'all' ? t('page.allStatuses') : t(`status.${id}`), badge: id === 'OPEN' && canDecide ? openCount.total : undefined }))}
+        />
+
         {body}
       </SectionCard>
 

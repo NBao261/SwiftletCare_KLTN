@@ -73,13 +73,16 @@ export function zoneHasIssue({ readings, thresholds, isOnline, hasFaultDevice }:
 
 // Chart thống kê chim
 export function mergeBirdCountRecords(lists: BirdCountDailyRecord[][]): BirdCountDailyRecord[] {
-  const byDate = new Map<string, { exit: number; entry: number; rates: number[] }>()
+  const byDate = new Map<string, { exit: number; entry: number; rates: number[]; noMorning: boolean; noEvening: boolean }>()
 
   lists.flat().forEach(record => {
-    const day = byDate.get(record.date) ?? { exit: 0, entry: 0, rates: [] }
+    const day = byDate.get(record.date) ?? { exit: 0, entry: 0, rates: [], noMorning: false, noEvening: false }
     day.exit += record.morning_exit
     day.entry += record.evening_entry
     if (record.return_rate !== null) day.rates.push(record.return_rate)
+    // Một nhà thiếu buổi nào thì ngày gộp thiếu buổi đó
+    if (record.has_morning === false) day.noMorning = true
+    if (record.has_evening === false) day.noEvening = true
     byDate.set(record.date, day)
   })
 
@@ -90,6 +93,8 @@ export function mergeBirdCountRecords(lists: BirdCountDailyRecord[][]): BirdCoun
       morning_exit: day.exit,
       evening_entry: day.entry,
       return_rate: day.rates.length > 0 ? day.rates.reduce((sum, rate) => sum + rate, 0) / day.rates.length : null,
+      ...(day.noMorning && { has_morning: false }),
+      ...(day.noEvening && { has_evening: false }),
     }))
 }
 

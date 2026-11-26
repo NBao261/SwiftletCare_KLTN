@@ -18,7 +18,7 @@ export interface AlertFilters {
   page: number
 }
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 10
 
 // 2. Thống kê tỷ lệ xác nhận theo loại
 export function useExpertVerdictStats(farmId?: string, zoneId?: string) {
@@ -74,7 +74,7 @@ export function useAlertsWithFilters(farmId?: string, zoneId?: string) {
     paginatedAlerts: list.data?.records ?? [],
     filteredTotal,
     kpiCounts,
-    totalPages: Math.ceil(filteredTotal / PAGE_SIZE),
+    pageSize: PAGE_SIZE,
     isLoading: list.isLoading || stats.isLoading,
     isFetching: list.isFetching,
   }

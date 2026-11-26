@@ -121,7 +121,7 @@ export default function DomainExpertReportsPage() {
                   : 'text-warmGray hover:text-charcoal'
               }`}
             >
-              {i18nT('Ngày lệch')}
+              {i18nT('Ngày đánh giá khác')}
               {disagreeingDaysCount > 0 && (
                 <span className="rounded-full bg-orange-600 px-2 py-0.5 text-small font-bold tabular-nums text-white">
                   {disagreeingDaysCount}

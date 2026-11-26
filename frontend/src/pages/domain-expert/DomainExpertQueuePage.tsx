@@ -17,9 +17,9 @@ const kindTitle = (kind: ExpertQueueKind): string => ({
   alert_verdict: t('Cảnh báo chờ kết luận'),
   parameter_review: t('Thay đổi tham số chờ duyệt'),
   coefficient_proposal: t('Đề xuất hệ số mờ'),
-  disagreeing_day: t('Ngày lệch đánh giá (14 ngày)'),
+  disagreeing_day: t('Ngày đánh giá khác hệ thống (14 ngày)'),
   report_conclusion: t('Báo cáo chờ kết luận'),
-  weather_proposal: t('Đề xuất luật bù thời tiết'),
+  weather_proposal: t('Đề xuất luật phun sương theo thời tiết'),
   profile_draft: t('Hồ sơ cấu hình chờ duyệt'),
   recommendation_rule: t('Luật khuyến nghị chờ bật'),
   season_conclusion: t('Mùa vụ chờ kết luận'),
@@ -28,8 +28,8 @@ const kindTitle = (kind: ExpertQueueKind): string => ({
 const SECTIONS: Array<{ key: QueueSection; label: () => string; sub: () => string; icon: typeof ShieldCheckIcon }> = [
   { key: 'verdicts', label: () => t('Kết luận cảnh báo'), sub: () => t('cảnh báo suy luận'), icon: ShieldCheckIcon },
   { key: 'reviews', label: () => t('Duyệt thay đổi'), sub: () => t('tham số và hệ số mờ'), icon: ChecksIcon },
-  { key: 'proposals', label: () => t('Duyệt đề xuất'), sub: () => t('luật thời tiết, hồ sơ, luật khuyến nghị'), icon: LightbulbFilamentIcon },
-  { key: 'conclusions', label: () => t('Viết kết luận'), sub: () => t('ngày lệch, báo cáo, mùa vụ'), icon: FileTextIcon },
+  { key: 'proposals', label: () => t('Duyệt đề xuất'), sub: () => t('luật phun sương, hồ sơ, luật khuyến nghị'), icon: LightbulbFilamentIcon },
+  { key: 'conclusions', label: () => t('Viết kết luận'), sub: () => t('ngày đánh giá khác, báo cáo, mùa vụ'), icon: FileTextIcon },
 ]
 
 // Ngày lệch trả 'YYYY-MM-DD', các việc khác trả thời điểm

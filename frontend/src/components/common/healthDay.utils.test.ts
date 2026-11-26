@@ -19,7 +19,7 @@ describe('formatHealthReason', () => {
 
   it('thiếu dữ liệu: phân biệt môi trường (theo Zone) và đàn chim (theo phiên)', () => {
     const env = reason('MISSING_DATA', 'environment', { min_pct: 80, zones: [{ zone_name: 'Tầng 1', valid_pct: 42.5 }] });
-    expect(formatHealthReason(env, vi, plain)).toBe('Thiếu dữ liệu môi trường: mẫu nhiệt độ, độ ẩm hợp lệ dưới 80 % (Tầng 1 42.5 %)');
+    expect(formatHealthReason(env, vi, plain)).toBe('Thiếu dữ liệu môi trường: số đo nhiệt độ, độ ẩm hợp lệ dưới 80 % (Tầng 1 42.5 %)');
     expect(formatHealthReason(reason('MISSING_DATA', 'environment', { no_zones: true }), en, plain)).toBe('Missing environment data: the house has no zone');
     expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'EVENING' }), vi, plain)).toBe('Thiếu dữ liệu đàn chim: thiếu phiên chiều');
     // nút AI mất kết nối trong khung phiên
@@ -31,7 +31,7 @@ describe('formatHealthReason', () => {
 
   it('nguồn tuỳ chọn không xét, thời tiết, mưa', () => {
     expect(formatHealthReason(reason('NOT_ASSESSED', 'air'), en, plain)).toBe('Air quality not assessed (missing NH3, CO2 samples)');
-    expect(formatHealthReason(reason('NOT_ASSESSED', 'noise'), vi, plain)).toBe('Chưa xét tiếng ồn (thiếu mẫu độ ồn)');
+    expect(formatHealthReason(reason('NOT_ASSESSED', 'noise'), vi, plain)).toBe('Chưa xét tiếng ồn (thiếu số đo độ ồn)');
     expect(formatHealthReason(reason('WEATHER_UNAVAILABLE'), vi, plain)).toBe('Không có dữ liệu thời tiết');
     // nhà dẫn dụ: không xét đàn chim
     expect(formatHealthReason(reason('ATTRACTING_STAGE', 'flock'), vi, plain)).toBe('Đàn chim: nhà đang ở giai đoạn dẫn dụ, không xét tỷ lệ chim về');

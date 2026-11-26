@@ -4,6 +4,7 @@ import type { SensorNode } from "@/types"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
 import { Badge } from "@/components/ui"
+import ActionsMenu, { type ActionsMenuItem } from "@/components/ui/ActionsMenu"
 import StatusDot from "@/components/common/StatusDot"
 import SimulatedBadge from "@/components/common/SimulatedBadge"
 import DeviceDiagnosticsPanel from "@/components/features/technician/devices/DeviceDiagnosticsPanel"
@@ -20,6 +21,8 @@ interface DeviceListRowProps {
   // Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích
   rebootUnsupported?: boolean;
   onOpenAudio: () => void;
+  // Dời, thay, gỡ bộ điều khiển; không truyền thì ẩn menu
+  moreActions?: ActionsMenuItem[];
 }
 
 const STALE_HEARTBEAT_MS = 5 * 60 * 1000
@@ -44,7 +47,7 @@ function RssiBars({ rssi }: { rssi?: number }) {
 export default function DeviceListRow({
   node, zoneId, locationLabel, index = 0, isExpanded, onToggleExpand,
   onReboot, rebootUnsupported,
-  onOpenAudio,
+  onOpenAudio, moreActions,
 }: DeviceListRowProps) {
   const isOnline = node.status === "ONLINE";
 
@@ -101,7 +104,7 @@ export default function DeviceListRow({
           {node.activation_overdue_at && (
             <Badge tone="warning">Quá hạn kích hoạt</Badge>
           )}
-          {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển thủ công</Badge>}
+          {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển tay</Badge>}
           {node.ota_pending && (
             <span className="inline-flex items-center gap-1 rounded-full bg-limeMist px-2.5 py-1 text-xs font-semibold text-charcoal">
               <DownloadCloud size={12} /> Đang cập nhật
@@ -131,6 +134,7 @@ export default function DeviceListRow({
               <span className="mx-1 hidden h-6 w-px bg-warmGray/20 md:block" />
             </>
           )}
+          {moreActions && moreActions.length > 0 && <ActionsMenu items={moreActions} />}
           <button
             type="button"
             className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-transparent max-sm:h-11 max-sm:w-11 transition-colors ${isExpanded ? 'bg-charcoal text-white' : 'bg-stone text-charcoal hover:bg-warmGray/20'}`}

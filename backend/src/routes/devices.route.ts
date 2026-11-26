@@ -16,7 +16,7 @@ router.use(authenticate)
 const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_AUDIO_BYTES, files: 1 } })
 const trackParams = [param('id').isMongoId(), param('trackId').isMongoId()]
 
-router.post('/sensor-nodes/register',        requireRole('FARM_OWNER'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
+router.post('/sensor-nodes/register',        requireRole('FARM_OWNER','FARM_TECHNICIAN'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
 // Thiết bị gỡ trong 24 giờ còn khôi phục được
 router.get ('/sensor-nodes',
   query('zoneId').optional().isString().isMongoId(), query('removed').optional().isString().isIn(['recent']), validate,
@@ -51,15 +51,15 @@ router.post  ('/sensor-nodes/:id/audio-tracks/:trackId/play-now', requireRole('F
 router.post  ('/sensor-nodes/:id/audio/stop', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, audioTrackController.stopPlayback)
 router.delete('/sensor-nodes/:id/audio-tracks/:trackId', requireRole('FARM_OWNER'), ...trackParams, validate, audioTrackController.deleteTrack)
 
-router.put ('/sensor-nodes/:id/reassign-zone', requireRole('FARM_OWNER'), param('id').isMongoId(), body('newZoneId').isMongoId(), validate, deviceController.reassignZone)
+router.put ('/sensor-nodes/:id/reassign-zone', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('newZoneId').isMongoId(), validate, deviceController.reassignZone)
 
-router.post('/sensor-nodes/:id/decommission', requireRole('FARM_OWNER'), param('id').isMongoId(),
+router.post('/sensor-nodes/:id/decommission', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
   body('reason').trim().notEmpty(),
   // toBoolean(): isBoolean() không đổi kiểu, "false" lọt xuống service là truthy
   body('force').optional().isBoolean().toBoolean(),
   validate, deviceController.decommission('sensor'))
-router.post('/sensor-nodes/:id/restore', requireRole('FARM_OWNER'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('sensor'))
-router.post('/sensor-nodes/:id/replace',      requireRole('FARM_OWNER'), param('id').isMongoId(),
+router.post('/sensor-nodes/:id/restore', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('sensor'))
+router.post('/sensor-nodes/:id/replace',      requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
   body('new_device_id').trim().notEmpty(), body('secret_key').isString().trim().notEmpty(), body('reason').trim().notEmpty(),
   validate, deviceController.replaceSensorNode)
 // Farm Owner, Farm Technician chỉ RESTART (service kiểm)
@@ -70,14 +70,14 @@ router.post('/sensor-nodes/:id/commands', requireRole('ADMIN','FARM_OWNER','FARM
   body('ota.url').if(body('command').equals('OTA')).isURL({ protocols: ['https'], require_protocol: true, require_tld: false }),
   body('ota.sha256').if(body('command').equals('OTA')).isHash('sha256'),
   validate, deviceController.sendCommand)
-router.post('/camera-nodes/:id/decommission', requireRole('FARM_OWNER'), param('id').isMongoId(),
+router.post('/camera-nodes/:id/decommission', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
   body('reason').trim().notEmpty(),
   // toBoolean(): như trên
   body('force').optional().isBoolean().toBoolean(),
   validate, deviceController.decommission('camera'))
-router.post('/camera-nodes/:id/restore', requireRole('FARM_OWNER'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('camera'))
+router.post('/camera-nodes/:id/restore', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('camera'))
 // zone_id cũ: quy ra House chứa Zone
-router.post('/camera-nodes/register',        requireRole('FARM_OWNER'), body('device_id').trim().notEmpty(),
+router.post('/camera-nodes/register',        requireRole('FARM_OWNER','FARM_TECHNICIAN'), body('device_id').trim().notEmpty(),
   body('house_id').if(body('zone_id').not().exists()).isString().isMongoId().withMessage('Cần house_id'),
   body('zone_id').optional().isString().isMongoId(),
   body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerCameraNode)

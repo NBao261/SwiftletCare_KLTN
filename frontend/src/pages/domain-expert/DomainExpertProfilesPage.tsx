@@ -1,11 +1,12 @@
 // Soạn và duyệt hồ sơ cấu hình
 import { useState } from 'react'
-import { BookCopy, Plus, AlertTriangle } from 'lucide-react'
+import { BookCopy, AlertTriangle } from 'lucide-react'
+import { PlusIcon } from '@phosphor-icons/react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import SectionCard from '@/components/ui/SectionCard'
-import FilterChip from '@/components/ui/FilterChip'
+import StatusTabs from '@/components/common/StatusTabs'
 import { useZoneStore } from '@/stores/zoneStore'
 import { useToastStore } from '@/stores/toastStore'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
@@ -139,27 +140,27 @@ export default function DomainExpertProfilesPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-screen-xl space-y-5">
+    <div className="flex w-full flex-col gap-6">
       {/* Khung giống các tab cùng nhóm Tham số điều khiển: một card, tên trang đã ở header nên không có h1 riêng */}
       <SectionCard
-        icon={<BookCopy className="w-5 h-5" />}
-        title={t('Hồ sơ cấu hình')}
         description={t('Bộ ngưỡng và hệ số mẫu để áp cho nhiều nhà')}
         help={t('Soạn hồ sơ bản nháp rồi duyệt; Chủ nhà yến áp hồ sơ cho các nhà')}
         action={canEditParameters ? (
           <Button variant="primary" size="sm" onClick={openCreate}>
-            <Plus className="w-3.5 h-3.5" /> {t('Tạo hồ sơ')}
+            <PlusIcon size={14} weight="bold" /> {t('Tạo hồ sơ')}
           </Button>
         ) : undefined}
       >
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map(f => (
-            <FilterChip key={f.value} active={statusFilter === f.value} label={t(f.label)} onClick={() => setStatusFilter(f.value)} />
-          ))}
-        </div>
+        <StatusTabs
+          variant="underline"
+          ariaLabel={t('Lọc hồ sơ theo trạng thái')}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          tabs={STATUS_FILTERS.map(f => ({ id: f.value, label: t(f.label) }))}
+        />
 
         {error && (
-          <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
+          <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3 py-2 text-sm text-alertRed">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>

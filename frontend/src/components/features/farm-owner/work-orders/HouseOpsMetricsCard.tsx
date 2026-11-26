@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { ClockIcon, WrenchIcon } from '@phosphor-icons/react';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import KpiTile from '@/components/common/KpiTile';
@@ -37,7 +36,6 @@ export default function HouseOpsMetricsCard({ farmId, houseId }: HouseOpsMetrics
     <FarmFrame
       title={t('metrics.title')}
       description={t('metrics.desc')}
-      action={<Link to="/work-orders" className="text-xs font-semibold text-charcoal underline-offset-4 hover:underline">{t('metrics.viewAll')}</Link>}
     >
       {isLoading ? (
         <LoadingSkeleton count={3} className="h-16 w-full" />

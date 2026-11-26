@@ -8,23 +8,20 @@ import MaintenancePlanDetailDrawer from '@/components/features/farm-owner/mainte
 import MaintenancePlanFormModal from '@/components/features/farm-owner/maintenance/MaintenancePlanFormModal';
 import MaintenancePlanTable, { type PlanAction } from '@/components/features/farm-owner/maintenance/MaintenancePlanTable';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
+import StatusTabs from '@/components/common/StatusTabs';
+import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard } from '@/components/ui';
 import { maintenanceDict } from '@/constants/maintenance.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { MAINTENANCE_PAGE_SIZE, useDueMaintenancePlans, useMaintenancePlanActions, useMaintenancePlans } from '@/hooks/farm-owner/useMaintenance';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
-import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
-import type { MaintenancePlan, MaintenancePlanState } from '@/types';
+import type { MaintenancePlan } from '@/types';
 import { COMMENT_MAX_LENGTH } from '@/validations/farm-owner/maintenancePlan.validation';
 
-const PLAN_STATES: MaintenancePlanState[] = ['SCHEDULED', 'DUE', 'OVERDUE', 'RETIRED'];
-// 'active' = mọi kế hoạch chưa xoá (backend mặc định bỏ RETIRED)
-type StateFilter = 'active' | MaintenancePlanState;
-// Tên tab trùng tiền tố khoá tiêu đề (due.title, list.title); tab đầu là mặc định
-const TABS = ['due', 'list'] as const;
+// Tab: kế hoạch cần làm trước (đến hạn, quá hạn), rồi theo lịch, mọi kế hoạch đang dùng, đã xoá
+const TABS = ['due', 'SCHEDULED', 'active', 'RETIRED'] as const;
 type MaintenanceTab = (typeof TABS)[number];
 
 // Đệm trên dày hơn vì hình minh hoạ tràn lên 40px
@@ -50,7 +47,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
   if (canManage) helpKey = 'list.subtitle';
   else if (canComment) helpKey = 'list.subtitleExpert';
   const actions = useMaintenancePlanActions();
-  // Tab nằm trên URL (?tab=list) để F5 hoặc quay lại vẫn đúng tab
+  // Tab nằm trên URL (?tab=active) để F5 hoặc quay lại vẫn đúng tab; tab đầu (cần bảo trì) là mặc định
   const [searchParams, setSearchParams] = useSearchParams();
   const tab: MaintenanceTab = TABS.find(value => value === searchParams.get('tab')) ?? 'due';
   const setTab = (value: MaintenanceTab) => setSearchParams(previous => {
@@ -63,8 +60,8 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
   const scopeQuery = scope.houseId ? { houseId: scope.houseId } : scope.farmId ? { farmId: scope.farmId } : {};
   const due = useDueMaintenancePlans(scopeQuery);
 
-  const [stateFilter, setStateFilter] = useState<StateFilter>('active');
-  const query = { ...scopeQuery, ...(stateFilter !== 'active' && { state: stateFilter }) };
+  // Tab "Cần bảo trì" lấy danh sách riêng; các tab còn lại lọc theo trạng thái ('active' = mọi kế hoạch chưa xoá)
+  const query = { ...scopeQuery, ...(tab === 'SCHEDULED' || tab === 'RETIRED' ? { state: tab } : {}) };
   // Đổi phạm vi hoặc trạng thái thì về trang 1
   const filterKey = JSON.stringify(query);
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
@@ -118,27 +115,21 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
     );
   }
 
-  // Chuyển giữa kế hoạch đến hạn và mọi kế hoạch: đặt ở góc khung, không thành hàng tab thứ hai dưới tab Công việc
-  const viewSwitch = (
-    <div className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('page.tabs')}>
-      {TABS.map(value => (
-        <button
-          key={value}
-          type="button"
-          role="tab"
-          aria-selected={tab === value}
-          onClick={() => setTab(value)}
-          className={cn(
-            'h-9 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
-            tab === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-          )}
-        >
-          {t(`${value}.title`)}
-          {value === 'due' && Boolean(due.data?.length) && ` (${due.data?.length})`}
-        </button>
-      ))}
+  // Nút tạo kế hoạch ở góc thẻ, mọi tab (chỉ Farm Owner, cần chọn 1 nhà)
+  const createAction = canManage ? (
+    <div className="flex items-center gap-3">
+      {!scope.houseId && <span className="text-small text-warmGray">{t('list.needHouseShort')}</span>}
+      <Button
+        size="sm"
+        disabled={!scope.houseId}
+        title={scope.houseId ? undefined : t('list.needHouse')}
+        onClick={() => setIsCreateOpen(true)}
+      >
+        <PlusIcon size={14} weight="bold" aria-hidden />
+        {t('list.create')}
+      </Button>
     </div>
-  );
+  ) : undefined;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -146,10 +137,18 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
         <ScopeFilter scope={scope} lockZone />
       </HeaderActions>
 
-      {tab === 'due' ? (
-        // Kế hoạch đến hạn và quá hạn
-        <SectionCard className="flex-1" title={t('due.title')} description={t('due.short')} help={t('due.subtitle')} action={viewSwitch}>
-          {due.isLoading ? (
+      <SectionCard className="flex-1" description={t(tab === 'due' ? 'due.short' : 'list.short')} help={t(tab === 'due' ? 'due.subtitle' : helpKey)} action={createAction}>
+        <StatusTabs
+          variant="underline"
+          ariaLabel={t('page.tabs')}
+          value={tab}
+          onChange={setTab}
+          tabs={TABS.map(id => ({ id, label: t(`tab.${id}`), badge: id === 'due' ? due.data?.length : undefined }))}
+        />
+
+        {tab === 'due' ? (
+          // Kế hoạch đến hạn và quá hạn
+          due.isLoading ? (
             <LoadingSkeleton count={3} className="h-14 w-full" />
           ) : due.isError ? (
             <EmptyState
@@ -159,7 +158,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
             />
           ) : !due.data?.length ? (
             <EmptyFrame title={t('due.emptyTitle')} hint={t('due.emptyHint')} />
-        ) : (
+          ) : (
             <MaintenancePlanTable
               plans={due.data}
               houseNames={houseNames}
@@ -168,58 +167,29 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
               emptyNotice={t('due.emptyTitle')}
               onAction={startAction}
             />
-          )}
-        </SectionCard>
-      ) : (
-        // Danh sách kế hoạch
-        <SectionCard className="flex-1" title={t('list.title')} description={t('list.short')} help={t(helpKey)} action={viewSwitch}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <SelectMenu
-              ariaLabel={t('list.filterState')}
-              value={stateFilter}
-              onChange={setStateFilter}
-              options={[
-                { value: 'active', label: t('filter.active') },
-                ...PLAN_STATES.map(state => ({ value: state, label: t(`state.${state}`) })),
-              ]}
-            />
-            {canManage && (
-              <Button
-                size="sm"
-                disabled={!scope.houseId}
-                title={scope.houseId ? undefined : t('list.needHouse')}
-                onClick={() => setIsCreateOpen(true)}
-              >
-                <PlusIcon size={14} weight="bold" aria-hidden />
-                {t('list.create')}
-              </Button>
-            )}
-            {canManage && !scope.houseId && <span className="text-small text-warmGray">{t('list.needHouseShort')}</span>}
-          </div>
-
-          {isLoading ? (
-            <LoadingSkeleton count={5} className="h-14 w-full" />
-          ) : isError ? (
-            <EmptyState
-              title={t('list.errorTitle')}
-              description={apiErrorMessage(error)}
-              action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-            />
-          ) : plans.length === 0 ? (
-            <EmptyFrame title={t('list.emptyTitle')} hint={t('list.emptyHint')} />
+          )
+        ) : isLoading ? (
+          <LoadingSkeleton count={5} className="h-14 w-full" />
+        ) : isError ? (
+          <EmptyState
+            title={t('list.errorTitle')}
+            description={apiErrorMessage(error)}
+            action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
+          />
+        ) : plans.length === 0 ? (
+          <EmptyFrame title={t('list.emptyTitle')} hint={t('list.emptyHint')} />
         ) : (
-            <MaintenancePlanTable
-              plans={plans}
-              serverPagination={{ page, total, onChange: next => setPageState({ key: filterKey, page: next }) }}
-              houseNames={houseNames}
-              canManage={canManage}
-              canComment={canComment}
-              emptyNotice={t('list.emptyTitle')}
-              onAction={startAction}
-            />
-          )}
-        </SectionCard>
-      )}
+          <MaintenancePlanTable
+            plans={plans}
+            serverPagination={{ page, total, onChange: next => setPageState({ key: filterKey, page: next }) }}
+            houseNames={houseNames}
+            canManage={canManage}
+            canComment={canComment}
+            emptyNotice={t('list.emptyTitle')}
+            onAction={startAction}
+          />
+        )}
+      </SectionCard>
 
       <MaintenancePlanDetailDrawer
         plan={pending?.action === 'view' ? pending.plan : null}

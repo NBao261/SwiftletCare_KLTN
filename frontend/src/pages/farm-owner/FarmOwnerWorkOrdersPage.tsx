@@ -10,17 +10,18 @@ import WorkOrderDoneModal from '@/components/features/farm-owner/work-orders/Wor
 import WorkOrderReassignModal from '@/components/features/farm-owner/work-orders/WorkOrderReassignModal';
 import WorkOrderTable from '@/components/features/farm-owner/work-orders/WorkOrderTable';
 import {
-  WORK_ORDER_STATUSES, approvalDescriptionKey, memberNames, reassignCandidates, statusFilterQuery, type OwnerAction, type StatusFilter,
+  approvalDescriptionKey, memberNames, reassignCandidates, statusFilterQuery, type OwnerAction, type StatusFilter,
   type WorkOrderActor,
 } from '@/components/features/farm-owner/work-orders/workOrder.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import { Button, ConfirmModal, EmptyState, FilterChip, LoadingSkeleton, NoteActionModal, SectionCard, SelectMenu } from '@/components/ui';
+import StatusTabs from '@/components/common/StatusTabs';
+import { Button, ConfirmModal, EmptyState, FilterChip, LoadingSkeleton, NoteActionModal, SectionCard } from '@/components/ui';
 import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
-import { WORK_ORDER_PAGE_SIZE, useWorkOrderActions, useWorkOrders } from '@/hooks/farm-owner/useWorkOrders';
+import { WORK_ORDER_PAGE_SIZE, useAwaitingApproval, useWorkOrderActions, useWorkOrders } from '@/hooks/farm-owner/useWorkOrders';
 import { lastPage } from '@/lib/helpers';
 import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { useToastStore } from '@/stores/toastStore';
@@ -31,6 +32,9 @@ const NOTE_MAX_LENGTH = 1000;
 
 // Lời giải thích của trang theo người xem
 const HELP_KEY = { owner: 'list.subtitle', technician: 'list.subtitleTechnician', reader: 'list.subtitleExpert' } as const;
+
+// Tab trạng thái: việc còn làm trước, đã đóng sau; huỷ và đang kiểm dữ liệu xem ở "Tất cả"
+const STATUS_TABS = ['open', 'OPEN', 'IN_PROGRESS', 'AWAITING_APPROVAL', 'CLOSED', 'all'] as const satisfies readonly StatusFilter[];
 
 // Chủ nhà yến thao tác mọi việc, kỹ thuật viên làm phiếu của nhà được giao, chuyên gia chỉ xem
 export default function FarmOwnerWorkOrdersPage(): JSX.Element {
@@ -46,6 +50,8 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   if (canManage) actor = 'owner';
   else if (isTechnician) actor = 'technician';
   const actions = useWorkOrderActions();
+  // Số phiếu chờ duyệt ghi trên tab (chỉ chủ nhà yến duyệt)
+  const awaiting = useAwaitingApproval(scope.farmId, scope.houseId, actor === 'owner');
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
   // Kỹ thuật viên mặc định chỉ xem phiếu giao cho mình (backend assigneeId=me)
@@ -128,18 +134,16 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
       </HeaderActions>
 
       <SectionCard description={t('list.short')} help={t(HELP_KEY[actor])}>
-        {/* Lọc trạng thái bên trái, nút mở tay bên phải (chỉ Farm Owner) */}
+        <StatusTabs
+          variant="underline"
+          ariaLabel={t('list.filterStatus')}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          tabs={STATUS_TABS.map(id => ({ id, label: t(`tab.${id}`), badge: id === 'AWAITING_APPROVAL' ? awaiting.data?.total : undefined }))}
+        />
+
+        {/* Bộ lọc "giao cho tôi" bên trái, nút mở tay bên phải (chỉ Farm Owner) */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <SelectMenu
-            ariaLabel={t('list.filterStatus')}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
-              { value: 'open', label: t('filter.open') },
-              { value: 'all', label: t('filter.all') },
-              ...WORK_ORDER_STATUSES.map(status => ({ value: status, label: t(`status.${status}`) })),
-            ]}
-          />
           {isTechnician && (
             <FilterChip active={isOnlyMine} label={t('filter.mine')} onClick={() => setIsOnlyMine(current => !current)} />
           )}

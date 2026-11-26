@@ -100,7 +100,7 @@ export default function DeviceDiagnosticsPanel({
             ) : (
               <div className="text-center p-6 bg-white rounded-2xl border border-warmGray/10 border-dashed h-full flex flex-col items-center justify-center min-h-[160px]">
                 <Music size={32} className="mx-auto text-warmGray mb-3" />
-                <p className="text-small text-charcoal font-medium">Không có thông tin Audio</p>
+                <p className="text-small text-charcoal font-medium">Không có thông tin âm thanh</p>
               </div>
             )}
           </div>
@@ -118,7 +118,7 @@ export default function DeviceDiagnosticsPanel({
                 </div>
                 <div className="text-left">
                   <p className="font-bold text-charcoal">Danh sách bài loa ru</p>
-                  <p className="text-xs text-warmGray mt-0.5">Danh sách file mp3 trên thẻ SD</p>
+                  <p className="text-xs text-warmGray mt-0.5">Danh sách bài mp3 trên thẻ SD</p>
                 </div>
               </Button>
             )}

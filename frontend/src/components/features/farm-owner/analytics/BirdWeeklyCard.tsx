@@ -1,20 +1,20 @@
 import { useMemo, useState } from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
 import { format, parseISO } from 'date-fns';
-import { CalendarCheckIcon, ChartLineIcon, TrendUpIcon, WarningIcon } from '@phosphor-icons/react';
+import { WarningIcon } from '@phosphor-icons/react';
 
 import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
-import KpiTile from '@/components/common/KpiTile';
+import StatStrip from '@/components/common/StatStrip';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
-import { BIRD_WEEK_OPTIONS, axisTitle, type BirdWeekOption } from '@/components/features/farm-owner/analytics/analytics.constants';
+import { BIRD_WEEK_OPTIONS, LINE_LEGEND, SERIES_COLORS, X_AXIS_TICKS, axisTitle, type BirdWeekOption } from '@/components/features/farm-owner/analytics/analytics.constants';
 import { summarizeWeeklyReturnRates } from '@/components/features/farm-owner/analytics/analyticsMetrics';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics';
-import { CHART_COLORS, baseChartOptions } from '@/lib/chartTheme';
+import { baseChartOptions } from '@/lib/chartTheme';
 
 interface BirdWeeklyCardProps {
   // 1 nhà, hoặc mọi nhà của farm khi lọc tất cả nhà yến (số đếm cộng theo ngày)
@@ -46,22 +46,44 @@ export default function BirdWeeklyCard({ houseIds, scopeLabel }: BirdWeeklyCardP
 
   const chartData = useMemo(() => ({
     labels: weeklyRates.map(week => format(parseISO(week.weekStart), 'dd/MM')),
-    datasets: [{
-      label: t('chart.returnRate'),
-      data: weeklyRates.map(week => Number(week.averageReturnRate.toFixed(1))),
-      backgroundColor: CHART_COLORS.accentGreen,
-      borderRadius: 6,
-      maxBarThickness: 28,
-    }],
-  }), [weeklyRates, t]);
+    datasets: [
+      {
+        label: t('chart.returnRate'),
+        data: weeklyRates.map(week => Number(week.averageReturnRate.toFixed(1))),
+        borderColor: SERIES_COLORS.entry,
+        backgroundColor: SERIES_COLORS.entry,
+        // Đường thẳng nối điểm, không tô vùng vì trục không bắt đầu từ 0
+        tension: 0,
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBorderColor: '#FFFFFF',
+        pointBorderWidth: 2,
+        fill: false,
+      },
+      ...(averageRate === null ? [] : [{
+        label: t('bird.average'),
+        data: weeklyRates.map(() => Number(averageRate.toFixed(1))),
+        borderColor: SERIES_COLORS.reference,
+        backgroundColor: SERIES_COLORS.reference,
+        borderDash: [6, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        fill: false,
+      }]),
+    ],
+  }), [weeklyRates, averageRate, t]);
 
+  // Trục bám dải số đo (tròn chục, chừa 10 điểm) để thấy tuần nào lên xuống; đỉnh gợi ý 100
+  const rateMin = weeklyRates.length === 0 ? 0 : Math.max(0, Math.floor((Math.min(...weeklyRates.map(week => week.averageReturnRate)) - 10) / 10) * 10);
   const chartOptions = useMemo(() => ({
     ...baseChartOptions,
+    plugins: { ...baseChartOptions.plugins, legend: LINE_LEGEND },
     scales: {
-      x: baseChartOptions.scales.x,
-      y: { ...baseChartOptions.scales.y, min: 0, title: axisTitle('%') },
+      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, ...X_AXIS_TICKS } },
+      y: { ...baseChartOptions.scales.y, min: rateMin, suggestedMax: 100, title: axisTitle('%') },
     },
-  } as ChartOptions<'bar'>), []);
+  } as ChartOptions<'line'>), [rateMin]);
 
   // Dấu + cho số dương để đọc rõ chiều tăng
   const signedPoints = (value: number): string => `${value > 0 ? '+' : ''}${num(value, 1)}`;
@@ -79,28 +101,13 @@ export default function BirdWeeklyCard({ houseIds, scopeLabel }: BirdWeeklyCardP
   if (!isLoading && !isError) {
     body = (
       <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <KpiTile
-            icon={ChartLineIcon}
-            label={t('bird.average')}
-            value={averageRate === null ? NO_VALUE : num(averageRate, 1)}
-            unit="%"
-            sub={t('bird.averageSub', { n: num(countedDays) })}
-          />
-          <KpiTile
-            icon={CalendarCheckIcon}
-            label={t('bird.latestWeek')}
-            value={latestWeek ? num(latestWeek.averageReturnRate, 1) : NO_VALUE}
-            unit="%"
-            sub={latestWeek ? t('bird.latestWeekSub', { date: date(latestWeek.weekStart) }) : NO_VALUE}
-          />
-          <KpiTile
-            icon={TrendUpIcon}
-            label={t('bird.change')}
-            value={weekChange === null ? NO_VALUE : signedPoints(weekChange)}
-            sub={t('bird.changeSub')}
-          />
-        </div>
+        <StatStrip
+          items={[
+            { label: t('bird.average'), value: averageRate === null ? NO_VALUE : num(averageRate, 1), unit: '%', sub: t('bird.averageSub', { n: num(countedDays) }) },
+            { label: t('bird.latestWeek'), value: latestWeek ? num(latestWeek.averageReturnRate, 1) : NO_VALUE, unit: '%', sub: latestWeek ? t('bird.latestWeekSub', { date: date(latestWeek.weekStart) }) : NO_VALUE },
+            { label: t('bird.change'), value: weekChange === null ? NO_VALUE : signedPoints(weekChange), sub: t('bird.changeSub') },
+          ]}
+        />
 
         {/* Cảnh báo giảm quá mức chuyên gia đặt riêng cho từng nhà nên chỉ hiện khi xem 1 nhà */}
         {single?.is_significant_drop && single.drop_percent !== null && (
@@ -112,7 +119,7 @@ export default function BirdWeeklyCard({ houseIds, scopeLabel }: BirdWeeklyCardP
 
         {weeklyRates.length > 0 ? (
           <div className="h-64">
-            <Bar data={chartData} options={chartOptions} />
+            <Line data={chartData} options={chartOptions} />
           </div>
         ) : (
           <ChartEmptyFrame message={t('bird.empty')} className="h-64" />

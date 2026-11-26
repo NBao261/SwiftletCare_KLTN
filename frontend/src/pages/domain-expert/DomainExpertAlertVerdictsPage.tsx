@@ -1,15 +1,17 @@
 // Thẩm định cảnh báo suy luận
 import { useState, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, Info, ArrowRight } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { useSearchParams } from 'react-router-dom';
+import { Check } from 'lucide-react';
+import { SectionCard } from '@/components/ui';
+import StatusTabs from '@/components/common/StatusTabs';
 import SelectMenu from '@/components/ui/SelectMenu';
 import ClearFiltersButton from '@/components/ui/ClearFiltersButton';
-import AlertsKpiAndStatsBar, {
+import {
   TYPE_OPTS,
   INFERRED_SEVERITIES,
-  TAB_INFO,
-} from '@/components/features/domain-expert/alerts/AlertsKpiAndStatsBar';
+  TAB_ORDER,
+  TAB_LABEL,
+} from '@/components/features/domain-expert/alerts/alertFilters';
 import { useAlert } from '@/hooks/shared/useAlerts';
 import InferredAlertsTable from '@/components/features/domain-expert/alerts/InferredAlertsTable';
 import ExpertVerdictDrawer from '@/components/features/domain-expert/alerts/ExpertVerdictDrawer';
@@ -39,7 +41,6 @@ function Toast({ show, message }: { show: boolean; message: string }) {
 }
 
 export default function DomainExpertAlertVerdictsPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { selectedFarmId } = useZoneStore();
   const farmId = selectedFarmId ?? undefined;
@@ -65,9 +66,8 @@ export default function DomainExpertAlertVerdictsPage() {
     paginatedAlerts,
     filteredTotal,
     kpiCounts,
-    totalPages,
     isLoading,
-    isFetching,
+    pageSize,
   } = useAlertsWithFilters(farmId, filterZoneId);
   // Ô lọc mức độ theo cấp chung (FE_Design 2.4)
   const { t: levelLabel } = useTranslation(levelDict);
@@ -120,109 +120,72 @@ export default function DomainExpertAlertVerdictsPage() {
     setTimeout(() => setToast(currentToast => ({ ...currentToast, show: false })), 3000);
   }, []);
 
-  const currentTab = TAB_INFO[filters.tab];
-  const isFiltered = filters.type !== 'ALL' || filters.severity !== 'ALL' || filters.tab !== 'ALL' || filterZoneId !== undefined;
+  // Ô lọc đang bật (không tính tab): để hiện nút Huỷ lọc
+  const isFiltered = filters.type !== 'ALL' || filters.severity !== 'ALL' || filterZoneId !== undefined;
 
   return (
-    <div className="relative w-full flex-1 flex flex-col gap-5">
-      <div className="w-full max-w-screen-xl mx-auto space-y-5">
-        {/* 4 Interactive KPI cards */}
-        <AlertsKpiAndStatsBar
-          counts={kpiCounts}
-          isLoading={isLoading}
-          activeTab={filters.tab}
-          onTabChange={setTab}
+    <div className="relative flex w-full flex-1 flex-col gap-6">
+      <SectionCard description={t('Hệ thống suy luận cảnh báo từ số liệu; chuyên gia kết luận là sự cố thật hay báo động giả')}>
+        <StatusTabs
+          variant="underline"
+          ariaLabel={t('Lọc cảnh báo theo kết luận')}
+          value={filters.tab}
+          onChange={setTab}
+          tabs={TAB_ORDER.map(id => ({ id, label: t(TAB_LABEL[id]), badge: id === 'PENDING' ? kpiCounts.pending : undefined }))}
         />
 
-        {/* Khung Card danh sách chuẩn hệ thống */}
-        <Card size="lg" className="flex flex-col gap-4">
-          {/* Header hàng 1: Tiêu đề + Thẻ đếm tab + Bộ lọc SelectMenu */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-warmGray/10">
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-h2 text-charcoal shrink-0">{t('Danh sách cảnh báo')}</h2>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-charcoal border border-warmGray/15">
-                {t(currentTab.label)} • {kpiCounts[currentTab.countKey]}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              {zoneOptions.length > 1 && (
-                <SelectMenu
-                  value={filterZoneId ?? 'ALL'}
-                  options={zoneOptions}
-                  onChange={(selectedZone: string) => {
-                    setFilterZoneId(selectedZone === 'ALL' ? undefined : selectedZone);
-                    setPage(1);
-                  }}
-                  ariaLabel={t('Lọc theo Zone')}
-                />
-              )}
-              <SelectMenu
-                value={filters.type}
-                options={TYPE_OPTS}
-                onChange={(selectedType: string) => setType(selectedType as InferredAlertType | 'ALL')}
-                ariaLabel={t('Lọc theo loại cảnh báo')}
-              />
-              <SelectMenu
-                value={filters.severity}
-                options={severityOptions}
-                onChange={(selectedSeverity: string) => setSeverity(selectedSeverity as AlertSeverity | 'ALL')}
-                ariaLabel={t('Lọc theo mức độ cảnh báo')}
-              />
-              {isFiltered && (
-                <ClearFiltersButton
-                  onClick={() => {
-                    setType('ALL');
-                    setSeverity('ALL');
-                    setTab('ALL');
-                    setFilterZoneId(undefined);
-                    setPage(1);
-                  }}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Sub-bar hàng 2: Tỷ lệ xác nhận sự cố thật + Shortcut Chỉnh tham số */}
-          <div className="flex items-center justify-between gap-4 text-xs -mt-1 pb-1">
-            <div className="flex items-center gap-2 min-w-0 text-warmGray">
-              {statsSummary ? (
-                <>
-                  <Info className="w-3.5 h-3.5 text-[#B5D32C] shrink-0" />
-                  <p className="truncate text-small">
-                    <span className="font-semibold text-charcoal">{t('Tỷ lệ xác nhận sự cố thật:')}</span> {statsSummary}
-                  </p>
-                </>
-              ) : (
-                <span className="text-small text-warmGray">
-                  {t('Tỷ lệ xác nhận sẽ hiện khi có kết luận đầu tiên.')}
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/domain-expert/tuning')}
-              className="inline-flex items-center gap-1 text-xs text-[#7A9A00] hover:text-[#4A5C00] font-semibold whitespace-nowrap transition-colors shrink-0 cursor-pointer"
-            >
-              {t('Chỉnh tham số phát hiện')}
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Bảng dữ liệu chuẩn hệ thống (DataTable + Pagination variant="full") */}
-          <InferredAlertsTable
-            alerts={paginatedAlerts}
-            isLoading={isLoading}
-            onOpenDrawer={openDrawer}
-            page={filters.page}
-            pageSize={5}
-            filteredTotal={filteredTotal}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            isFetching={isFetching}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {zoneOptions.length > 1 && (
+            <SelectMenu
+              value={filterZoneId ?? 'ALL'}
+              options={zoneOptions}
+              onChange={(selectedZone: string) => {
+                setFilterZoneId(selectedZone === 'ALL' ? undefined : selectedZone);
+                setPage(1);
+              }}
+              ariaLabel={t('Lọc theo Zone')}
+            />
+          )}
+          <SelectMenu
+            value={filters.type}
+            options={TYPE_OPTS}
+            onChange={(selectedType: string) => setType(selectedType as InferredAlertType | 'ALL')}
+            ariaLabel={t('Lọc theo loại cảnh báo')}
           />
-        </Card>
-      </div>
+          <SelectMenu
+            value={filters.severity}
+            options={severityOptions}
+            onChange={(selectedSeverity: string) => setSeverity(selectedSeverity as AlertSeverity | 'ALL')}
+            ariaLabel={t('Lọc theo mức độ cảnh báo')}
+          />
+          {isFiltered && (
+            <ClearFiltersButton
+              onClick={() => {
+                setType('ALL');
+                setSeverity('ALL');
+                setFilterZoneId(undefined);
+                setPage(1);
+              }}
+            />
+          )}
+          {/* Tỷ lệ chuyên gia xác nhận là sự cố thật theo loại, chỉ hiện khi đã có kết luận */}
+          {statsSummary && (
+            <p className="ml-auto min-w-0 truncate text-small text-warmGray" title={statsSummary}>
+              <span className="font-semibold text-charcoal">{t('Tỷ lệ xác nhận sự cố thật:')}</span> {statsSummary}
+            </p>
+          )}
+        </div>
+
+        <InferredAlertsTable
+          alerts={paginatedAlerts}
+          isLoading={isLoading}
+          onOpenDrawer={openDrawer}
+          page={filters.page}
+          pageSize={pageSize}
+          filteredTotal={filteredTotal}
+          onPageChange={setPage}
+        />
+      </SectionCard>
 
       <ExpertVerdictDrawer
         alert={liveSelectedAlert}

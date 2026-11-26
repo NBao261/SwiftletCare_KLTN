@@ -1727,6 +1727,9 @@ ensureCollection("maintenanceplans", {
     "overdue_notified_at": {
       "bsonType": ["date", "null"]
     },
+    "last_reminder_at": {
+      "bsonType": ["date", "null"]
+    },
     "last_done_at": {
       "bsonType": ["date", "null"]
     },
