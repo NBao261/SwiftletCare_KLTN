@@ -174,10 +174,15 @@ const SECTIONS_EN: PolicySection[] = [
   },
 ];
 
-const POLICY_TEXT: Record<Lang, { heading: string; versionLabel: string; effectiveLabel: string; sections: PolicySection[] }> = {
-  vi: { heading: 'Chính sách quyền riêng tư', versionLabel: 'Phiên bản', effectiveLabel: 'Hiệu lực từ', sections: SECTIONS_VI },
-  en: { heading: 'Privacy policy', versionLabel: 'Version', effectiveLabel: 'Effective from', sections: SECTIONS_EN },
+const POLICY_TEXT: Record<Lang, { heading: string; versionLabel: string; effectiveLabel: string; contents: string; sections: PolicySection[] }> = {
+  vi: { heading: 'Chính sách quyền riêng tư', versionLabel: 'Phiên bản', effectiveLabel: 'Hiệu lực từ', contents: 'Mục lục', sections: SECTIONS_VI },
+  en: { heading: 'Privacy policy', versionLabel: 'Version', effectiveLabel: 'Effective from', contents: 'Contents', sections: SECTIONS_EN },
 };
+
+// Mục lục cuộn mượt tới từng mục (khung cuộn của ứng dụng không phải cửa sổ nên không dùng link #)
+function scrollToSection(index: number): void {
+  document.getElementById(`policy-section-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 // headingLevel: trang công khai không có header nên tiêu đề là h1; trong khung app tên trang đã là h1
 export default function PrivacyPolicy({ headingLevel: Heading = 'h1' }: { headingLevel?: 'h1' | 'h2' }): JSX.Element {
@@ -190,8 +195,22 @@ export default function PrivacyPolicy({ headingLevel: Heading = 'h1' }: { headin
         {text.versionLabel} {POLICY_VERSION} · {text.effectiveLabel} {EFFECTIVE_DATE}
       </p>
 
-      {text.sections.map(section => (
-        <section key={section.title} className="mt-6">
+      {/* Mục lục: chính sách dài 9 mục nên cho nhảy thẳng tới mục cần đọc */}
+      <nav aria-label={text.contents} className="mt-4 flex flex-wrap gap-2">
+        {text.sections.map((section, index) => (
+          <button
+            key={section.title}
+            type="button"
+            onClick={() => scrollToSection(index)}
+            className="rounded-full border border-warmGray/20 px-3 py-1 text-small font-medium text-graphite transition-colors hover:border-warmGray/40 hover:text-charcoal"
+          >
+            {section.title}
+          </button>
+        ))}
+      </nav>
+
+      {text.sections.map((section, index) => (
+        <section key={section.title} id={`policy-section-${index}`} className="mt-6 scroll-mt-24">
           <h2 className="text-h3 text-charcoal">{section.title}</h2>
           {section.items && (
             <ul className="mt-2 list-disc space-y-1.5 pl-5 text-body text-charcoal">

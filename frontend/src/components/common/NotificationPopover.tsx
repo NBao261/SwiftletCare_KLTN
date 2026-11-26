@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ChevronDown } from 'lucide-react'
+import { CaretRightIcon } from '@phosphor-icons/react'
 import { useAlertsInfinite, usePendingAlertTotal } from '@/hooks/shared/useAlerts'
-import { useNotificationUnreadCount } from '@/hooks/shared/useNotifications'
+import { useMarkAllNotificationsRead, useNotificationUnreadCount } from '@/hooks/shared/useNotifications'
 import NotificationInboxList from '@/components/common/NotificationInboxList'
+import SeverityBadge from '@/components/common/SeverityBadge'
+import StatusTabs from '@/components/common/StatusTabs'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useAuthStore } from '@/stores/authStore'
+import { useToastStore } from '@/stores/toastStore'
 import { canAccessPath } from '@/constants/roles'
-import { formatDate } from '@/lib/helpers'
+import { formatDateTime } from '@/lib/i18n'
 import { IconBell } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
 import { useTranslation } from '@/hooks/common/useTranslation'
@@ -15,20 +19,24 @@ import type { Alert } from '@/types'
 
 const PAGE_SIZE = 10
 
-// Popup chuông: tab Cảnh báo và tab Thông báo (nơi duy nhất có đã đọc / chưa đọc)
+type PopoverTab = 'alerts' | 'inbox'
+
+// Popup chuông: tab Cảnh báo (bấm mở thẳng cảnh báo) và tab Thông báo (nơi duy nhất có đã đọc / chưa đọc); chân popup dẫn tới trang đầy đủ và cài đặt
 export default function NotificationPopover() {
   const { t } = useTranslation(shellDict)
   const [open, setOpen] = useState(false)
   // Role không vào được /alerts (Domain Expert) chỉ có tab Thông báo và không gọi GET /alerts
   const showAlerts = canAccessPath(useAuthStore(s => s.user?.role), '/alerts')
-  const [tab, setTab] = useState<'alerts' | 'inbox'>(showAlerts ? 'alerts' : 'inbox')
+  const [tab, setTab] = useState<PopoverTab>(showAlerts ? 'alerts' : 'inbox')
   const inboxUnreadCount = useNotificationUnreadCount()
   const [pendingFirst, setPendingFirst] = useState(false)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
+  const markAllRead = useMarkAllNotificationsRead()
   const alertPendingCount = usePendingAlertTotal() ?? 0
   // Badge chuông = cảnh báo chờ xác nhận + thông báo trong ứng dụng chưa đọc
   const badgeCount = alertPendingCount + inboxUnreadCount
@@ -39,8 +47,6 @@ export default function NotificationPopover() {
   const pager = pendingFirst && pendingOnly.hasNextPage ? pendingOnly : all
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = pager
 
-  const isPending = (alert: Alert) => alert.status === 'ACTIVE'
-
   // Gộp các trang bỏ trùng; chế độ chờ xác nhận lên đầu thì tin ACTIVE đứng trước
   const alerts = useMemo(() => {
     const byId = new Map<string, Alert>()
@@ -49,30 +55,28 @@ export default function NotificationPopover() {
     return [...byId.values()]
   }, [all.data, pendingOnly.data, pendingFirst])
 
-  // Xổ/thu chi tiết 1 tin
-  function toggleNotification(alert: Alert) {
-    setExpandedId(current => (current === alert._id ? null : alert._id))
-  }
-
-  // Đóng popup, thu gọn tin đang xổ
   function closePopover() {
     setOpen(false)
-    setExpandedId(null)
   }
 
-  // Sang trang Cảnh báo, cuộn tới đúng dòng qua highlight
+  // Bấm một cảnh báo: sang trang Cảnh báo, cuộn tới đúng dòng qua highlight
   function openAlertPage(alert: Alert) {
     closePopover()
     navigate(`/alerts?highlight=${alert._id}`)
   }
 
+  function goTo(path: string) {
+    closePopover()
+    navigate(path)
+  }
+
   useEffect(() => {
     if (!open) return
     function onPointerDown(e: MouseEvent) {
-      if (!containerRef.current?.contains(e.target as Node)) closePopover()
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
     }
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') closePopover()
+      if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
@@ -96,6 +100,8 @@ export default function NotificationPopover() {
     observer.observe(sentinel)
     return () => observer.disconnect()
   }, [open, tab, hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  const toolbarLinkClass = 'shrink-0 text-xs text-warmGray underline transition-colors hover:text-charcoal disabled:opacity-50'
 
   return (
     <div ref={containerRef} className="relative">
@@ -123,132 +129,98 @@ export default function NotificationPopover() {
           onWheel={e => e.stopPropagation()}
           className="absolute right-0 z-30 mt-2 flex w-[360px] animate-fade-in flex-col overflow-hidden rounded-2xl glass-panel"
         >
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-charcoal/10 px-4 py-3">
-            <span className="text-base font-bold text-charcoal">{t('notif.title')}</span>
-            {tab === 'alerts' && (
-              <button
-                type="button"
-                aria-pressed={pendingFirst}
-                onClick={() => setPendingFirst(on => !on)}
-                className="shrink-0 text-xs text-warmGray underline transition-colors hover:text-charcoal"
-              >
-                {pendingFirst ? t('notif.sortByTime') : t('notif.pendingFirst')}
-              </button>
+          {/* Đầu: hai tab, hoặc tiêu đề khi role chỉ có hộp thông báo; không lặp chữ "Thông báo" ở hai chỗ */}
+          <div className="shrink-0 border-b border-charcoal/10 px-3 py-2.5">
+            {showAlerts ? (
+              <StatusTabs
+                ariaLabel={t('notif.tabsAria')}
+                value={tab}
+                onChange={setTab}
+                tabs={[
+                  { id: 'alerts', label: t('notif.tabAlerts'), badge: alertPendingCount },
+                  { id: 'inbox', label: t('notif.tabInbox'), badge: inboxUnreadCount },
+                ]}
+              />
+            ) : (
+              <span className="px-1 text-base font-bold text-charcoal">{t('notif.title')}</span>
             )}
           </div>
 
-          {showAlerts && (
-          // Kiểu tab như SectionTabs: pill trắng trên nền xám, không tô đen (SH-08)
-          <div className="shrink-0 border-b border-charcoal/10 px-3 py-2">
-          <div role="tablist" className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1">
-            {([['alerts', t('notif.tabAlerts'), alertPendingCount], ['inbox', t('notif.tabInbox'), inboxUnreadCount]] as const).map(([key, label, count]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                onClick={() => setTab(key)}
-                className={cn(
-                  'rounded-full px-3 py-1 text-small font-semibold transition-colors',
-                  tab === key ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-                )}
-              >
-                {label}{count > 0 ? ` (${count > 99 ? '99+' : count})` : ''}
-              </button>
-            ))}
-          </div>
-          </div>
-          )}
-
-          {tab === 'inbox' ? <NotificationInboxList onNavigate={closePopover} /> : (
-          <>
-          <div ref={listRef} className="max-h-[380px] overflow-y-auto [scrollbar-color:theme(colors.gray.300)_transparent] [scrollbar-width:thin]">
-            {isLoading && <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.loading')}</p>}
-            {!isLoading && alerts.length === 0 && (
-              <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.empty')}</p>
-            )}
-            {alerts.map(alert => {
-              const pending = isPending(alert)
-              const expanded = expandedId === alert._id
-              return (
-                <div
-                  key={alert._id}
-                  className={cn(
-                    'border-b transition-colors',
-                    expanded ? 'border-charcoal/10 bg-limeMist/50' : pending ? 'border-charcoal/10 bg-charcoal/5' : 'border-charcoal/5 bg-transparent',
-                  )}
-                >
+          {/* Dòng công cụ chung: tóm tắt bên trái, thao tác của tab bên phải */}
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-charcoal/10 px-4 py-2">
+            {tab === 'alerts' ? (
+              <>
+                <span className="text-xs text-warmGray">{t('notif.pendingSummary', { count: alertPendingCount })}</span>
+                <button type="button" aria-pressed={pendingFirst} onClick={() => setPendingFirst(on => !on)} className={toolbarLinkClass}>
+                  {pendingFirst ? t('notif.sortByTime') : t('notif.pendingFirst')}
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-warmGray">{inboxUnreadCount > 0 ? t('notif.unreadSummary', { count: inboxUnreadCount }) : t('notif.allRead')}</span>
+                {inboxUnreadCount > 0 && (
                   <button
                     type="button"
-                    aria-expanded={expanded}
-                    onClick={() => toggleNotification(alert)}
+                    disabled={markAllRead.isPending}
+                    onClick={() => markAllRead.mutate(undefined, { onError: error => push(apiErrorMessage(error, t('notif.markFailed')), 'error') })}
+                    className={toolbarLinkClass}
+                  >
+                    {t('notif.markAllRead')}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          {tab === 'inbox' ? <NotificationInboxList onNavigate={closePopover} /> : (
+            <div ref={listRef} className="max-h-[380px] overflow-y-auto [scrollbar-color:theme(colors.gray.300)_transparent] [scrollbar-width:thin]">
+              {isLoading && <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.loading')}</p>}
+              {!isLoading && alerts.length === 0 && <p className="px-4 py-8 text-center text-sm text-warmGray">{t('notif.empty')}</p>}
+              {alerts.map(alert => {
+                const pending = alert.status === 'ACTIVE'
+                return (
+                  <button
+                    key={alert._id}
+                    type="button"
+                    onClick={() => openAlertPage(alert)}
                     className={cn(
-                      'flex w-full items-start gap-3 p-3.5 text-left transition-colors',
-                      !expanded && (pending ? 'hover:bg-charcoal/10' : 'hover:bg-charcoal/5'),
-                      !pending && !expanded && 'opacity-80',
+                      'flex w-full items-start gap-3 border-b p-3.5 text-left transition-colors',
+                      pending ? 'border-charcoal/10 bg-charcoal/5 hover:bg-charcoal/10' : 'border-charcoal/5 hover:bg-charcoal/5',
                     )}
                   >
                     <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', pending ? 'bg-safetyOrange' : 'bg-transparent')} />
                     <span className="min-w-0 flex-1">
-                      <span className={cn('block text-sm', expanded ? 'whitespace-normal break-words' : 'truncate', pending ? 'font-bold text-charcoal' : 'font-medium text-graphite')}>
-                        {alert.title}
-                      </span>
-                      <span className={cn('mt-1 block text-xs', expanded ? 'whitespace-normal break-words' : 'truncate', pending ? 'text-gray-600' : 'text-warmGray')}>
-                        {alert.message}
-                      </span>
-                      <span className={cn('mt-1 block text-xs', pending ? 'text-gray-600' : 'text-warmGray')}>
-                        {formatDate(alert.created_at)}
+                      <span className={cn('block truncate text-sm', pending ? 'font-bold text-charcoal' : 'font-medium text-graphite')}>{alert.title}</span>
+                      <span className="mt-1 line-clamp-2 break-words text-xs text-graphite">{alert.message}</span>
+                      <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-warmGray">
+                        <SeverityBadge severity={alert.severity} isMuted={!pending} />
+                        <span>{t(`status.${alert.status}`)}</span>
+                        <span aria-hidden>·</span>
+                        <span>{formatDateTime(alert.created_at)}</span>
                       </span>
                     </span>
-                    <ChevronDown width={16} height={16} className={cn('mt-0.5 shrink-0 text-warmGray transition-transform duration-200', expanded && 'rotate-180')} />
+                    <CaretRightIcon size={16} className="mt-0.5 shrink-0 text-warmGray" aria-hidden />
                   </button>
-
-                  {expanded && (
-                    <div className="flex items-end justify-between gap-3 px-3.5 pb-3.5 pl-[34px]">
-                      <dl className="grid min-w-0 flex-1 grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                        <dt className="text-warmGray">{t('notif.severity')}</dt>
-                        <dd className="font-semibold text-charcoal">{t(`severity.${alert.severity}`)}</dd>
-                        <dt className="text-warmGray">{t('notif.status')}</dt>
-                        <dd className="font-semibold text-charcoal">{t(`status.${alert.status}`)}</dd>
-                        {alert.acknowledged_at && (
-                          <>
-                            <dt className="text-warmGray">{t('notif.acknowledgedAt')}</dt>
-                            <dd className="font-semibold text-charcoal">{formatDate(alert.acknowledged_at)}</dd>
-                          </>
-                        )}
-                        {alert.acknowledgement_note && (
-                          <>
-                            <dt className="text-warmGray">{t('notif.note')}</dt>
-                            <dd className="break-words text-charcoal">{alert.acknowledgement_note}</dd>
-                          </>
-                        )}
-                      </dl>
-                      <button
-                        type="button"
-                        onClick={() => openAlertPage(alert)}
-                        aria-label={t('notif.openDetail')}
-                        title={t('notif.openDetail')}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-charcoal text-white transition-colors hover:bg-charcoal/85"
-                      >
-                        <ArrowRight width={16} height={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            <div ref={sentinelRef} aria-hidden="true" />
-            {isFetchingNextPage && <p className="px-4 py-3 text-center text-xs text-warmGray">{t('notif.loadingMore')}</p>}
-          </div>
-
-          <button
-            onClick={() => { closePopover(); navigate('/alerts') }}
-            className="block w-full shrink-0 rounded-b-2xl border-t border-charcoal/10 py-3 text-center text-xs font-bold text-charcoal transition-colors hover:bg-charcoal/5"
-          >
-            {t('notif.viewAll')}
-          </button>
-          </>
+                )
+              })}
+              <div ref={sentinelRef} aria-hidden="true" />
+              {isFetchingNextPage && <p className="px-4 py-3 text-center text-xs text-warmGray">{t('notif.loadingMore')}</p>}
+            </div>
           )}
+
+          {/* Chân: nơi đọc đầy đủ của tab đang mở, và cài đặt kênh nhận */}
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-charcoal/10 px-4 py-2.5">
+            <button type="button" onClick={() => goTo('/settings?tab=notifications')} className={toolbarLinkClass}>
+              {t('notif.settings')}
+            </button>
+            <button
+              type="button"
+              onClick={() => goTo(tab === 'alerts' ? '/alerts' : '/notifications')}
+              className="text-xs font-bold text-charcoal transition-colors hover:text-charcoal/70"
+            >
+              {tab === 'alerts' ? t('notif.viewAllAlerts') : t('notif.viewAll')}
+            </button>
+          </div>
         </div>
       )}
     </div>
