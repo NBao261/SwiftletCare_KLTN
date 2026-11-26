@@ -9,21 +9,21 @@ const vi = {
   'page.retry': 'Thử lại',
   'page.loadFailed': 'Không tải được danh sách trang trại',
   'page.tabs': 'Việc cần bảo trì và kế hoạch',
+  'tab.due': 'Cần bảo trì',
+  'tab.SCHEDULED': 'Đã lên lịch',
+  'tab.active': 'Tất cả kế hoạch',
+  'tab.RETIRED': 'Đã xoá',
 
   // Khung đến hạn
-  'due.title': 'Cần bảo trì',
   'due.subtitle': 'Kế hoạch đã đến hạn hoặc quá hạn. Hệ thống đã tạo phiếu công việc phòng ngừa cho kỹ thuật viên của nhà.',
   'due.errorTitle': 'Không tải được kế hoạch đến hạn',
   'due.emptyTitle': 'Không có kế hoạch nào đến hạn',
   'due.emptyHint': 'Khi bộ đếm giờ chạy, số lần đóng cắt hoặc ngày đến hạn, kế hoạch hiện ở đây.',
 
   // Khung kế hoạch
-  'list.title': 'Kế hoạch bảo trì',
   'list.subtitle': 'Chu kỳ bảo trì của bơm, quạt, cảm biến và béc phun theo từng nhà. Bạn nhập chu kỳ theo khuyến cáo của nhà sản xuất hoặc kinh nghiệm nuôi.',
   'list.subtitleExpert': 'Chu kỳ bảo trì do chủ nhà yến đặt. Bạn góp ý chu kỳ hoặc checklist; chủ nhà yến quyết định sửa.',
   'list.subtitleTechnician': 'Chu kỳ bảo trì do chủ nhà yến đặt cho các nhà bạn được giao. Đến hạn, hệ thống mở phiếu công việc phòng ngừa ở trang Phiếu công việc.',
-  'list.filterState': 'Lọc trạng thái',
-  'filter.active': 'Đang dùng',
   'list.create': 'Tạo kế hoạch',
   'list.needHouse': 'Chọn một nhà yến ở bộ lọc phía trên để tạo kế hoạch',
   'due.short': 'Kế hoạch đến hạn hoặc quá hạn',
@@ -38,11 +38,10 @@ const vi = {
   'col.interval': 'Chu kỳ',
   'col.state': 'Trạng thái',
   'col.due': 'Hạn',
-  'col.lastDone': 'Lần gần nhất',
-  'col.actions': 'Thao tác',
   'cell.byCounter': 'Theo bộ đếm',
   'cell.dueSince': 'Từ {date}',
   'cell.openWorkOrders': '{count} phiếu đang mở',
+  'cell.lastDone': 'Lần trước {date}',
 
   // Thiết bị, cách tính, trạng thái
   'equipment.PUMP': 'Bảo trì bơm phun sương',
@@ -63,6 +62,7 @@ const vi = {
 
   // Thao tác
   'action.view': 'Xem chi tiết',
+  'action.open': 'Xem',
   'action.edit': 'Sửa kế hoạch',
   'action.retire': 'Xoá kế hoạch',
   'action.comment': 'Góp ý',
@@ -136,19 +136,19 @@ const en: Record<MaintenanceKey, string> = {
   'page.retry': 'Retry',
   'page.loadFailed': 'Could not load the farm list',
   'page.tabs': 'Maintenance due and plans',
+  'tab.due': 'Due now',
+  'tab.SCHEDULED': 'Scheduled',
+  'tab.active': 'All plans',
+  'tab.RETIRED': 'Deleted',
 
-  'due.title': 'Maintenance due',
   'due.subtitle': 'Plans that are due or overdue. A preventive work order has been opened for the house technician.',
   'due.errorTitle': 'Could not load the due plans',
   'due.emptyTitle': 'No plan is due',
   'due.emptyHint': 'A plan shows here when its run hours, switch count or date fall due.',
 
-  'list.title': 'Maintenance plans',
   'list.subtitle': 'Maintenance intervals of pumps, fans, sensors and nozzles per house. Enter each interval from the manufacturer’s advice or farming practice.',
   'list.subtitleExpert': 'Maintenance intervals set by the farm owner. You can comment on an interval or a checklist; the farm owner decides the change.',
   'list.subtitleTechnician': 'Maintenance intervals the farm owner set for your assigned houses. When one falls due, a preventive work order opens on the Work orders page.',
-  'list.filterState': 'Filter by state',
-  'filter.active': 'In use',
   'list.create': 'Create plan',
   'list.needHouse': 'Choose a swiftlet house in the filter above to create a plan',
   'due.short': 'Plans due or overdue',
@@ -163,11 +163,10 @@ const en: Record<MaintenanceKey, string> = {
   'col.interval': 'Interval',
   'col.state': 'State',
   'col.due': 'Due',
-  'col.lastDone': 'Last done',
-  'col.actions': 'Actions',
   'cell.byCounter': 'By counter',
   'cell.dueSince': 'Since {date}',
   'cell.openWorkOrders': '{count} open work orders',
+  'cell.lastDone': 'Last {date}',
 
   'equipment.PUMP': 'Misting pump service',
   'equipment.FAN': 'Ventilation fan service',
@@ -186,6 +185,7 @@ const en: Record<MaintenanceKey, string> = {
   'state.RETIRED': 'Deleted',
 
   'action.view': 'View details',
+  'action.open': 'Open',
   'action.edit': 'Edit plan',
   'action.retire': 'Delete plan',
   'action.comment': 'Comment',

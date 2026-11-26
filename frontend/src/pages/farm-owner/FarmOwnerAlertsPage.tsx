@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
+import StatusTabs from '@/components/common/StatusTabs';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import AcknowledgeAlertModal from '@/components/features/farm-owner/alerts/AcknowledgeAlertModal';
@@ -21,7 +22,6 @@ import { ALERT_PAGE_SIZE, useAlertsList } from '@/hooks/shared/useAlerts';
 import { useSensorNodes, useSystemNodeStatus } from '@/hooks/shared/useDevices';
 import { useAllZones } from '@/hooks/shared/useFarms';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
-import { cn } from '@/lib/cn';
 import { nodeLocation } from '@/lib/deviceLocation';
 import { lastPage } from '@/lib/helpers';
 import type { Alert, AlertStatus, AlertType, SeverityLevel } from '@/types';
@@ -30,7 +30,7 @@ import type { InferredAlertType } from '@/types/expert/alerts.types';
 // 'open' = còn hiệu lực (ACTIVE, ACKNOWLEDGED), hiện tách khỏi DISMISSED và RESOLVED
 type StatusFilter = 'open' | 'all' | AlertStatus;
 // Tab trạng thái: việc cần làm đứng trước, trạng thái đã đóng đứng sau
-const STATUS_TABS: StatusFilter[] = ['open', 'ACTIVE', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED', 'all'];
+const STATUS_TABS = ['open', 'ACTIVE', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED', 'all'] as const;
 type LevelFilter = 'all' | SeverityLevel;
 type VerdictFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
 const ALERT_TYPES = Object.keys(alertTypeDict.vi) as AlertType[];
@@ -157,29 +157,13 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
           <ScopeFilter scope={scope} />
         </HeaderActions>
       )}
-      {/* Tab trạng thái như trang Sức khoẻ; số chờ xác nhận ghi ngay trên tab */}
-      <div className="max-w-full self-start overflow-x-auto">
-        <div className="inline-flex gap-1 rounded-full bg-warmGray/10 p-1" role="tablist" aria-label={t('list.filterStatus')}>
-          {STATUS_TABS.map(value => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={statusFilter === value}
-              onClick={() => setStatusFilter(value)}
-              className={cn(
-                'inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-small font-semibold transition-colors duration-150',
-                statusFilter === value ? 'bg-white text-charcoal shadow-card' : 'text-warmGray hover:text-charcoal',
-              )}
-            >
-              {t(`tab.${value}`)}
-              {value === 'ACTIVE' && !!pendingCount && (
-                <span className="min-w-5 rounded-full bg-safetyOrange px-1.5 text-center text-xs font-bold leading-5 text-white tabular-nums">{pendingCount}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Tab trạng thái; số chờ xác nhận ghi ngay trên tab */}
+      <StatusTabs
+        ariaLabel={t('list.filterStatus')}
+        value={statusFilter}
+        onChange={setStatusFilter}
+        tabs={STATUS_TABS.map(id => ({ id, label: t(`tab.${id}`), badge: id === 'ACTIVE' ? pendingCount : undefined }))}
+      />
 
       {/* Một card: tên trang đã ở header nên card không lặp tiêu đề */}
       <SectionCard description={`${t(subtitleKey)}`}>
