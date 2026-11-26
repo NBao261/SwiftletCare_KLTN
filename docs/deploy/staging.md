@@ -51,7 +51,7 @@ Hướng dẫn Review 2 bắt buộc demo chạy trên staging đã khai báo tr
 | backend | API, Socket.io, job nền; nối EMQX qua `mqtt://emqx:1883` trong mạng Docker | không |
 | EMQX | Broker; xác thực qua `/internal/mqtt-auth`, quyền theo `deploy/emqx/acl.conf`, tắt anonymous; dashboard 18083 chỉ mở cho `127.0.0.1` và vào qua SSH tunnel | không (đi qua Nginx 8883) |
 | EMQX, biến môi trường | `EMQX_AUTHENTICATION__1__URL=http://backend:3000/internal/mqtt-auth?key=<MQTT_AUTH_KEY>`; `MQTT_USERNAME` của backend phải là `backend-service` như `deploy/emqx/acl.conf` | không |
-| MongoDB | Dữ liệu | không |
+| MongoDB | Dữ liệu: cụm MongoDB Atlas khi đặt `MONGODB_URI` (mục 3, "Cơ sở dữ liệu"), không thì container `mongodb` | không |
 | File (âm thanh, ảnh Work Order, ảnh mùa vụ, firmware) | `STORAGE_DRIVER=s3`: bucket riêng của Cloudflare R2 (tương thích S3, 10 GB đầu miễn phí, không tính phí tải ra), backend dùng cùng lớp S3 như với MinIO, link tải là URL ký hết hạn sau 1 giờ (mục 3, "Kho file"). Không dùng MinIO vì ảnh `minio/minio` và `minio/mc` không còn phát công khai (Docker Hub, Quay). Để trống `STORAGE_DRIVER` thì lưu ở volume `backend_storage`, tải qua `/api/files/<key>`, key có UUID ngẫu nhiên nhưng **không hết hạn** | không |
 | MediaMTX | Nhận video có khung từ PC cũ (AI node); phát WebRTC cho web (trang WHEP qua `/stream`) và HLS cho app mobile (qua `/hls`); hỏi backend `/internal/stream-auth` ở mỗi lần đẩy hoặc xem | 8189 TCP + UDP (WebRTC tự mã hoá) |
 
@@ -116,7 +116,7 @@ File trong repo (G-17):
 | `deploy/.env.staging.example` | Mọi biến, mật khẩu là placeholder; chép thành `deploy/.env.staging` trên VPS (bị `.gitignore`) |
 | `deploy/staging-cert.sh` | Chứng chỉ lần đầu: tạo chứng chỉ tạm, bật Nginx, xin chứng chỉ Let's Encrypt, nạp lại Nginx |
 | `deploy/secrets/` | Chỗ đặt `firebase-service-account.json` trên VPS; chỉ có `.gitignore` trong repo |
-| `deploy/staging-backup.sh` | `mongodump` vào `~/backup`, giữ 7 bản, chép ra ngoài VPS bằng rclone khi đặt `BACKUP_REMOTE` |
+| `deploy/staging-backup.sh` | `mongodump` (từ Atlas khi đặt `MONGODB_URI`, không thì từ container) vào `~/backup`, giữ 7 bản, chép ra ngoài VPS bằng rclone khi đặt `BACKUP_REMOTE` |
 
 Backend không ghi `/internal/*` vào log truy cập, vì khoá EMQX và MediaMTX nằm trong query `?key=`.
 
@@ -154,6 +154,34 @@ docker run --rm -v swiftletcare-staging_backend_storage:/data:ro   -e RCLONE_CON
 5. Thử: tải lên một ảnh ở phiếu công việc, mở lại ảnh (link ký, hết hạn sau 1 giờ), và nghe thử một file âm thanh. Tải lên lỗi `AccessDenied` hay không tạo được bucket thì token thiếu quyền hoặc bucket chưa có: tạo bucket ở Cloudflare trước, backend chỉ tạo bucket khi `headBucket` lỗi.
 
 Khi dùng R2, volume `backend_storage` không còn nhận file mới; sao lưu MongoDB vẫn bắt buộc (bản ghi trỏ tới file), còn file thì bật versioning cho bucket nếu muốn khôi phục file bị xoá nhầm.
+
+Cơ sở dữ liệu (MongoDB Atlas). Staging dùng cụm Atlas thay cho container `mongodb` để dữ liệu và bản sao lưu nằm ngoài VPS. Backend không dùng transaction nên không cần cấu hình riêng:
+
+1. Atlas → tạo project và **Create cluster** gói **Flex** (sao lưu snapshot hằng ngày có sẵn, giá có trần theo tháng) hoặc M10 trở lên nếu cần khôi phục về một thời điểm. Nhà cung cấp AWS, vùng **Singapore (ap-southeast-1)**. Gói miễn phí M0 không có sao lưu nên không dùng cho dữ liệu thật.
+2. **Database Access** → thêm user `swiftletcare-app`, mật khẩu ngẫu nhiên **chỉ gồm chữ và số** (ký tự đặc biệt phải mã hoá trong chuỗi nối), quyền **Specific Privileges: `readWrite` trên database `swiftletcare`**, không cấp quyền quản trị.
+3. **Network Access** → thêm IP của VPS (`PUBLIC_IP`) và chỉ IP đó, không dùng `0.0.0.0/0`.
+4. **Connect → Drivers** → chép chuỗi `mongodb+srv://…`, đổi thành dạng `mongodb+srv://<user>:<mật khẩu>@<cụm>.mongodb.net/swiftletcare?retryWrites=true&w=majority` (thêm `/swiftletcare` trước dấu `?`).
+5. Chuyển dữ liệu từ container sang Atlas, dừng backend để không mất ghi. Thiết bị tạm thời bị EMQX từ chối vì EMQX hỏi backend khi xác thực; chúng tự nối lại:
+
+```bash
+$C stop backend
+sh deploy/staging-backup.sh                       # bản cuối của container mongodb (chưa đặt MONGODB_URI nên dump container)
+F=$(ls -1t ~/backup/swiftletcare-*.gz | head -1)
+read -rsp "MONGODB_URI của Atlas: " URI; echo
+if case "$URI" in mongodb+srv://*/swiftletcare\?*) true;; *) false;; esac; then
+  URI="$URI" docker run --rm -i -e URI mongo:7.0 sh -c 'mongorestore --uri "$URI" --archive --gzip --drop' < "$F" \
+    && sed -i '/^MONGODB_URI=/d' deploy/.env.staging \
+    && printf '\nMONGODB_URI=%s\n' "$URI" >> deploy/.env.staging && echo "DA CHUYEN XONG"
+else
+  echo "SAI DINH DANG: phai bat dau bang mongodb+srv:// va co /swiftletcare truoc dau ?"
+fi
+unset URI
+$C up -d backend                                  # khôi phục lỗi thì chưa ghi URI, backend quay về container cũ
+$C logs --tail 30 backend | grep -i "mongodb connected"
+```
+
+6. Kiểm tra: đăng nhập web, và `$C exec backend printenv MONGODB_URI | cut -c1-14` phải in `mongodb+srv://`. Dữ liệu trong container `mongodb` giữ nguyên làm đường lui trong vài ngày: xoá dòng `MONGODB_URI` khỏi `.env.staging` rồi `$C up -d backend` là quay về container (dữ liệu từ lúc chuyển không theo về). Sau khi Atlas chạy ổn thì `$C stop mongodb`; backend đang phụ thuộc container này nên lệnh `up -d` sau đó sẽ bật lại nó, hãy gỡ phụ thuộc trước khi dừng hẳn.
+7. Khi `MONGODB_URI` có giá trị, `deploy/staging-backup.sh` dump thẳng từ Atlas vào `~/backup`, thành bản logic thứ hai ngoài snapshot của Atlas; tải về máy bằng `scp`. Khôi phục từ Atlas: mục Backup của cụm (snapshot), hoặc `mongorestore --uri … --archive --gzip --drop < bản.gz`.
 
 Khôi phục một bản sao lưu (ghi đè DB hiện tại):
 
