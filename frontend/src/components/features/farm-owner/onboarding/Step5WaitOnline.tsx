@@ -141,6 +141,7 @@ export function Step5WaitOnline({ data, onSuccess, onRetry, leaveLabel = 'Về d
         </div>
         <ul className="w-full max-w-sm list-disc space-y-1 pl-5 text-left text-sm text-warmGray">
           {[
+            'Wi-Fi của nhà yến là mạng 5 GHz (thiết bị chỉ kết nối được mạng 2,4 GHz)',
             'Wi-Fi của nhà yến có thể bị nhập sai mật khẩu',
             'Thiết bị chưa khởi động lại sau khi nhận cấu hình',
             'Thiết bị cách bộ phát Wi-Fi quá xa, tín hiệu yếu',
@@ -193,6 +194,9 @@ export function Step5WaitOnline({ data, onSuccess, onRetry, leaveLabel = 'Về d
       <div>
         <h2 className="text-lg font-bold text-charcoal">{heading}</h2>
         <p className="mt-1 text-xs text-warmGray">{hint}</p>
+        {!isCamera && !wifiConnecting && !online && (
+          <p className="mt-1 text-xs text-warmGray">Thiết bị chỉ kết nối được Wi-Fi 2,4 GHz.</p>
+        )}
       </div>
 
       <MilestoneList
