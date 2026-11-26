@@ -10,7 +10,7 @@ import { Step5WaitOnline } from '@/components/features/farm-owner/onboarding/Ste
 import type { OnboardingState } from '@/components/features/farm-owner/onboarding/onboardingTypes'
 
 // SENSOR_NODE: 4 bước; CAMERA_NODE: 3 bước (bỏ AP WiFi)
-const SENSOR_STEPS  = ['Vị trí', 'Xác thực', 'Kết nối AP & WiFi', 'Đợi kết nối']
+const SENSOR_STEPS  = ['Vị trí', 'Xác thực', 'Kết nối Wi-Fi', 'Đợi kết nối']
 const CAMERA_STEPS  = ['Vị trí', 'Xác thực', 'Đợi kết nối']
 
 const INITIAL_STATE: OnboardingState = {
@@ -43,7 +43,7 @@ export default function FarmOwnerDeviceSetupPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-charcoal">Lắp đặt thiết bị mới</h2>
+        <h2 className="text-2xl font-bold text-charcoal">Thiết lập thiết bị mới</h2>
         <p className="mt-0.5 text-sm text-warmGray">Hướng dẫn từng bước kết nối thiết bị vào hệ thống SwiftletCare</p>
       </div>
 

@@ -89,7 +89,7 @@ const enExpert: Record<string, string> = {
   'Chờ phản hồi': 'Awaiting reply',
   'Quan sát:': 'Observation:',
   'Ảnh kiểm tra tại chỗ': 'On-site check photo',
-  'Ảnh tại chỗ (URL tạm 1 giờ)': 'On-site photo (link valid 1 hour)',
+  'Ảnh tại chỗ (liên kết dùng được trong 1 giờ)': 'On-site photo (link valid 1 hour)',
   'Trả lời lúc {{time}}': 'Answered at {{time}}',
   'bởi {{name}}': 'by {{name}}',
   'Chủ nhà yến (làm thay chuyên gia)': 'Farm owner (in place of an expert)',

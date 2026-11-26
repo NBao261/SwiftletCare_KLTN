@@ -101,7 +101,7 @@ export default function DeviceListRow({
           {node.activation_overdue_at && (
             <Badge tone="warning">Quá hạn kích hoạt</Badge>
           )}
-          {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển thủ công</Badge>}
+          {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển tay</Badge>}
           {node.ota_pending && (
             <span className="inline-flex items-center gap-1 rounded-full bg-limeMist px-2.5 py-1 text-xs font-semibold text-charcoal">
               <DownloadCloud size={12} /> Đang cập nhật

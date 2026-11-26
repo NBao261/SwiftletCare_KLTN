@@ -134,7 +134,7 @@ export function Step1Location({ data, patch, onNext }: Props) {
       </div>
 
       {isRegistered && (
-        <p className="text-sm text-warmGray">Thiết bị đã đăng ký vào vị trí này. Muốn đổi vị trí, hãy hoàn tất cài đặt rồi dời thiết bị ở trang Thiết bị.</p>
+        <p className="text-sm text-warmGray">Thiết bị đã đăng ký vào vị trí này. Muốn đổi vị trí, hoàn tất cài đặt rồi dời thiết bị ở trang Thiết bị.</p>
       )}
 
       {isComplete && (

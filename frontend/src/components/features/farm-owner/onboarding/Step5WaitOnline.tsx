@@ -139,9 +139,9 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
         </div>
         <ul className="w-full max-w-sm list-disc space-y-1 pl-5 text-left text-sm text-warmGray">
           {[
-            'WiFi nhà yến có thể bị nhập sai mật khẩu',
+            'Wi-Fi của nhà yến có thể bị nhập sai mật khẩu',
             'Thiết bị chưa khởi động lại sau khi nhận cấu hình',
-            'Khoảng cách WiFi quá xa, tín hiệu yếu',
+            'Thiết bị cách bộ phát Wi-Fi quá xa, tín hiệu yếu',
             'Máy chủ đang bảo trì',
           ].map(reason => <li key={reason}>{reason}</li>)}
         </ul>
@@ -200,8 +200,8 @@ export function Step5WaitOnline({ data, onSuccess, onRetry }: Props) {
               { label: 'Kết nối máy chủ', done: online },
             ]
           : [
-              { label: 'Đã nhận cấu hình WiFi', done: true },
-              { label: 'Kết nối WiFi nhà yến', done: wifiConnecting || online },
+              { label: 'Đã nhận cấu hình Wi-Fi', done: true },
+              { label: 'Kết nối Wi-Fi của nhà yến', done: wifiConnecting || online },
               { label: 'Kết nối máy chủ', done: online },
               { label: 'Áp cấu hình của Zone', done: configApplied },
             ]}
