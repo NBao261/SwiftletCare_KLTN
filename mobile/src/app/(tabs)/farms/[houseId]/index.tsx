@@ -4,7 +4,7 @@ import { router, useIsFocused, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query'
 import { refetchVisibleQueries } from '@/config/queryClient'
-import { GearSixIcon } from 'phosphor-react-native'
+import { ChartLineIcon, GearSixIcon } from 'phosphor-react-native'
 import { BellButton } from '@/components/common/BellButton'
 import { ActuatorSection } from '@/components/farm/ActuatorSection'
 import { BirdCountStrip } from '@/components/farm/BirdCountStrip'
@@ -128,8 +128,9 @@ export default function HouseDetailScreen() {
       pathname: '/(tabs)/alerts',
       params: { houseId, zoneId: zoneId ?? '', returnTo: buildHouseReturnTo(houseId) },
     })
-  // Phân tích đúng nhà và tầng đang xem: ô cảm biến mở tab Môi trường của chỉ số đó, dải chim mở tab Đàn chim
-  const openAnalytics = (params: { tab: 'env' | 'birds'; metric?: string }) =>
+  // Phân tích đúng nhà và tầng đang xem: ô cảm biến mở tab Môi trường của chỉ số đó, dải chim mở tab Đàn chim, nút ở đầu màn
+  // mở tab đã xem lần trước
+  const openAnalytics = (params: { tab?: 'env' | 'birds'; metric?: string } = {}) =>
     router.navigate({
       pathname: '/(tabs)/analytics',
       params: { houseId, zoneId: detail.zone?._id ?? '', returnTo: buildHouseReturnTo(houseId), ...params },
@@ -200,6 +201,7 @@ export default function HouseDetailScreen() {
         right={
           <View style={styles.headerActions}>
             <BellButton />
+            <IconButton icon={ChartLineIcon} label={t('Phân tích nhà yến này')} onPress={() => openAnalytics()} />
             <IconButton icon={GearSixIcon} label={t('Cài đặt nhà')} onPress={openSettings} />
           </View>
         }

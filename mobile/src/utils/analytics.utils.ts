@@ -1,5 +1,5 @@
 import { getISOWeek, getISOWeekYear, parseISO } from 'date-fns'
-import type { AnalyticsRange, BirdCountDay, EnvSeriesPoint, Thresholds } from '@/types'
+import type { AnalyticsRange, BirdCountDay, EnvSeriesPoint, OutdoorWeatherPoint, Thresholds } from '@/types'
 import { getVietnamDayStart } from '@/utils/date.utils'
 import { METRIC_DECIMALS } from '@/utils/sensorTile.utils'
 import type { SensorMetric } from '@/utils/threshold.utils'
@@ -161,6 +161,34 @@ export function buildEnvLine(
       ((bounds.min !== undefined && value < bounds.min) || (bounds.max !== undefined && value > bounds.max))
     return { timestamp: point.timestamp, value, isOutOfRange }
   })
+}
+
+// Một giờ: mỗi điểm thời tiết phủ ít nhất một giờ kể từ mốc của nó (api-spec env/summary)
+export const OUTDOOR_MIN_SPAN_MS = 60 * 60 * 1000
+
+// Điểm thời tiết phủ mỗi mốc của trục: điểm T phủ [T, T + spanMs); mốc không được phủ thì null. Hai chuỗi đều tăng dần nên đi
+// một lượt, O(n + m) — như web (analyticsMetrics.alignOutdoorWeather)
+export function alignOutdoorWeather(
+  times: readonly string[],
+  outdoor: readonly OutdoorWeatherPoint[],
+  spanMs: number,
+): (OutdoorWeatherPoint | null)[] {
+  let index = 0
+  return times.map(time => {
+    const at = Date.parse(time)
+    while (index < outdoor.length && Date.parse(outdoor[index].timestamp) + spanMs <= at) index += 1
+    const point = outdoor[index]
+    return point && Date.parse(point.timestamp) <= at ? point : null
+  })
+}
+
+// Tổng mưa ngoài trời của khoảng đang xem (mm); không giờ nào có số mưa thì null, không ghi 0 mm
+export function totalRainfall(outdoor: readonly OutdoorWeatherPoint[]): number | null {
+  let total: number | null = null
+  for (const point of outdoor) {
+    if (point.precipitation_mm !== null) total = (total ?? 0) + point.precipitation_mm
+  }
+  return total
 }
 
 // Thấp nhất, cao nhất của các số có thật (câu tóm tắt cho trình đọc màn hình); không có số nào thì null
