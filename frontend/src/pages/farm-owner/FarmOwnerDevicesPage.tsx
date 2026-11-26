@@ -1,25 +1,65 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import ScopeFilter from '@/components/common/ScopeFilter';
+import StatusTabs from '@/components/common/StatusTabs';
 import HeaderActions from '@/components/layouts/HeaderActions';
-import HouseDeviceAccordion from '@/components/features/farm-owner/devices/HouseDeviceAccordion';
+import DeviceListTable from '@/components/features/farm-owner/devices/DeviceListTable';
+import { listDeviceRows, type DeviceRow } from '@/components/features/farm-owner/devices/deviceInventory';
+import { DEVICE_DETAIL_PATH, type DeviceDetailState } from '@/components/features/farm-owner/devices/devices.constants';
 import RemovedDevicesSection from '@/components/features/farm-owner/devices/RemovedDevicesSection';
-import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { Button, EmptyState, LoadingSkeleton, SectionCard } from '@/components/ui';
 import { devicesDict } from '@/constants/devices.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
+import type { DeviceStatus } from '@/types';
+
+// Tab trạng thái: mất kết nối đứng ngay sau "Tất cả" vì là thứ chủ nhà cần thấy trước
+const STATUS_TABS = ['all', 'OFFLINE', 'ONLINE', 'PENDING'] as const satisfies readonly (DeviceStatus | 'all')[];
+type StatusTab = (typeof STATUS_TABS)[number];
 
 // Thiết bị của Farm Owner, chỉ xem
 export default function FarmOwnerDevicesPage(): JSX.Element {
   const { t } = useTranslation(devicesDict);
+  const navigate = useNavigate();
   const scope = useScopeFilter();
-  const { farmNames, houses, houseId, zones, zone, isLoading: isLoadingScope } = scope;
+  const { houses, houseId, zones, zone, isLoading: isLoadingScope } = scope;
+  const [statusTab, setStatusTab] = useState<StatusTab>('all');
   // Phạm vi: 1 nhà đang lọc hoặc mọi nhà của farm; chọn 1 Zone thì chỉ còn thiết bị của Zone đó
   const scopedHouses = useMemo(() => (houseId ? houses.filter(house => house._id === houseId) : houses), [houses, houseId]);
   const { inventory, isLoading, isError, refetch } = useDeviceInventory(scopedHouses, zones, zone?._id);
 
-  let body = <HouseDeviceAccordion inventory={inventory} farmNames={farmNames} />;
+  const allRows = useMemo(() => listDeviceRows(inventory), [inventory]);
+  // Số thiết bị theo từng trạng thái, đếm 1 lần cho các tab
+  const counts = useMemo(() => {
+    const result: Record<StatusTab, number> = { all: allRows.length, OFFLINE: 0, ONLINE: 0, PENDING: 0 };
+    for (const row of allRows) result[row.device.status] += 1;
+    return result;
+  }, [allRows]);
+  const visibleRows = useMemo(
+    () => (statusTab === 'all' ? allRows : allRows.filter(row => row.device.status === statusTab)),
+    [allRows, statusTab],
+  );
+
+  // Id truyền qua history state, không đưa lên URL
+  const openDetail = useCallback((row: DeviceRow) => {
+    const state: DeviceDetailState = { houseId: row.house._id, deviceId: row.device.id };
+    navigate(DEVICE_DETAIL_PATH, { state });
+  }, [navigate]);
+
+  let body = (
+    <>
+      <StatusTabs
+        variant="underline"
+        ariaLabel={t('list.filterStatus')}
+        value={statusTab}
+        onChange={setStatusTab}
+        tabs={STATUS_TABS.map(id => ({ id, label: t(`tab.${id}`), badge: id === 'OFFLINE' ? counts.OFFLINE : undefined }))}
+      />
+      <DeviceListTable rows={visibleRows} hasAnyDevice={allRows.length > 0} onOpen={openDetail} />
+    </>
+  );
   if (isLoadingScope || isLoading) body = <LoadingSkeleton count={4} className="h-16 w-full" />;
   if (isError) {
     body = (
@@ -38,7 +78,9 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
         <ScopeFilter scope={scope} />
       </HeaderActions>
 
-      {body}
+      <SectionCard description={t('list.short')} help={t('list.help')}>
+        {body}
+      </SectionCard>
       {/* thiết bị gỡ nhầm khôi phục được trong 24 giờ */}
       <RemovedDevicesSection />
     </div>
