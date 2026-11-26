@@ -16,6 +16,7 @@ import { domainExpertRoutes } from "@/routes/domain-expert.routes";
 // Mọi role đã đăng nhập đều dùng nên khai ở đây
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const SettingsPrivacyPage = lazy(() => import("@/pages/SettingsPrivacyPage"));
+const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -88,6 +89,7 @@ export default function App() {
             <Route index element={<RoleHomeRedirect />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="settings/privacy" element={<SettingsPrivacyPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             {farmOwnerRoutes}
             {technicianRoutes}
             {adminRoutes}
