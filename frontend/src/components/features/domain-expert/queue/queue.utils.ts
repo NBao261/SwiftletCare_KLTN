@@ -33,14 +33,14 @@ export function sectionTotal(groups: ExpertQueueGroup[], section: QueueSection):
 // Trang xử lý một việc; luật thời tiết theo nhà nên trang đó đọc nhà đang chọn (chọn trước khi mở)
 export function targetOf(kind: ExpertQueueKind, item?: ExpertQueueItem): string {
   switch (kind) {
-    case 'alert_verdict': return item ? `/domain-expert/alert-verdicts?alertId=${item.id}` : '/domain-expert/alert-verdicts'
-    case 'parameter_review': return '/domain-expert/reviews'
+    case 'alert_verdict': return item ? `/domain-expert/alert-verdicts?tab=PENDING&alertId=${item.id}` : '/domain-expert/alert-verdicts?tab=PENDING'
+    case 'parameter_review': return '/domain-expert/reviews?tab=reviews'
     case 'coefficient_proposal': return '/domain-expert/reviews?tab=proposals'
     case 'disagreeing_day': return '/domain-expert/reports?tab=disagreements'
-    case 'report_conclusion': return '/domain-expert/reports'
+    case 'report_conclusion': return '/domain-expert/reports?tab=reports'
     case 'season_conclusion': return '/domain-expert/reports?tab=harvest-cycles'
     case 'weather_proposal': return '/domain-expert/weather-rules'
-    case 'profile_draft': return '/domain-expert/profiles'
+    case 'profile_draft': return '/domain-expert/profiles?status=DRAFT'
     case 'recommendation_rule': return '/domain-expert/recommendation-rules'
   }
 }

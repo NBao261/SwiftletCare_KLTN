@@ -28,7 +28,9 @@ describe('hàng đợi việc của chuyên gia', () => {
 
   it('mở đúng trang và đúng tab của việc', () => {
     expect(targetOf('alert_verdict', { id: 'a1', title: '', house_name: null, at: '', reminded: false }))
-      .toBe('/domain-expert/alert-verdicts?alertId=a1')
+      .toBe('/domain-expert/alert-verdicts?tab=PENDING&alertId=a1')
+    expect(targetOf('alert_verdict')).toBe('/domain-expert/alert-verdicts?tab=PENDING')
+    expect(targetOf('profile_draft')).toBe('/domain-expert/profiles?status=DRAFT')
     expect(targetOf('coefficient_proposal')).toBe('/domain-expert/reviews?tab=proposals')
     expect(targetOf('disagreeing_day')).toBe('/domain-expert/reports?tab=disagreements')
     expect(targetOf('season_conclusion')).toBe('/domain-expert/reports?tab=harvest-cycles')
