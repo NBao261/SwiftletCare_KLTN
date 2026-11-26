@@ -5043,7 +5043,9 @@ paths:
         cố lúc đang kiểm hay chờ duyệt → trở lại `IN_PROGRESS` (rời chờ duyệt thì Farm Owner cũng được báo).
         `MISTING_INEFFECTIVE` được gửi lại trong lúc firmware còn chốt ngừng phun không tính là quay lại. Work Order không gắn cảnh báo, và Work Order
         `PREVENTIVE` (dù gắn `MAINTENANCE_DUE`), chuyển thẳng `AWAITING_APPROVAL` (không có dữ liệu phục hồi để kiểm).
-        Work Order `PREVENTIVE` cần mọi mục checklist đã có kết quả (OPS-FR-007), thiếu → 422.
+        Work Order `PREVENTIVE` cần mọi mục checklist đã có kết quả (OPS-FR-007), thiếu → 422, và cần ít nhất 1 ảnh
+        bằng chứng (ảnh gửi kèm lần này, ảnh đã có của Work Order, hoặc ảnh của một mục checklist), không có ảnh nào → 422
+        (OPS-FR-008). Work Order sửa chữa không bắt buộc ảnh.
 
         `cause` bắt buộc với Work Order của `MISTING_INEFFECTIVE`, `ACTUATOR_FAULT`, `SENSOR_FAULT`,
         `RS485_BUS_FAILURE`, `SPEAKER_FAILURE` (thiếu → 422); nguyên nhân và ảnh lưu cả vào cảnh báo

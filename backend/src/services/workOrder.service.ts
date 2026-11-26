@@ -36,6 +36,8 @@ const OUTAGE_TYPES: AlertType[] = ['NODE_OFFLINE', 'EDGE_AI_DEGRADED']
 
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 export const MAX_WORK_ORDER_PHOTOS = 5
+// Bảo trì phải có ảnh làm bằng chứng: ảnh của phiếu hoặc của một mục checklist
+export const MIN_PREVENTIVE_PHOTOS = 1
 const PHOTO_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
 
 export interface UploadedPhoto { buffer: Buffer; mimetype: string; size: number }
@@ -67,6 +69,13 @@ async function handlerIds(wo: IWorkOrder): Promise<string[]> {
 
 async function notifyAll(userIds: string[], wo: IWorkOrder, title: string, body: string): Promise<void> {
   await Promise.all(userIds.map(id => notifyUser(id, { title, body, ref: { kind: 'work_order', id: String(wo._id) } })))
+}
+
+// Nhắc phiếu bảo trì chưa làm: người đang giữ phiếu, thêm Farm Owner khi kế hoạch đã quá hạn
+export async function remindPreventiveWorkOrder(wo: IWorkOrder, alsoOwners: boolean, title: string, body: string): Promise<void> {
+  const recipients = new Set(await handlerIds(wo))
+  if (alsoOwners) for (const id of await ownerIdsOf(wo.farm_id)) recipients.add(id)
+  await notifyAll([...recipients], wo, title, body)
 }
 
 function historyEntry(from: WorkOrderStatus | undefined, to: WorkOrderStatus, by?: string, note?: string) {
@@ -431,6 +440,10 @@ export async function completeWorkOrder(
   const preventive = wo.kind === 'PREVENTIVE'
   if (preventive && wo.checklist.some(i => !i.result)) {
     throw new AppError(422, 'VALIDATION_ERROR', 'Cần ghi kết quả mọi mục checklist trước khi báo xong')
+  }
+  const checklistPhotos = wo.checklist.filter(item => item.photo).length
+  if (preventive && wo.photos.length + files.length + checklistPhotos < MIN_PREVENTIVE_PHOTOS) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Cần chụp ít nhất một ảnh bằng chứng trước khi báo xong bảo trì')
   }
   // tối đa 5 ảnh cả Work Order, gồm ảnh các lần trước
   if (wo.photos.length + files.length > MAX_WORK_ORDER_PHOTOS) {

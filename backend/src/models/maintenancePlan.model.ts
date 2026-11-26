@@ -29,6 +29,8 @@ export interface IMaintenancePlan extends Document {
   next_due_at?: Date
   due_since?: Date
   overdue_notified_at?: Date
+  // Lần nhắc hằng ngày gần nhất khi kế hoạch còn đến hạn hoặc quá hạn
+  last_reminder_at?: Date
   last_done_at?: Date
   source: string
   note?: string
@@ -50,6 +52,7 @@ const maintenancePlanSchema = new Schema<IMaintenancePlan>(
     next_due_at:        { type: Date },
     due_since:          { type: Date },
     overdue_notified_at: { type: Date },
+    last_reminder_at:   { type: Date },
     last_done_at:       { type: Date },
     source:             { type: String, required: true },
     note:               { type: String },
