@@ -58,7 +58,7 @@ export default function AttentionDevicesCard() {
             const TypeIcon = node.type === 'camera' ? VideoCameraIcon : CpuIcon
             return (
               <li key={node._id}>
-                <Link to="/devices" className="flex items-center gap-3 rounded-lg py-3 transition-colors hover:bg-warmGray/5">
+                <div className="flex items-center gap-3 py-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warmGray/10 text-charcoal">
                     <TypeIcon size={20} aria-hidden />
                   </span>
@@ -70,7 +70,7 @@ export default function AttentionDevicesCard() {
                     <StatusDot status={node.status} colored />
                     <span className="text-small text-warmGray">{lastSeen}</span>
                   </span>
-                </Link>
+                </div>
               </li>
             )
           })}

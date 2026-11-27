@@ -1,5 +1,4 @@
-// Tổng quan hệ thống: 4 ô chỉ số bấm được tới trang liên quan, thiết bị cần chú ý và nhật ký gần đây
-import { Link } from 'react-router-dom'
+// Tổng quan hệ thống: 4 ô chỉ số chỉ để xem, thiết bị cần chú ý và nhật ký gần đây
 import { CpuIcon, HouseIcon, UsersIcon, WarningIcon } from '@phosphor-icons/react'
 import { useSystemHealth } from '@/hooks/admin/useSystem'
 import { useAlertsList } from '@/hooks/shared/useAlerts'
@@ -45,38 +44,34 @@ export default function AdminSystemHealthPage() {
     ? 'Không có cảnh báo đang mở'
     : criticalAlerts.total > 0 ? i18nT('{{n}} khẩn cấp', { n: criticalAlerts.total }) : 'Không có cảnh báo khẩn cấp'
 
-  // Ô có trang liên quan thì bấm được; số trang trại chỉ để biết quy mô
+  // Cả 4 ô chỉ để xem, không ô nào bấm được; muốn xem tiếp thì dùng "Xem tất cả" của hai thẻ bên dưới hoặc menu
   const tiles = [
     {
-      key: 'devices', to: '/devices', icon: CpuIcon, label: 'Thiết bị online',
+      key: 'devices', icon: CpuIcon, label: 'Thiết bị online',
       // Số thiết bị online / tổng thiết bị đang phục vụ (thay cho %: 0% với 2 thiết bị khó hình dung)
       value: hasDevices ? `${devices.online}/${devices.total}` : '--', sub: deviceSub, warn: devices.offline > 0,
     },
-    { key: 'alerts', to: '/alerts', icon: WarningIcon, label: 'Cảnh báo đang mở', value: String(openAlerts.total), sub: alertSub, warn: criticalAlerts.total > 0 },
-    { key: 'farms', to: undefined, icon: HouseIcon, label: 'Trang trại hoạt động', value: farms.total, sub: i18nT('Gồm {{n}} Zone', { n: zones.total }), warn: false },
+    { key: 'alerts', icon: WarningIcon, label: 'Cảnh báo đang mở', value: String(openAlerts.total), sub: alertSub, warn: criticalAlerts.total > 0 },
+    { key: 'farms', icon: HouseIcon, label: 'Trang trại hoạt động', value: farms.total, sub: i18nT('Gồm {{n}} Zone', { n: zones.total }), warn: false },
     // tài khoản đăng nhập được (gồm chờ xoá) và bị khoá; chi tiết theo role ở trang Người dùng
-    { key: 'users', to: '/users', icon: UsersIcon, label: 'Tài khoản hoạt động', value: users.active, sub: i18nT('{{n}} bị khoá', { n: users.inactive }), warn: false },
+    { key: 'users', icon: UsersIcon, label: 'Tài khoản hoạt động', value: users.active, sub: i18nT('{{n}} bị khoá', { n: users.inactive }), warn: false },
   ]
 
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {tiles.map(tile => {
-          const content = (
-            <KpiTile
-              className={tile.to ? 'h-full transition-shadow group-hover:shadow-md' : 'h-full'}
-              icon={tile.icon}
-              iconClass={ICON_NORMAL}
-              tone={tile.warn ? 'warning' : undefined}
-              label={tile.label}
-              value={tile.value}
-              sub={tile.sub}
-            />
-          )
-          return tile.to
-            ? <Link key={tile.key} to={tile.to} className="group block rounded-2xl">{content}</Link>
-            : <div key={tile.key}>{content}</div>
-        })}
+        {tiles.map(tile => (
+          <KpiTile
+            key={tile.key}
+            className="h-full"
+            icon={tile.icon}
+            iconClass={ICON_NORMAL}
+            tone={tile.warn ? 'warning' : undefined}
+            label={tile.label}
+            value={tile.value}
+            sub={tile.sub}
+          />
+        ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
