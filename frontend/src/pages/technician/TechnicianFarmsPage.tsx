@@ -38,7 +38,8 @@ export default function TechnicianFarmsPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const { visible, counts } = useMemo(() => {
-    const q = search.trim().toLowerCase()
+    // Ô tìm chỉ hiện khi nhiều nhà; ẩn thì bỏ từ khoá cũ để danh sách không bị lọc ngầm
+    const q = structure.houses.length > SEARCH_FROM ? search.trim().toLowerCase() : ''
     const counts = { all: 0, ALERT: 0, NORMAL: 0, EMPTY: 0 }
     const visible: HouseNode[] = []
     for (const n of structure.houses) {
