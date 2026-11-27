@@ -1,5 +1,5 @@
 import { vnYearMonth } from '@/lib/helpers';
-import { NEST_TYPES } from '@/components/features/farm-owner/harvest/harvest.constants';
+import { MAX_GRAMS_PER_BATCH, MAX_NESTS_PER_BATCH, NEST_TYPES } from '@/components/features/farm-owner/harvest/harvest.constants';
 import type { EnvSnapshot, HarvestBatch, NestType, Role } from '@/types';
 
 const GRAMS_PER_KILOGRAM = 1000;
@@ -181,7 +181,7 @@ export function nestTypeBreakdown(batches: HarvestBatch[], nestTypes: NestType[]
 }
 
 // Lỗi của 1 dòng loại yến trong form tạo đợt thu
-export type NestAmountError = 'negative' | 'nestsNotInteger' | 'incomplete';
+export type NestAmountError = 'negative' | 'nestsNotInteger' | 'incomplete' | 'tooLarge';
 
 export interface NestAmountCheck {
   nests: number;
@@ -196,6 +196,8 @@ export function checkNestAmount(nestsText: string, gramsText: string): NestAmoun
   const nests = nestsText.trim() === '' ? 0 : Number(nestsText);
   const grams = gramsText.trim() === '' ? 0 : Number(gramsText);
   if (Number.isNaN(nests) || Number.isNaN(grams) || nests < 0 || grams < 0) return { nests, grams, isFilled: false, error: 'negative' };
+  // Infinity (vd gõ 1e999) không phải số nguyên nhưng cũng không phải lỗi gõ lẻ: báo quá lớn
+  if (nests > MAX_NESTS_PER_BATCH || grams > MAX_GRAMS_PER_BATCH) return { nests, grams, isFilled: false, error: 'tooLarge' };
   if (!Number.isInteger(nests)) return { nests, grams, isFilled: false, error: 'nestsNotInteger' };
   if (nests === 0 && grams === 0) return { nests, grams, isFilled: false, error: null };
   if (nests === 0 || grams === 0) return { nests, grams, isFilled: false, error: 'incomplete' };

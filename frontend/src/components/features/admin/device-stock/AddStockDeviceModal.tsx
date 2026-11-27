@@ -4,22 +4,16 @@ import { useAddStockDevice } from '@/hooks/admin/useDeviceStock'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
 import { t } from '@/i18n'
+import { deviceIdError } from '@/validations/common/deviceId.validation'
 import type { IssuedDeviceSecrets, ProvisionedDeviceKind } from '@/types'
 
-// Cùng mẫu với backend (DEVICE_ID_PATTERN): device ID là username và một đoạn topic trên broker
-const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 
 const KIND_OPTIONS: { value: ProvisionedDeviceKind; label: string }[] = [
   { value: 'SENSOR', label: 'Bộ điều khiển' },
   { value: 'CAMERA', label: 'Camera đếm chim' },
 ]
 
-function validate(deviceId: string): string | undefined {
-  const id = deviceId.trim()
-  if (!id) return t('Chưa nhập mã thiết bị')
-  if (!DEVICE_ID_PATTERN.test(id)) return t('Mã thiết bị chỉ gồm chữ, số, dấu _ và -')
-  return undefined
-}
+const validate = deviceIdError
 
 // thêm thiết bị vào kho; thành công thì trả mã (chỉ 1 lần) cho trang mở popup in nhãn
 export default function AddStockDeviceModal({ open, onClose, onAdded }: {

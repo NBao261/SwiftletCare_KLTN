@@ -34,6 +34,7 @@ const AMOUNT_ERROR_KEY: Record<NestAmountError, HarvestKey> = {
   negative: 'form.errorNegative',
   nestsNotInteger: 'form.errorNestsInteger',
   incomplete: 'form.errorIncomplete',
+  tooLarge: 'form.errorTooLarge',
 };
 
 // Chặn gõ dấu âm/dương và số mũ (e) vào ô số tổ, trọng lượng: không cho nhập số âm

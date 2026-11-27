@@ -12,7 +12,7 @@ import {
 } from '@/hooks/shared/useAudioTracks';
 import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
-import { validateAudioUpload, type AudioUploadField } from '@/validations/farm-owner/audioTrack.validation';
+import { MAX_DISPLAY_NAME_LENGTH, validateAudioUpload, type AudioUploadField } from '@/validations/farm-owner/audioTrack.validation';
 import type { AudioTrack, SensorNode } from '@/types';
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
@@ -195,7 +195,7 @@ function UploadForm({ nodeId }: { nodeId: string }): JSX.Element {
       <div className="grid grid-cols-2 gap-3">
         <Input label={t('trk.numberLabel')} type="number" min={1} max={255} placeholder={t('trk.numberPlaceholder')}
           value={trackNumber} error={errors.trackNumber} onChange={event => setTrackNumber(event.target.value)} />
-        <Input label={t('trk.nameLabel')} placeholder={t('trk.namePlaceholder')}
+        <Input label={t('trk.nameLabel')} placeholder={t('trk.namePlaceholder')} maxLength={MAX_DISPLAY_NAME_LENGTH}
           value={displayName} error={errors.displayName} onChange={event => setDisplayName(event.target.value)} />
       </div>
       <Button type="submit" size="sm" loading={upload.isPending}>{t('trk.upload')}</Button>

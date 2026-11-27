@@ -6,6 +6,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useReplaceSensorNode } from '@/hooks/shared/useDevices';
 import { useToastStore } from '@/stores/toastStore';
+import { ACTIVATION_KEY_MAX_LENGTH, deviceIdError, isActivationKeyTooLong } from '@/validations/common/deviceId.validation';
 
 interface ReplaceControllerModalProps {
   device: DeviceItem;
@@ -26,14 +27,15 @@ export default function ReplaceControllerModal({ device, onClose }: ReplaceContr
   const newId = newDeviceId.trim();
   let idError: string | undefined;
   if (submitted && !newId) idError = t('replace.idEmpty');
+  else if (newId && deviceIdError(newId)) idError = deviceIdError(newId);
   if (newId && newId === device.deviceId) idError = t('replace.idSame');
-  const keyError = submitted && !secretKey.trim() ? t('replace.keyEmpty') : undefined;
+  const keyError = submitted && !secretKey.trim() ? t('replace.keyEmpty') : isActivationKeyTooLong(secretKey) ? `Mã kích hoạt tối đa ${ACTIVATION_KEY_MAX_LENGTH} ký tự` : undefined;
   const reasonError = submitted && !reason.trim() ? t('form.reasonEmpty') : undefined;
 
   function handleSubmit(event: FormEvent): void {
     event.preventDefault();
     setSubmitted(true);
-    if (!newId || newId === device.deviceId || !secretKey.trim() || !reason.trim()) return;
+    if (deviceIdError(newId) || newId === device.deviceId || !secretKey.trim() || isActivationKeyTooLong(secretKey) || !reason.trim()) return;
     replace.mutate(
       { nodeId: device.id, input: { new_device_id: newId, secret_key: secretKey.trim(), reason: reason.trim() } },
       {

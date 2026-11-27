@@ -7,6 +7,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { isNameTaken } from '@/components/features/farm-owner/farms/farmStructure'
+import { HOUSE_DESCRIPTION_MAX_LENGTH, HOUSE_FLOORS_MAX, STRUCTURE_NAME_MAX_LENGTH } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import type { Farm, House } from '@/types'
 
 interface AddHouseModalProps {
@@ -38,9 +39,9 @@ export default function AddHouseModal({ open, onClose, farms, existingHouses = [
     event.preventDefault()
     // Số tầng tuỳ chọn; có nhập thì phải là số nguyên ≥ 1
     const floorCount = floors.trim() === '' ? undefined : Number(floors)
-    const isFloorsInvalid = floorCount !== undefined && (!Number.isInteger(floorCount) || floorCount < 1)
+    const isFloorsInvalid = floorCount !== undefined && (!Number.isInteger(floorCount) || floorCount < 1 || floorCount > HOUSE_FLOORS_MAX)
     setFloorsError(isFloorsInvalid)
-    if (isFloorsInvalid || isDuplicate) return
+    if (!name.trim() || isFloorsInvalid || isDuplicate) return
     const input = { name: name.trim(), ...(floorCount !== undefined && { floors: floorCount }), ...(description.trim() && { description: description.trim() }) }
     createHouse.mutate(input, {
       onSuccess: () => {
@@ -72,6 +73,7 @@ export default function AddHouseModal({ open, onClose, farms, existingHouses = [
         <Input
           label={t('addHouse.name')}
           required
+          maxLength={STRUCTURE_NAME_MAX_LENGTH}
           value={name}
           onChange={event => setName(event.target.value)}
           placeholder={t('addHouse.namePlaceholder')}
@@ -81,14 +83,15 @@ export default function AddHouseModal({ open, onClose, farms, existingHouses = [
           label={t('addHouse.floors')}
           type="number"
           min={1}
+          max={HOUSE_FLOORS_MAX}
           step={1}
           value={floors}
           onChange={event => setFloors(event.target.value)}
           placeholder={t('addHouse.floorsPlaceholder')}
           error={floorsError ? t('addHouse.errorFloors') : undefined}
         />
-        <Input label={t('addHouse.description')} value={description} onChange={event => setDescription(event.target.value)} placeholder={t('addHouse.descriptionPlaceholder')} />
-        <Button type="submit" loading={createHouse.isPending} disabled={isDuplicate} className="w-full">{t('addHouse.submit')}</Button>
+        <Input label={t('addHouse.description')} maxLength={HOUSE_DESCRIPTION_MAX_LENGTH} value={description} onChange={event => setDescription(event.target.value)} placeholder={t('addHouse.descriptionPlaceholder')} />
+        <Button type="submit" loading={createHouse.isPending} disabled={isDuplicate || !name.trim()} className="w-full">{t('addHouse.submit')}</Button>
       </form>
     </Modal>
   )

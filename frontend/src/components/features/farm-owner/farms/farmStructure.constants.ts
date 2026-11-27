@@ -52,3 +52,7 @@ export const ROSTER_ROLE_LABEL: Record<RosterShift['role'], FarmKey> = { PRIMARY
 
 // tên trang trại, nhà, Zone tối đa 50 ký tự, cùng giới hạn với backend
 export const STRUCTURE_NAME_MAX_LENGTH = 50
+// Số tầng tối đa của một nhà, địa chỉ trang trại và mô tả nhà: cùng giới hạn với backend (Report 3 §4.5)
+export const HOUSE_FLOORS_MAX = 10
+export const FARM_ADDRESS_MAX_LENGTH = 200
+export const HOUSE_DESCRIPTION_MAX_LENGTH = 500

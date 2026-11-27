@@ -3,6 +3,7 @@ import { MapPinIcon } from '@phosphor-icons/react';
 
 import type { AddressSuggestion } from '@/apis/farm-owner/geocoding.api';
 import { Input } from '@/components/ui';
+import { FARM_ADDRESS_MAX_LENGTH } from '@/components/features/farm-owner/farms/farmStructure.constants';
 import { farmDict } from '@/constants/farmStructure.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useAddressSuggestions } from '@/hooks/farm-owner/useAddressSuggestions';
@@ -67,6 +68,7 @@ export default function AddressAutocomplete({ value, onChange, onPick }: Address
         name="farmAddress"
         label={t('farmForm.address')}
         required
+        maxLength={FARM_ADDRESS_MAX_LENGTH}
         value={value}
         onChange={event => {
           onChange(event.target.value);
