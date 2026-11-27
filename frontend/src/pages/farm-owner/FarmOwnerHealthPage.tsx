@@ -14,6 +14,7 @@ import HealthReportSection from '@/components/common/HealthReportSection';
 import { HOVER_DARK_BUTTON, shiftDate, vietnamDate } from '@/components/common/healthDay.utils';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import { Button, EmptyState, FilterChip, LoadingSkeleton, SectionCard } from '@/components/ui';
+import NoHouseAssignedState from '@/components/common/NoHouseAssignedState';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -132,6 +133,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
   );
 
   if (scope.farms.length === 0 && !scope.isLoading) {
+    if (isTechnician) return <NoHouseAssignedState />;
     return (
       <EmptyState
         title={t('page.noFarmTitle')}
@@ -158,7 +160,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           description={t(canRate ? 'table.subtitle' : 'table.subtitleExpert')}
           action={
             <div className="flex flex-wrap items-center gap-2">
-              {/* Mức chỉ số do Chủ nhà yến và Chuyên gia đặt; Kỹ thuật viên không đọc (backend 403) */}
+              {/* Mức chỉ số do chủ nhà yến và Chuyên gia đặt; Kỹ thuật viên không đọc (backend 403) */}
               {!isTechnician && (
                 <>
                   {!house && <span className="text-small text-warmGray">{t('page.levelsNeedHouse')}</span>}

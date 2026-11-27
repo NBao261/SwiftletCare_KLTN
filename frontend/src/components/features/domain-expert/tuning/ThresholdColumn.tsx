@@ -27,7 +27,7 @@ const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: str
   { key: 'temp_max', label: 'Nhiệt độ tối đa', step: 0.5, decimals: 1 },
   { key: 'humidity_min', label: 'Độ ẩm tối thiểu', step: 0.5, decimals: 1 },
   { key: 'humidity_max', label: 'Độ ẩm tối đa', step: 0.5, decimals: 1 },
-  { key: 'light_max', label: 'Ánh sáng tối đa', subLabel: 'Chuẩn tối yến tổ', step: 0.1, decimals: 1 },
+  { key: 'light_max', label: 'Ánh sáng tối đa', subLabel: 'Yến cần tối để làm tổ', step: 0.1, decimals: 1 },
   { key: 'nh3_max', label: 'Ngưỡng cảnh báo khí NH3', subLabel: 'Chỉ cảnh báo', step: 1, decimals: 0 },
   { key: 'co2_max', label: 'Ngưỡng cảnh báo khí CO2', subLabel: 'Chỉ cảnh báo', step: 50, decimals: 0 },
 ]
@@ -70,8 +70,8 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
   return (
     <>
       <SectionCard
-        title={t('Ngưỡng vi khí hậu & khí độc')}
-        description={t('Tiêu chuẩn vi khí hậu môi trường nuôi')}
+        title={t('Ngưỡng môi trường')}
+        description={t('Tiêu chuẩn vi khí hậu trong nhà yến')}
         help={<TuningRangeList hints={FIELDS.map(field => {
           const limit = THRESHOLD_LIMITS[field.key]
           return { label: t(field.label), range: `Phạm vi: ${limit.min}–${limit.max} ${t(limit.unit)}` }
@@ -99,7 +99,7 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
       <ConfirmModal
         open={resetOpen}
         title={t('Khôi phục ngưỡng mặc định?')}
-        description={t('Thao tác sẽ ghi đè toàn bộ ngưỡng hiện tại của Zone bằng ngưỡng mặc định hiện hành do Quản trị viên đặt. Không thể hoàn tác.')}
+        description={t('Ngưỡng của Zone sẽ về mặc định hệ thống do Quản trị viên đặt. Không hoàn tác được.')}
         confirmLabel={t('Xác nhận khôi phục')}
         danger
         loading={isResetting}

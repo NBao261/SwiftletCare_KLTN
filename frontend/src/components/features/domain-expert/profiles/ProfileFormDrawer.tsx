@@ -140,13 +140,13 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
           onExpand={() => setExpanded(e => ({ ...e, thresholds: !e.thresholds }))}
         >
           <div className="grid grid-cols-2 gap-2 mt-2">
-            <NumField label={t('Nhiệt độ thấp nhất')} value={thresholds.temp_min} onChange={v => setThresholds(t => ({ ...t, temp_min: v }))} min={10} max={45} unit="°C" />
-            <NumField label={t('Nhiệt độ cao nhất')} value={thresholds.temp_max} onChange={v => setThresholds(t => ({ ...t, temp_max: v }))} min={10} max={45} unit="°C" />
-            <NumField label={t('Độ ẩm thấp nhất')} value={thresholds.humidity_min} onChange={v => setThresholds(t => ({ ...t, humidity_min: v }))} min={40} max={95} unit="%" />
-            <NumField label={t('Độ ẩm cao nhất')} value={thresholds.humidity_max} onChange={v => setThresholds(t => ({ ...t, humidity_max: v }))} min={40} max={95} unit="%" />
-            <NumField label={t('Ánh sáng cao nhất')} value={thresholds.light_max} onChange={v => setThresholds(t => ({ ...t, light_max: v }))} min={0} max={10} step={0.01} unit="lux" />
-            <NumField label="NH3 cao nhất" value={thresholds.nh3_max} onChange={v => setThresholds(t => ({ ...t, nh3_max: v }))} min={0} max={100} step={1} unit="ppm" />
-            <NumField label="CO2 cao nhất" value={thresholds.co2_max} onChange={v => setThresholds(t => ({ ...t, co2_max: v }))} min={0} max={5000} step={1} unit="ppm" />
+            <NumField label={t('Nhiệt độ tối thiểu')} value={thresholds.temp_min} onChange={v => setThresholds(t => ({ ...t, temp_min: v }))} min={10} max={45} unit="°C" />
+            <NumField label={t('Nhiệt độ tối đa')} value={thresholds.temp_max} onChange={v => setThresholds(t => ({ ...t, temp_max: v }))} min={10} max={45} unit="°C" />
+            <NumField label={t('Độ ẩm tối thiểu')} value={thresholds.humidity_min} onChange={v => setThresholds(t => ({ ...t, humidity_min: v }))} min={40} max={95} unit="%" />
+            <NumField label={t('Độ ẩm tối đa')} value={thresholds.humidity_max} onChange={v => setThresholds(t => ({ ...t, humidity_max: v }))} min={40} max={95} unit="%" />
+            <NumField label={t('Ánh sáng tối đa')} value={thresholds.light_max} onChange={v => setThresholds(t => ({ ...t, light_max: v }))} min={0} max={10} step={0.01} unit="lux" />
+            <NumField label="NH3 tối đa" value={thresholds.nh3_max} onChange={v => setThresholds(t => ({ ...t, nh3_max: v }))} min={0} max={100} step={1} unit="ppm" />
+            <NumField label="CO2 tối đa" value={thresholds.co2_max} onChange={v => setThresholds(t => ({ ...t, co2_max: v }))} min={0} max={5000} step={1} unit="ppm" />
           </div>
         </GroupToggle>
 
@@ -161,7 +161,7 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
             <NumField label={t('Dải biên độ ẩm')} value={fuzzy.fuzzy_humidity_band} onChange={v => setFuzzy(f => ({ ...f, fuzzy_humidity_band: v }))} min={2} max={20} step={0.5} unit="%RH" />
             <NumField label={t('Dải biên nhiệt độ')} value={fuzzy.fuzzy_temp_band} onChange={v => setFuzzy(f => ({ ...f, fuzzy_temp_band: v }))} min={1} max={10} step={0.5} unit="°C" />
             <NumField label={t('Mức quạt khử ẩm')} value={fuzzy.fuzzy_fan_dry_level} onChange={v => setFuzzy(f => ({ ...f, fuzzy_fan_dry_level: v }))} min={0} max={100} step={1} unit="%" />
-            <NumField label={t('Cửa sổ')} value={fuzzy.fuzzy_window_sec} onChange={v => setFuzzy(f => ({ ...f, fuzzy_window_sec: v }))} min={60} max={600} step={10} unit="giây" />
+            <NumField label={t('Chu kỳ điều khiển')} value={fuzzy.fuzzy_window_sec} onChange={v => setFuzzy(f => ({ ...f, fuzzy_window_sec: v }))} min={60} max={600} step={10} unit="giây" />
           </div>
           <label className="flex items-center gap-2 mt-2">
             <input
@@ -183,7 +183,7 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
         >
           <div className="grid grid-cols-2 gap-2 mt-2">
             <NumField label={t('Mức ồn vượt nền')} value={detection.noise_margin_db} onChange={v => setDetection(d => ({ ...d, noise_margin_db: v }))} min={5} max={30} step={1} unit="dB" />
-            <NumField label={t('Thời gian ồn')} value={detection.noise_min_sec} onChange={v => setDetection(d => ({ ...d, noise_min_sec: v }))} min={5} max={15} step={1} unit="giây" />
+            <NumField label={t('Thời gian ồn kéo dài tối thiểu')} value={detection.noise_min_sec} onChange={v => setDetection(d => ({ ...d, noise_min_sec: v }))} min={5} max={15} step={1} unit="giây" />
             <NumField label={t('Thời gian bơm chạy không tăng ẩm')} value={detection.pump_dry_on_sec} onChange={v => setDetection(d => ({ ...d, pump_dry_on_sec: v }))} min={120} max={900} step={30} unit="giây" />
             <NumField label={t('Độ ẩm cần tăng tối thiểu')} value={detection.pump_dry_min_rise_pct} onChange={v => setDetection(d => ({ ...d, pump_dry_min_rise_pct: v }))} min={0.5} max={10} step={0.5} unit="%RH" />
             <NumField label={t('Độ sụt âm lượng báo hỏng loa')} value={detection.speaker_drop_pct} onChange={v => setDetection(d => ({ ...d, speaker_drop_pct: v }))} min={30} max={90} step={1} unit="%" />

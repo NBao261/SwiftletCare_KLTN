@@ -32,7 +32,7 @@ export function reviewPlace(review: Pick<ParameterReview, 'group' | 'zone_id' | 
   if (review.zone_id) return places.zoneNames.get(review.zone_id) ?? t('Không xác định');
   const houseName = review.house_id ? places.houseNames.get(review.house_id) : undefined;
   if (!houseName) return t('Không xác định');
-  if (review.group === 'counting_ring') return `${houseName} • ${t('Camera đếm chim')}`;
+  if (review.group === 'counting_ring') return `${houseName} · ${t('Camera đếm chim')}`;
   return houseName;
 }
 
@@ -45,7 +45,7 @@ const STATUS_TONE: Record<ParameterReviewStatus, { label: string; tone: BadgeTon
 
 // Tên mục theo nhóm tham số (Zone, nhà hoặc camera)
 const GROUP_TITLE: Record<ParameterReviewGroup, string> = translated({
-  thresholds: 'Thay đổi ngưỡng vi khí hậu',
+  thresholds: 'Thay đổi ngưỡng môi trường',
   fuzzy: 'Thay đổi hệ số điều khiển mờ',
   detection: 'Thay đổi tham số phát hiện',
   return_rate_drop: 'Thay đổi mức giảm tỷ lệ chim về',
@@ -211,7 +211,7 @@ export default function ParameterReviewCard({
       <ConfirmModal
         open={showConfirmRevert}
         title={t('Hoàn tác về giá trị cũ?')}
-        description={t('Giá trị cũ được gửi lại xuống thiết bị và mục này chuyển sang Đã hoàn tác.')}
+        description={t('Bộ điều khiển nhận lại giá trị cũ và mục này chuyển sang Đã hoàn tác.')}
         confirmLabel={t('Hoàn tác')}
         danger
         loading={isProcessing}

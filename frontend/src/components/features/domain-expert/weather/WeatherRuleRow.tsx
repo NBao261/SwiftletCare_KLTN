@@ -1,4 +1,4 @@
-// Một dòng luật bù thời tiết (xem + bật/tắt + xoá); các dòng nằm chung một khung, ngăn bằng vạch mảnh
+// Một dòng luật phun sương theo thời tiết (xem + bật/tắt + xoá); các dòng nằm chung một khung, ngăn bằng vạch mảnh
 import { TrashIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import { Badge, Button } from '@/components/ui'

@@ -10,6 +10,7 @@ import MaintenancePlanTable, { type PlanAction } from '@/components/features/far
 import HeaderActions from '@/components/layouts/HeaderActions';
 import StatusTabs from '@/components/common/StatusTabs';
 import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard } from '@/components/ui';
+import NoHouseAssignedState from '@/components/common/NoHouseAssignedState';
 import { maintenanceDict } from '@/constants/maintenance.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -42,6 +43,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
   const scope = { ...useScopeFilter(), zone: undefined };
   const canManage = usePermission('FARM_OWNER');
   const canComment = usePermission('DOMAIN_EXPERT');
+  const isTechnician = usePermission('FARM_TECHNICIAN');
   // Lời giải thích theo người xem: chủ nhà yến đặt chu kỳ, chuyên gia góp ý, kỹ thuật viên chỉ đọc
   let helpKey: 'list.subtitle' | 'list.subtitleExpert' | 'list.subtitleTechnician' = 'list.subtitleTechnician';
   if (canManage) helpKey = 'list.subtitle';
@@ -106,6 +108,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
     );
   }
   if (scope.farms.length === 0) {
+    if (isTechnician) return <NoHouseAssignedState />;
     return (
       <EmptyState
         title={t('page.noFarmTitle')}

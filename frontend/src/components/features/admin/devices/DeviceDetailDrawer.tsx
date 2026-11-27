@@ -159,7 +159,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
       <ConfirmModal
         open={confirmRestart}
         title={t('Khởi động lại')}
-        description={t('Bộ điều khiển {{device}} khởi động lại và chạy tiếp với cấu hình đã lưu; Chủ nhà yến được báo trong ứng dụng.', { device: node.device_id })}
+        description={t('Bộ điều khiển {{device}} khởi động lại và chạy tiếp với cấu hình đã lưu; chủ nhà yến được báo trong ứng dụng.', { device: node.device_id })}
         confirmLabel={t('Khởi động lại')}
         loading={sendCommand.isPending}
         onConfirm={() => send('RESTART', 'Đã gửi lệnh khởi động lại tới {{device}}')}

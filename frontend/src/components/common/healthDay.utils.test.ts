@@ -20,7 +20,7 @@ describe('formatHealthReason', () => {
   it('thiếu dữ liệu: phân biệt môi trường (theo Zone) và đàn chim (theo phiên)', () => {
     const env = reason('MISSING_DATA', 'environment', { min_pct: 80, zones: [{ zone_name: 'Tầng 1', valid_pct: 42.5 }] });
     expect(formatHealthReason(env, vi, plain)).toBe('Thiếu dữ liệu môi trường: số đo nhiệt độ, độ ẩm hợp lệ dưới 80 % (Tầng 1 42.5 %)');
-    expect(formatHealthReason(reason('MISSING_DATA', 'environment', { no_zones: true }), en, plain)).toBe('Missing environment data: the house has no zone');
+    expect(formatHealthReason(reason('MISSING_DATA', 'environment', { no_zones: true }), en, plain)).toBe('Missing environment data: the house has no Zone');
     expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'EVENING' }), vi, plain)).toBe('Thiếu dữ liệu đàn chim: thiếu phiên chiều');
     // nút AI mất kết nối trong khung phiên
     expect(formatHealthReason(reason('MISSING_DATA', 'flock', { missing: 'INCOMPLETE' }), vi, plain))

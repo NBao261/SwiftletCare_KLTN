@@ -16,6 +16,7 @@ import {
 import HeaderActions from '@/components/layouts/HeaderActions';
 import StatusTabs from '@/components/common/StatusTabs';
 import { Button, ConfirmModal, EmptyState, FilterChip, LoadingSkeleton, NoteActionModal, SectionCard } from '@/components/ui';
+import NoHouseAssignedState from '@/components/common/NoHouseAssignedState';
 import { workOrderDict } from '@/constants/workOrders.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -118,6 +119,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
     );
   }
   if (scope.farms.length === 0) {
+    if (isTechnician) return <NoHouseAssignedState />;
     return (
       <EmptyState
         title={t('page.noFarmTitle')}

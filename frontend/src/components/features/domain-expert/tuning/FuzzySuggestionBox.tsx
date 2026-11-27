@@ -75,7 +75,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
           </span>
         </div>
         <span className="bg-white text-stone-600 border border-stone-200/80 text-small font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap self-start sm:self-center shrink-0">
-          {t('Đang tích lũy dữ liệu')}
+          {t('Đang thu thập dữ liệu')}
         </span>
       </div>
     )
@@ -90,7 +90,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-accent-900" />
-          <h3 className="text-sm font-bold text-charcoal">{t('Gợi ý hệ số điều khiển mờ từ dữ liệu')}</h3>
+          <h3 className="text-sm font-bold text-charcoal">{t('Gợi ý hệ số mờ từ dữ liệu')}</h3>
         </div>
         <p className="text-xs text-warmGray">
           {t('Tính từ {{days}} ngày qua ({{samples}} lần đo) · độ khớp R² = {{r2}}', {
@@ -108,7 +108,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
             {predicted.inRangeNow}% → <span className="text-accent-900">{predicted.inRangeSuggested}%</span>
             {inRangeDelta && <span className="text-accent-600 font-bold ml-0.5">(+{inRangeDelta}%)</span>}
           </span>
-          <span className="text-xs font-medium text-accent-900 ml-1">{t('Công suất phun sương trung bình:')}</span>
+          <span className="text-xs font-medium text-accent-900 ml-1">{t('Tỷ lệ thời gian phun sương:')}</span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-xs font-bold text-charcoal border border-accent-600">
             {predicted.mistingNow}% → <span className="text-accent-900">{predicted.mistingSuggested}%</span>
             {mistingDelta !== null && <span className="text-accent-900 font-bold ml-0.5">({mistingSign}{mistingDelta}%)</span>}
@@ -125,7 +125,7 @@ export default function FuzzySuggestionBox({ suggestion, isLoading, action, onDi
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-small text-warmGray italic flex items-center gap-1">
           <Info className="w-3.5 h-3.5 flex-shrink-0" />
-          {t('Gợi ý không tự áp dụng; hệ số chỉ đổi khi người có quyền áp dụng.')}
+          {t('Gợi ý không tự áp dụng. Hệ số chỉ đổi khi người có quyền bấm Áp dụng gợi ý.')}
         </p>
         <div className="flex items-center gap-3">
           <button type="button" onClick={onDismiss} className="text-xs text-warmGray hover:text-charcoal transition-colors font-medium">

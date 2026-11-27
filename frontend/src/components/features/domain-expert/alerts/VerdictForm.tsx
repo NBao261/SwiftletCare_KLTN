@@ -48,7 +48,7 @@ export default function VerdictForm({ alert, verdict, note, onVerdictChange, onN
   const isDismissed = alert?.status === 'DISMISSED' || existingVerdict?.result === 'REJECTED'
   const authorName = typeof existingVerdict?.by === 'object' ? existingVerdict.by?.full_name : t('Chuyên gia')
   const authorRole = existingVerdict?.role === 'FARM_OWNER' ? t('Chủ nhà yến (làm thay chuyên gia)') : t('Chuyên gia')
-  const previousStatusLabel = alert?.previous_status === 'ACKNOWLEDGED' ? t('Chủ nhà đã nhận') : t('Đang mở')
+  const previousStatusLabel = alert?.previous_status === 'ACKNOWLEDGED' ? t('Chủ nhà yến đã nhận') : t('Đang mở')
   const isNoteMissing = verdict === 'REJECTED' && !note.trim()
 
   return (
@@ -67,7 +67,7 @@ export default function VerdictForm({ alert, verdict, note, onVerdictChange, onN
       {isDismissed && verdict === 'CONFIRMED' && (
         <p className="flex items-start gap-2 rounded-xl border border-infoBlue/20 bg-infoBlue/5 px-3 py-2 text-small text-graphite">
           <InfoIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-infoBlue" />
-          <span>{t('Xác nhận sẽ khôi phục cảnh báo về trạng thái "{{status}}" và gửi lại thông báo cho Chủ nhà yến.', { status: previousStatusLabel })}</span>
+          <span>{t('Xác nhận sẽ khôi phục cảnh báo về trạng thái "{{status}}" và gửi lại thông báo cho chủ nhà yến.', { status: previousStatusLabel })}</span>
         </p>
       )}
 
@@ -78,7 +78,7 @@ export default function VerdictForm({ alert, verdict, note, onVerdictChange, onN
         />
         <ChoiceButton
           value="REJECTED" selected={verdict === 'REJECTED'} onClick={() => onVerdictChange('REJECTED')}
-          title={t('Bác bỏ - Báo động giả')} hint={t('Nhiễu cảm biến hoặc dao động tự nhiên')}
+          title={t('Bác bỏ: báo động giả')} hint={t('Nhiễu cảm biến hoặc dao động tự nhiên')}
         />
       </div>
 

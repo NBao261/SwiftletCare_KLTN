@@ -43,18 +43,18 @@ describe('mô tả thay đổi lịch đếm và vòng đếm cho chuyên gia', 
     ])
   })
 
-  it('vòng đếm: thêm vòng, đổi số đỉnh, đổi hướng, bỏ vòng', () => {
+  it('vòng đếm: thêm vòng, đổi số điểm, đổi hướng, bỏ vòng', () => {
     const square = { points: [[0, 0], [1, 0], [1, 1], [0, 1]] as [number, number][], into_ring_is_exit: true }
     const triangle = { points: square.points.slice(0, 3), into_ring_is_exit: true }
     expect(describeStructuredChange('rings', [], [square])).toEqual([
-      { kind: 'added', text: 'Thêm vòng 1: 4 đỉnh, Chim bay vào vòng là chim ra khỏi tổ' },
+      { kind: 'added', text: 'Thêm vòng 1: 4 điểm, Chim bay vào vòng là chim ra khỏi tổ' },
     ])
     expect(describeStructuredChange('rings', [square], [{ ...triangle, into_ring_is_exit: false }])).toEqual([{
       kind: 'changed',
-      text: 'Sửa vòng 1: 4 → 3 đỉnh; Chim bay vào vòng là chim ra khỏi tổ → Chim bay vào vòng là chim về tổ',
+      text: 'Sửa vòng 1: 4 → 3 điểm; Chim bay vào vòng là chim ra khỏi tổ → Chim bay vào vòng là chim về tổ',
     }])
     expect(describeStructuredChange('rings', [square, triangle], [square])).toEqual([
-      { kind: 'removed', text: 'Bỏ vòng 2: 3 đỉnh' },
+      { kind: 'removed', text: 'Bỏ vòng 2: 3 điểm' },
     ])
     // Bản ghi cũ ghi một vòng, không phải danh sách
     expect(describeStructuredChange('ring', null, square)).toHaveLength(1)

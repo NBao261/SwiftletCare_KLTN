@@ -1,4 +1,4 @@
-// luật bù phun sương của nhà; Farm Owner ở farm có chuyên gia gửi đề xuất
+// luật phun sương theo thời tiết của nhà; Farm Owner ở farm có chuyên gia gửi đề xuất
 import { useState, useEffect } from 'react'
 import { CloudRain, AlertTriangle } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -23,7 +23,7 @@ import { t } from '@/i18n'
 
 const MAX_RULES = 10
 
-// Lần bù gần nhất: một khối trung tính, dòng trên là mức bù và lúc gửi, dòng dưới là hạn và số liệu dự báo
+// Lần chỉnh gần nhất: một khối trung tính, dòng trên là mức bù và lúc gửi, dòng dưới là hạn và số liệu dự báo
 function LastCompensationBadge({ data }: {
   data: NonNullable<import('@/types/expert.types').WeatherRulesResponse['last_compensation']>
 }) {
@@ -32,7 +32,7 @@ function LastCompensationBadge({ data }: {
   return (
     <div className="flex flex-col gap-0.5 rounded-xl bg-warmGray/10 px-3.5 py-2.5 text-sm">
       <p className="font-semibold text-charcoal">
-        {t('Lần bù gần nhất:')} {t('{{offset}}% phun', { offset: `${sign}${data.offset_pct}` })}
+        {t('Lần chỉnh gần nhất:')} {t('{{offset}}% phun', { offset: `${sign}${data.offset_pct}` })}
         <span className="ml-2 font-normal text-warmGray">{t('lúc {{time}}', { time: formatDate(data.sent_at) })}</span>
       </p>
       <p className="text-small text-graphite">
@@ -98,7 +98,7 @@ export default function DomainExpertWeatherRulesPage() {
     try {
       await mutation.mutateAsync(rules)
       setLocalRules(null)
-      pushToast(ownerNeedsExpert ? t('Đã gửi chuyên gia duyệt. Luật đang chạy giữ nguyên tới khi được duyệt.') : t('Đã lưu luật bù thời tiết.'), 'success')
+      pushToast(ownerNeedsExpert ? t('Đã gửi chuyên gia duyệt. Luật đang chạy giữ nguyên tới khi được duyệt.') : t('Đã lưu luật phun sương theo thời tiết.'), 'success')
     } catch (error) {
       setSaveError(getErrorMessage(error))
     }
@@ -155,7 +155,7 @@ export default function DomainExpertWeatherRulesPage() {
     // Không hiện hộp "chưa có bù" khi chưa có luật nào: EmptyState bên dưới đã đủ
     if (!rules.length) return null
     return (
-      <p className="rounded-xl bg-warmGray/10 px-3.5 py-2.5 text-sm text-graphite">{t('Chưa có lần bù nào kể từ khi lưu luật, hoặc dự báo chưa khớp luật nào.')}</p>
+      <p className="rounded-xl bg-warmGray/10 px-3.5 py-2.5 text-sm text-graphite">{t('Chưa có lần chỉnh nào kể từ khi lưu luật, hoặc dự báo chưa khớp luật nào.')}</p>
     )
   }
 
@@ -180,7 +180,7 @@ export default function DomainExpertWeatherRulesPage() {
       return (
         <EmptyState
           icon={<CloudRain className="w-8 h-8" />}
-          title={t('Nhà này chưa có luật bù thời tiết.')}
+          title={t('Nhà này chưa có luật phun sương theo thời tiết.')}
           // Người chỉ xem (Kỹ thuật viên) không có nút Thêm luật nên không có câu hướng dẫn
           description={canEditParameters ? t('Bấm "Thêm luật" ở góc trên để thêm luật đầu tiên.') : undefined}
         />
@@ -205,7 +205,7 @@ export default function DomainExpertWeatherRulesPage() {
     return (
       <EmptyState
         icon={<CloudRain className="w-8 h-8" />}
-        title={t('Chọn nhà yến ở thanh trên để xem luật bù thời tiết')}
+        title={t('Chọn nhà yến ở thanh trên để xem luật phun sương theo thời tiết')}
       />
     )
   }
@@ -216,7 +216,7 @@ export default function DomainExpertWeatherRulesPage() {
     <div className="flex w-full flex-col gap-6">
       <SectionCard
         description={t('Tự chỉnh mức phun sương theo dự báo thời tiết')}
-        help={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức bù lớn nhất.')}
+        help={t('Mỗi giờ hệ thống tự chọn luật khớp với dự báo thời tiết và điều chỉnh mức phun sương trong khoảng ±10%, hiệu lực tối đa 2 giờ. Khi nhiều luật khớp, áp luật có mức chỉnh lớn nhất.')}
         action={renderHeaderAction()}
       >
         <div className="flex flex-col gap-4">
@@ -224,11 +224,11 @@ export default function DomainExpertWeatherRulesPage() {
           {isError && !isLoading && (
             <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3.5 py-2.5 text-sm text-alertRed">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{t('Không tải được luật bù thời tiết. Thử lại.')}</span>
+              <span>{t('Không tải được luật phun sương theo thời tiết. Thử lại.')}</span>
             </div>
           )}
 
-          {/* Lần bù gần nhất */}
+          {/* Lần chỉnh gần nhất */}
           {renderLastCompensation()}
 
           {renderProposal()}
@@ -242,7 +242,7 @@ export default function DomainExpertWeatherRulesPage() {
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        title={t('Thêm luật bù thời tiết')}
+        title={t('Thêm luật phun sương theo thời tiết')}
         size="lg"
         closeOnBackdrop
       >
@@ -275,7 +275,7 @@ export default function DomainExpertWeatherRulesPage() {
     <NoteActionModal
       open={rejectingAt !== null}
       onClose={() => setRejectingAt(null)}
-      title={t('Từ chối đề xuất luật bù phun sương')}
+      title={t('Từ chối đề xuất luật phun sương theo thời tiết')}
       label={t('Lý do')}
       placeholder={t('VD: mùa này chưa cần phun thêm')}
       hint={t('Chủ nhà yến nhận lý do này. Luật đang chạy giữ nguyên.')}

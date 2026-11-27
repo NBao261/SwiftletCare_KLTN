@@ -148,7 +148,7 @@ export default function DomainExpertProfilesPage() {
       {/* Khung giống các tab cùng nhóm Tham số điều khiển: một card, tên trang đã ở header nên không có h1 riêng */}
       <SectionCard
         description={t('Bộ ngưỡng và hệ số mẫu để áp cho nhiều nhà')}
-        help={t('Soạn hồ sơ bản nháp rồi duyệt; Chủ nhà yến áp hồ sơ cho các nhà')}
+        help={t('Soạn hồ sơ bản nháp rồi duyệt; chủ nhà yến áp hồ sơ cho các nhà')}
         action={canEditParameters ? (
           <Button variant="primary" size="sm" onClick={openCreate}>
             <PlusIcon size={14} weight="bold" /> {t('Tạo hồ sơ')}

@@ -11,7 +11,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
 import DeviceListRow, { DEVICE_ROW_GRID } from "@/components/features/technician/devices/DeviceListRow";
 import { countByTab, matchesSearch, matchesTab, sortDevices, type DeviceTab } from "@/components/features/technician/devices/deviceStatus.utils";
-import { restartBlockReason, type RestartBlockSay } from "@/lib/deviceCommand";
+import { restartBlockReason } from "@/lib/deviceCommand";
 import LullabyTracksModal from "@/components/features/farm-owner/devices/LullabyTracksModal";
 import MoveControllerModal from "@/components/features/farm-owner/devices/MoveControllerModal";
 import ReplaceControllerModal from "@/components/features/farm-owner/devices/ReplaceControllerModal";
@@ -25,14 +25,6 @@ import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
 
 const SEARCH_FROM = 6;
-
-// Lý do khoá nút khởi động lại bằng tiếng Việt (trang này chưa có bản tiếng Anh)
-const RESTART_BLOCK_VI: RestartBlockSay = (code, { version, min }) => ({
-  offline: "Thiết bị đang mất kết nối, chỉ khởi động lại từ xa được khi đang online.",
-  pending: "Thiết bị đang chờ kết nối, chỉ khởi động lại từ xa được khi đang online.",
-  noVersion: "Thiết bị chưa báo phiên bản firmware nên chưa khởi động lại từ xa được.",
-  oldFirmware: `Firmware v${version} chưa hỗ trợ khởi động lại từ xa, cần từ v${min}.`,
-})[code];
 
 // Thiết bị của Farm Technician: thiết bị các nhà được giao, chẩn đoán, khởi động lại, danh sách bài loa chỉ xem
 export default function TechnicianDevicesPage() {
@@ -86,15 +78,15 @@ export default function TechnicianDevicesPage() {
       { nodeId: rebootNode._id, input: { command: "RESTART" } },
       {
         onSuccess: () => {
-          push(`Đã gửi lệnh tới ${deviceLabel}, thiết bị sẽ tự kết nối lại sau vài giây`);
+          push(t("tech.restartSent", { id: deviceLabel }));
           setRebootNodeId(null);
         },
         onError: (err) => {
           if ((err as { response?: { status?: number } })?.response?.status === 501) {
             setRebootUnsupportedIds(prev => new Set(prev).add(nodeId));
-            push("Firmware chưa hỗ trợ lệnh khởi động lại từ xa", "error");
+            push(t("tech.restartUnsupported"), "error");
           } else {
-            push(getApiErrorMessage(err, "Khởi động lại thất bại"), "error");
+            push(getApiErrorMessage(err, t("tech.restartFailed")), "error");
           }
           setRebootNodeId(null);
         },
@@ -103,11 +95,11 @@ export default function TechnicianDevicesPage() {
   }
 
   // Câu trạng thái rỗng theo bậc đang lọc: Zone, nhà hay trang trại
-  let emptyTitle = "Chưa có thiết bị nào";
-  let emptyDescription = "Các nhà được giao cho bạn chưa có bộ điều khiển nào. Chủ nhà yến lắp thiết bị cho từng Zone.";
-  if (scope.zone) [emptyTitle, emptyDescription] = ["Zone này chưa có thiết bị", "Zone đang chọn chưa có bộ điều khiển nào."];
-  else if (scope.houseId) [emptyTitle, emptyDescription] = ["Nhà này chưa có thiết bị", "Nhà đang chọn chưa có bộ điều khiển nào."];
-  else if (scope.farmId) [emptyTitle, emptyDescription] = ["Trang trại này chưa có thiết bị", "Các nhà được giao ở trang trại này chưa có bộ điều khiển nào."];
+  let emptyTitle = t("tech.emptyAll");
+  let emptyDescription = t("tech.emptyAllDesc");
+  if (scope.zone) [emptyTitle, emptyDescription] = [t("tech.emptyZone"), t("tech.emptyZoneDesc")];
+  else if (scope.houseId) [emptyTitle, emptyDescription] = [t("tech.emptyHouse"), t("tech.emptyHouseDesc")];
+  else if (scope.farmId) [emptyTitle, emptyDescription] = [t("tech.emptyFarm"), t("tech.emptyFarmDesc")];
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,9 +126,9 @@ export default function TechnicianDevicesPage() {
 
         {!loading && failed && (
           <EmptyState
-            title="Không tải được thiết bị"
-            description="Kiểm tra kết nối tới máy chủ rồi thử lại."
-            action={<Button variant="secondary" size="sm" onClick={retry}>Thử lại</Button>}
+            title={t("tech.loadFailed")}
+            description={t("tech.loadFailedDesc")}
+            action={<Button variant="secondary" size="sm" onClick={retry}>{t("list.retry")}</Button>}
           />
         )}
 
@@ -147,30 +139,30 @@ export default function TechnicianDevicesPage() {
             {/* Số thiết bị mỗi nhóm nằm ngay trên tab; chỉ nhóm cần chú ý mới có số nổi */}
             <StatusTabs
               variant="underline"
-              ariaLabel="Lọc thiết bị theo trạng thái"
+              ariaLabel={t("tech.tabsLabel")}
               value={tab}
               onChange={setTab}
               tabs={[
-                { id: "ALL", label: `Tất cả (${tabCounts.ALL})` },
-                { id: "WARNING", label: "Cần xử lý", badge: tabCounts.WARNING },
-                { id: "OFFLINE", label: "Mất kết nối", badge: tabCounts.OFFLINE },
-                { id: "PENDING", label: `Chờ kết nối (${tabCounts.PENDING})` },
-                { id: "ONLINE", label: `Online (${tabCounts.ONLINE})` },
+                { id: "ALL", label: t("tech.tabAll", { n: tabCounts.ALL }) },
+                { id: "WARNING", label: t("tech.tabAttention"), badge: tabCounts.WARNING },
+                { id: "OFFLINE", label: t("tech.tabOffline"), badge: tabCounts.OFFLINE },
+                { id: "PENDING", label: t("tech.tabPending", { n: tabCounts.PENDING }) },
+                { id: "ONLINE", label: t("tech.tabOnline", { n: tabCounts.ONLINE }) },
               ]}
             />
 
             {showSearch && (
               <div className="max-w-sm">
-                <SearchInput placeholder="Tìm mã thiết bị, firmware..." value={searchQuery} onChange={setSearchQuery} />
+                <SearchInput placeholder={t("tech.search")} value={searchQuery} onChange={setSearchQuery} />
               </div>
             )}
 
             <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white">
               <div className={`hidden gap-x-4 border-b border-warmGray/15 bg-warmGray/5 px-4 py-2.5 text-xs font-semibold text-warmGray md:grid ${DEVICE_ROW_GRID}`}>
-                <span>Thiết bị</span>
-                <span>Vị trí</span>
-                <span>Trạng thái</span>
-                <span>Kết nối</span>
+                <span>{t("tech.colDevice")}</span>
+                <span>{t("tech.colPlace")}</span>
+                <span>{t("tech.colStatus")}</span>
+                <span>{t("tech.colConnection")}</span>
                 <span />
               </div>
               {filteredNodes.map(node => {
@@ -185,7 +177,7 @@ export default function TechnicianDevicesPage() {
                     isExpanded={expandedNodeId === node._id}
                     onToggleExpand={() => setExpandedNodeId(prev => prev === node._id ? null : node._id)}
                     onOpenAudio={() => setAudioNodeId(node._id)}
-                    rebootBlockedReason={restartBlockReason(node, RESTART_BLOCK_VI) ?? (rebootUnsupportedIds.has(node._id) ? "Firmware chưa hỗ trợ lệnh này." : null)}
+                    rebootBlockedReason={restartBlockReason(node, (code, params) => t(`block.${code}`, params)) ?? (rebootUnsupportedIds.has(node._id) ? t("tech.firmwareUnsupported") : null)}
                     onReboot={() => setRebootNodeId(node._id)}
                     moreActions={zone ? [
                       { label: t("action.move"), onClick: () => setMoveDevice(sensorItem(node, zone.house_id)) },
@@ -197,7 +189,7 @@ export default function TechnicianDevicesPage() {
               })}
               {filteredNodes.length === 0 && (
                 <div className="p-8 text-center text-small text-warmGray">
-                  Không có thiết bị nào ở nhóm này{showSearch && searchQuery.trim() ? " khớp với ô tìm kiếm" : ""}.
+                  {t(showSearch && searchQuery.trim() ? "tech.noneMatchSearch" : "tech.noneInGroup")}
                 </div>
               )}
             </div>
@@ -217,9 +209,9 @@ export default function TechnicianDevicesPage() {
 
         <ConfirmModal
           open={rebootNode !== null}
-          title="Khởi động lại thiết bị?"
-          description={rebootNode ? `Thiết bị ${rebootNode.device_id} sẽ mất kết nối trong vài giây rồi tự kết nối lại. Rơ-le đang chạy có thể bị ngắt tạm thời.` : undefined}
-          confirmLabel="Khởi động lại"
+          title={t("tech.restartTitle")}
+          description={rebootNode ? t("tech.restartDesc", { id: rebootNode.device_id }) : undefined}
+          confirmLabel={t("tech.restartConfirm")}
           danger
           loading={sendCommand.isPending}
           onConfirm={handleReboot}

@@ -15,7 +15,7 @@ export const KIND_ORDER: ExpertQueueKind[] = Object.values(SECTION_KINDS).flat()
 
 export type QueueTab = 'all' | QueueSection
 
-// Các khung việc của một tab: chỉ khung còn việc, theo thứ tự trang; việc Chủ nhà yến đã nhắc đứng trước
+// Các khung việc của một tab: chỉ khung còn việc, theo thứ tự trang; việc chủ nhà yến đã nhắc đứng trước
 export function groupsForTab(groups: ExpertQueueGroup[], tab: QueueTab): ExpertQueueGroup[] {
   const kinds = tab === 'all' ? KIND_ORDER : SECTION_KINDS[tab]
   const byKind = new Map(groups.map(group => [group.kind, group]))
@@ -36,7 +36,7 @@ const timeOf = (item: ExpertQueueItem): number => {
   return Number.isNaN(time) ? Number.MAX_SAFE_INTEGER : time
 }
 
-// Hàng đợi chung của một tab: việc Chủ nhà yến đã nhắc trước, rồi việc chờ lâu nhất
+// Hàng đợi chung của một tab: việc chủ nhà yến đã nhắc trước, rồi việc chờ lâu nhất
 export function queueRows(groups: ExpertQueueGroup[], tab: QueueTab): QueueRow[] {
   return groupsForTab(groups, tab)
     .flatMap(group => group.items.map(item => ({ kind: group.kind, item })))

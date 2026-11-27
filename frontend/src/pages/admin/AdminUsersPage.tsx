@@ -137,7 +137,7 @@ export default function AdminUsersPage() {
             minRows={total > limit ? PAGE_SIZE : 0}
             // Admin không có trang chi tiết người dùng riêng: bấm dòng mở popup chi tiết (UserDetailModal)
             onRowClick={setViewTarget}
-            emptyMessage="Không tìm thấy tài khoản nào, thử đổi bộ lọc hoặc từ khoá tìm kiếm."
+            emptyMessage="Không tìm thấy tài khoản nào. Thử đổi bộ lọc hoặc từ khoá tìm kiếm."
             mobileCard={user => (
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-col gap-1">

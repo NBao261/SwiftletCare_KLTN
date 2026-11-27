@@ -1,6 +1,8 @@
 import { Badge, Button } from "@/components/ui"
 import DeviceInfoCard from "@/components/features/technician/devices/DeviceInfoCard"
 import type { SensorNode } from "@/types"
+import { devicesDict } from "@/constants/devices.i18n"
+import { useTranslation } from "@/hooks/common/useTranslation"
 import { Clock, ListMusic } from "lucide-react"
 
 interface DeviceDiagnosticsPanelProps {
@@ -11,6 +13,7 @@ interface DeviceDiagnosticsPanelProps {
 
 // Chi tiết một thiết bị: thông tin chẩn đoán và loa ru cạnh nhau, không chia tab vì chỉ có hai khối
 export default function DeviceDiagnosticsPanel({ node, onOpenAudio }: DeviceDiagnosticsPanelProps) {
+  const { t } = useTranslation(devicesDict)
   const schedule = node.speaker_schedule
   return (
     <div className="grid animate-fade-in gap-4 motion-reduce:animate-none lg:grid-cols-2">
@@ -18,9 +21,9 @@ export default function DeviceDiagnosticsPanel({ node, onOpenAudio }: DeviceDiag
 
       <div className="flex flex-col gap-4 rounded-2xl border border-warmGray/15 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="text-small font-bold text-charcoal">Loa ru</h4>
+          <h4 className="text-small font-bold text-charcoal">{t("tech.speaker.title")}</h4>
           {node.audio && (
-            <Badge tone={schedule?.enabled ? "positive" : "neutral"}>{schedule?.enabled ? "Đang bật lịch" : "Lịch đang tắt"}</Badge>
+            <Badge tone={schedule?.enabled ? "positive" : "neutral"}>{t(schedule?.enabled ? "tech.speaker.scheduleOn" : "tech.speaker.scheduleOff")}</Badge>
           )}
         </div>
 
@@ -29,20 +32,20 @@ export default function DeviceDiagnosticsPanel({ node, onOpenAudio }: DeviceDiag
           <>
             <dl className="grid grid-cols-3 gap-4">
               <div>
-                <dt className="label-caption">Bài mặc định</dt>
+                <dt className="label-caption">{t("tech.speaker.track")}</dt>
                 <dd className="mt-1 font-bold tabular-nums text-charcoal">{String(node.audio.current_track).padStart(4, "0")}.mp3</dd>
               </div>
               <div>
-                <dt className="label-caption">Âm lượng</dt>
+                <dt className="label-caption">{t("tech.speaker.volume")}</dt>
                 <dd className="mt-1 font-bold tabular-nums text-charcoal">{node.audio.volume}/30</dd>
               </div>
               <div>
-                <dt className="label-caption">Lặp lại</dt>
-                <dd className="mt-1 font-bold text-charcoal">{node.audio.loop ? "Bật" : "Tắt"}</dd>
+                <dt className="label-caption">{t("tech.speaker.loop")}</dt>
+                <dd className="mt-1 font-bold text-charcoal">{t(node.audio.loop ? "tech.on" : "tech.off")}</dd>
               </div>
             </dl>
             <div>
-              <p className="label-caption mb-2">Khung giờ phát</p>
+              <p className="label-caption mb-2">{t("tech.speaker.windows")}</p>
               {schedule?.windows?.length ? (
                 <ul className="flex flex-wrap gap-2">
                   {schedule.windows.map((window, index) => (
@@ -52,22 +55,22 @@ export default function DeviceDiagnosticsPanel({ node, onOpenAudio }: DeviceDiag
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-warmGray">Chưa cài khung giờ nào.</p>
+                <p className="text-xs text-warmGray">{t("tech.speaker.noWindows")}</p>
               )}
             </div>
           </>
         ) : (
-          <p className="text-small text-warmGray">Thiết bị chưa báo cấu hình loa.</p>
+          <p className="text-small text-warmGray">{t("tech.speaker.noConfig")}</p>
         )}
 
         {/* Farm Technician chỉ xem danh sách bài loa; thiết bị PENDING chưa có cấu hình loa */}
         <div className="mt-auto border-t border-warmGray/15 pt-4">
           {node.status === "PENDING" ? (
-            <p className="text-xs font-medium text-warmGray">Thiết bị chưa kết nối. Danh sách bài loa ru có khi thiết bị online.</p>
+            <p className="text-xs font-medium text-warmGray">{t("tech.speaker.pending")}</p>
           ) : (
             <Button variant="secondary" size="sm" onClick={onOpenAudio}>
               <ListMusic size={16} />
-              Xem danh sách bài loa ru
+              {t("tech.speaker.tracks")}
             </Button>
           )}
         </div>

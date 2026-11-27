@@ -14,7 +14,7 @@ const SECTIONS_VI: PolicySection[] = [
   {
     title: '1. Phạm vi và ai chịu trách nhiệm',
     paragraphs: [
-      'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản Chủ nhà yến; Kỹ thuật viên, người đồng sở hữu và Chuyên gia tham gia qua lời mời của Chủ nhà yến.',
+      'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản chủ nhà yến; Kỹ thuật viên, người đồng sở hữu và Chuyên gia tham gia qua lời mời của chủ nhà yến.',
       'Chủ nhà yến quyết định ai được mời và dữ liệu nào được nhập cho trang trại của mình. Quản trị viên của bản cài đặt vận hành hệ thống và là đầu mối nhận mọi yêu cầu về dữ liệu cá nhân (mục 10).',
       'Dữ liệu cá nhân được xử lý theo Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân.',
     ],
@@ -25,10 +25,10 @@ const SECTIONS_VI: PolicySection[] = [
       'Tài khoản: họ tên, e-mail, số điện thoại (nếu có), vai trò, các trang trại và nhà bạn được giao. Mật khẩu chỉ lưu dạng băm bcrypt, không lưu mật khẩu gốc.',
       'Dữ liệu nhà yến: số đo cảm biến (nhiệt độ, độ ẩm, ánh sáng, NH3, CO2, tiếng ồn), trạng thái rơ-le, thông tin và tình trạng thiết bị, cảnh báo và lịch sử thay đổi cấu hình.',
       'Công việc và đánh giá: phiếu công việc, kết quả kiểm tra và bảo trì, đánh giá sức khoẻ hằng ngày, các đợt thu hoạch và ảnh bạn đính kèm. Ảnh được lưu riêng và chỉ mở bằng liên kết tạm có hiệu lực 1 giờ.',
-      'Đếm chim: hình camera ở cửa nhà yến được xử lý trên máy đếm chim để đếm chim ra vào. Hệ thống chỉ lưu số đếm theo từng 5 phút và theo phiên sáng, chiều, không ghi lại video. Camera có thể quay cả người đi qua gần cửa; hệ thống không nhận dạng người. Địa chỉ camera và mật khẩu camera do Chủ nhà yến nhập được mã hoá khi lưu và không hiện lại.',
+      'Đếm chim: hình camera ở cửa nhà yến được xử lý trên máy đếm chim để đếm chim ra vào. Hệ thống chỉ lưu số đếm theo từng 5 phút và theo phiên sáng, chiều, không ghi lại video. Camera có thể quay cả người đi qua gần cửa; hệ thống không nhận dạng người. Địa chỉ camera và mật khẩu camera do chủ nhà yến nhập được mã hoá khi lưu và không hiện lại.',
       'Thông báo: thông báo trong ứng dụng; mã trò chuyện Telegram nếu bạn tự liên kết; mã nhận thông báo đẩy của điện thoại nếu bạn dùng ứng dụng di động và cho phép.',
       'Nhật ký: lần đăng nhập và mọi thay đổi quan trọng (người thực hiện, thời điểm, địa chỉ IP và loại thiết bị hoặc trình duyệt). Địa chỉ IP khi đăng nhập còn dùng để chặn đăng nhập sai liên tục.',
-      'Vị trí: toạ độ trang trại do Chủ nhà yến nhập, hoặc điền bằng nút lấy vị trí hiện tại khi tạo trang trại. Hệ thống không theo dõi vị trí của bạn.',
+      'Vị trí: toạ độ trang trại do chủ nhà yến nhập, hoặc điền bằng nút lấy vị trí hiện tại khi tạo trang trại. Hệ thống không theo dõi vị trí của bạn.',
       'Trình duyệt: cookie đăng nhập (httpOnly) và bộ nhớ của trình duyệt dùng để nhớ phiên đăng nhập, ngôn ngữ và lựa chọn giao diện. Không có cookie quảng cáo hay theo dõi.',
     ],
   },
@@ -41,7 +41,7 @@ const SECTIONS_VI: PolicySection[] = [
       'Bảo vệ tài khoản và truy vết thay đổi qua nhật ký.',
     ],
     paragraphs: [
-      'Dữ liệu được xử lý để thực hiện việc quản lý nhà yến mà Chủ nhà yến giao cho hệ thống, và khi bạn đồng ý (ví dụ liên kết Telegram, cho phép thông báo đẩy).',
+      'Dữ liệu được xử lý để thực hiện việc quản lý nhà yến mà chủ nhà yến giao cho hệ thống, và khi bạn đồng ý (ví dụ liên kết Telegram, cho phép thông báo đẩy).',
       'SwiftletCare không mua bán, không môi giới và không chia sẻ dữ liệu để quảng cáo.',
     ],
   },
@@ -103,8 +103,8 @@ const SECTIONS_VI: PolicySection[] = [
     title: '9. Theo dõi công việc của Kỹ thuật viên',
     items: [
       'Mọi thao tác của Kỹ thuật viên trên thiết bị (bật tắt tay, khởi động lại, thiết lập, dời, gỡ), xác nhận cảnh báo, ghi nguyên nhân, đánh giá ngày và nhập thu hoạch đều ghi lại tên người làm và thời điểm. Chủ nhà yến xem được ở lịch sử điều khiển tay, phiếu công việc, cảnh báo và thông báo trong ứng dụng; nhật ký hệ thống đầy đủ do Quản trị viên xem.',
-      'Hệ thống tính thời gian từ lúc có cảnh báo đến lúc xác nhận và xử lý xong, và tỷ lệ bảo trì đúng hạn, theo từng nhà và từng Kỹ thuật viên. Đây là mục tiêu nội bộ của trang trại để Chủ nhà yến theo dõi công việc.',
-      'Lịch trực do Chủ nhà yến đặt được lưu và dùng để chọn người nhận cảnh báo đầu tiên.',
+      'Hệ thống tính thời gian từ lúc có cảnh báo đến lúc xác nhận và xử lý xong, và tỷ lệ bảo trì đúng hạn, theo từng nhà và từng Kỹ thuật viên. Đây là mục tiêu nội bộ của trang trại để chủ nhà yến theo dõi công việc.',
+      'Lịch trực do chủ nhà yến đặt được lưu và dùng để chọn người nhận cảnh báo đầu tiên.',
       'Hệ thống không theo dõi vị trí hay thời gian làm việc ngoài các thao tác kể trên.',
     ],
   },
@@ -112,7 +112,7 @@ const SECTIONS_VI: PolicySection[] = [
     title: '10. Sự cố dữ liệu, liên hệ và thay đổi chính sách',
     paragraphs: [
       'Khi xảy ra sự cố làm lộ hoặc mất dữ liệu cá nhân, Quản trị viên thông báo cho người bị ảnh hưởng và cơ quan có thẩm quyền theo quy định pháp luật.',
-      'Mọi câu hỏi hoặc yêu cầu về dữ liệu cá nhân xin gửi Quản trị viên của bản cài đặt; nếu bạn chưa biết liên hệ ai, hỏi Chủ nhà yến đã mời bạn.',
+      'Mọi câu hỏi hoặc yêu cầu về dữ liệu cá nhân xin gửi Quản trị viên của bản cài đặt; nếu bạn chưa biết liên hệ ai, hỏi chủ nhà yến đã mời bạn.',
       'Khi chính sách thay đổi, phiên bản và ngày hiệu lực ở đầu trang được cập nhật.',
     ],
   },
@@ -123,7 +123,7 @@ const SECTIONS_EN: PolicySection[] = [
   {
     title: '1. Scope and who is responsible',
     paragraphs: [
-      'Each SwiftletCare installation serves one swiftlet house owner and that owner’s farms. There is no public sign-up: the Administrator creates the Farm Owner’s account; Farm Technicians, co-owners and the Domain Expert join by the Farm Owner’s invitation.',
+      'Each SwiftletCare installation serves one swiftlet house owner and that owner’s farms. There is no public sign-up: the Administrator creates the Farm Owner’s account; Technicians, co-owners and the Domain Expert join by the Farm Owner’s invitation.',
       'The Farm Owner decides who is invited and what data is entered for their farms. The Administrator of the installation runs the system and is the contact for every request about personal data (section 10).',
       'Personal data is processed according to Decree 13/2023/ND-CP on personal data protection (Vietnam).',
     ],
@@ -133,7 +133,7 @@ const SECTIONS_EN: PolicySection[] = [
     items: [
       'Account: full name, e-mail, phone number (if given), role, and the farms and houses you are assigned to. The password is stored only as a bcrypt hash, never in plain text.',
       'Swiftlet house data: sensor readings (temperature, humidity, light, NH3, CO2, noise), relay states, device information and status, alerts and the history of configuration changes.',
-      'Work and ratings: Work Orders, inspection and maintenance results, daily health ratings, harvests and the photos you attach. Photos are stored separately and opened only through a temporary link valid for 1 hour.',
+      'Work and ratings: work orders, inspection and maintenance results, daily health ratings, harvests and the photos you attach. Photos are stored separately and opened only through a temporary link valid for 1 hour.',
       'Bird counting: the camera at the house entrance is processed on an AI node to count birds going in and out. The system keeps only the counts per 5 minutes and per morning and afternoon session, and does not record video. The camera may film people passing the entrance; the system does not identify people. The camera address and password entered by the Farm Owner are encrypted when stored and never shown again.',
       'Notifications: in-app notifications; the Telegram chat ID if you link it yourself; the phone’s push token if you use the mobile app and allow it.',
       'Logs: sign-ins and every important change (who made it, when, the IP address and the type of device or browser). The IP address at sign-in is also used to block repeated failed sign-ins.',
@@ -157,9 +157,9 @@ const SECTIONS_EN: PolicySection[] = [
   {
     title: '4. Who can see the data',
     items: [
-      'Farm Owner and co-owners: all data of their own farms, including the actions of Farm Technicians (section 9).',
+      'Farm Owner and co-owners: all data of their own farms, including the actions of Technicians (section 9).',
       'The farm’s Domain Expert: readings, bird counts, alerts, reports and harvests of the whole farm; edits parameters, writes conclusions and validates alerts; cannot control relays or enter harvests.',
-      'Farm Technician: only the assigned houses. Sees readings, bird counts, the camera view, alerts, reports and Work Orders of those houses; rates days and enters their own harvests; cannot see the comparison between houses or the camera address.',
+      'Technician: only the assigned houses. Sees readings, bird counts, the camera view, alerts, reports and work orders of those houses; rates days and enters their own harvests; cannot see the comparison between houses or the camera address.',
       'Administrator: accounts (name, e-mail, role, status), system logs, the devices and device alerts of every farm and the system overview figures; cannot see the environmental readings, bird counts, camera view, harvests or reports of any farm.',
     ],
   },
@@ -182,7 +182,7 @@ const SECTIONS_EN: PolicySection[] = [
     items: [
       '90 days: sensor readings, 5-minute bird counts, hourly weather and in-app notifications.',
       '180 days after being resolved: alerts.',
-      'For as long as the system is used: session counts, daily health ratings and reports, Work Orders with their photos, maintenance plans and records, recommendations, harvests, manual control history, change history and system logs.',
+      'For as long as the system is used: session counts, daily health ratings and reports, work orders with their photos, maintenance plans and records, recommendations, harvests, manual control history, change history and system logs.',
       'When an account is deleted, its personal data is anonymised. The server’s periodic backups may still hold older data until that backup is replaced.',
     ],
   },
@@ -209,10 +209,10 @@ const SECTIONS_EN: PolicySection[] = [
     ],
   },
   {
-    title: '9. Follow-up of Farm Technicians’ work',
+    title: '9. Follow-up of Technicians’ work',
     items: [
-      'Every action of a Farm Technician on a device (manual switching, restart, setup, move, removal), acknowledging an alert, recording a cause, rating a day and entering a harvest is logged with the person’s name and the time. The Farm Owner sees them in the manual control history, Work Orders, alerts and in-app notifications; the full system log is read by the Administrator.',
-      'The system computes the time from an alert to its acknowledgement and resolution, and the on-time maintenance rate, per house and per Farm Technician. These are internal targets of the farm that help the Farm Owner follow the work.',
+      'Every action of a Technician on a device (manual switching, restart, setup, move, removal), acknowledging an alert, recording a cause, rating a day and entering a harvest is logged with the person’s name and the time. The Farm Owner sees them in the manual control history, work orders, alerts and in-app notifications; the full system log is read by the Administrator.',
+      'The system computes the time from an alert to its acknowledgement and resolution, and the on-time maintenance rate, per house and per Technician. These are internal targets of the farm that help the Farm Owner follow the work.',
       'The duty roster set by the Farm Owner is stored and used to choose who receives an alert first.',
       'The system does not track location or working hours beyond the actions listed above.',
     ],

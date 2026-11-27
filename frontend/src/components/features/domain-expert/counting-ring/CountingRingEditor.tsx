@@ -201,7 +201,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
           </div>
 
           <p className="text-sm text-warmGray">
-            {t('Chạm lên khung để đặt đỉnh. Đủ {{auto}} đỉnh thì chạm tiếp sẽ sang vòng mới (tối đa {{rings}} vòng). Chọn lại một vòng để thêm đỉnh, tối đa {{max}}. Chạm vào một đỉnh để xoá.', { auto: POINTS_BEFORE_NEXT_RING, rings: MAX_RINGS, max: MAX_POINTS })}
+            {t('Chạm lên khung để đặt điểm. Đủ {{auto}} điểm thì chạm tiếp sẽ sang vòng mới (tối đa {{rings}} vòng). Chọn lại một vòng để thêm điểm, tối đa {{max}}. Chạm vào một điểm để xoá.', { auto: POINTS_BEFORE_NEXT_RING, rings: MAX_RINGS, max: MAX_POINTS })}
           </p>
 
           {knownDirection === undefined && (
@@ -260,7 +260,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
                   <span className="font-semibold text-charcoal">
                     {t('Vòng {{n}}', { n: index + 1 })}
                     <span className="ml-2 font-normal text-warmGray">
-                      {shown.isDefault ? t('Vòng mặc định') : t('{{n}} đỉnh', { n: ring.points.length })}
+                      {shown.isDefault ? t('Vòng mặc định') : t('{{n}} điểm', { n: ring.points.length })}
                     </span>
                   </span>
                   <div className="flex gap-1">

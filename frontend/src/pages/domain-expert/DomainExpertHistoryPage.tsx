@@ -21,7 +21,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'ALL', label: 'Tất cả hành động' },
   { value: 'ALERT_VERDICT_SET', label: 'Kiểm chứng cảnh báo' },
-  { value: 'THRESHOLD_UPDATED', label: 'Ngưỡng vi khí hậu' },
+  { value: 'THRESHOLD_UPDATED', label: 'Ngưỡng môi trường' },
   { value: 'FUZZY_TUNING_UPDATED', label: 'Hệ số mờ' },
   { value: 'DETECTION_TUNING_UPDATED', label: 'Tham số phát hiện' },
   { value: 'BIRD_COUNT_TUNING_UPDATED', label: 'Mức giảm tỷ lệ chim về' },

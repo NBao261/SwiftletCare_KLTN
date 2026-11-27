@@ -186,7 +186,7 @@ test('T8 — đánh giá ngày và thu hoạch của nhà được giao: không 
 
   await page.goto('/harvests');
   await expect(page).toHaveURL(/\/harvests$/);
-  // Kỹ thuật viên ghi đợt thu (chờ Chủ nhà yến xác nhận)
+  // Kỹ thuật viên ghi đợt thu (chờ chủ nhà yến xác nhận)
   await expect(page.getByRole('button', { name: 'Ghi đợt thu hoạch' })).toBeVisible();
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
