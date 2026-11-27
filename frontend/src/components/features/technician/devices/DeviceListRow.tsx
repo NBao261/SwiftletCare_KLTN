@@ -88,7 +88,7 @@ export default function DeviceListRow({
         <div className="flex flex-wrap items-center gap-2">
           <StatusDot status={node.status} colored />
           {node.activation_overdue_at && (
-            <Badge tone="warning" title="Thiết bị được thiết lập hơn 15 phút trước mà chưa kết nối lần nào. Kiểm tra nguồn điện, Wi-Fi 2.4 GHz và mật khẩu Wi-Fi tại nhà yến.">Quá hạn kích hoạt</Badge>
+            <Badge tone="warning" title="Thiết bị được thiết lập hơn 15 phút trước mà chưa kết nối lần nào. Kiểm tra nguồn điện và sóng Wi-Fi, rồi nối điện thoại vào Wi-Fi do thiết bị phát để nhập lại Wi-Fi 2.4 GHz của nhà yến.">Quá hạn kích hoạt</Badge>
           )}
           {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển tay</Badge>}
           {node.ota_pending && (
