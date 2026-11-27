@@ -1,7 +1,7 @@
 // Trang chủ Chuyên gia: một bảng việc đang chờ của trại đang chọn, hàng tab lọc theo kiểu quyết định, bấm cả dòng để mở việc
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { CaretRightIcon, ChecksIcon, ClipboardTextIcon, FileTextIcon, LightbulbFilamentIcon, ListChecksIcon, ShieldCheckIcon } from '@phosphor-icons/react'
+import { CaretRightIcon, ChecksIcon, ClipboardTextIcon, FileTextIcon, LightbulbFilamentIcon, ShieldCheckIcon } from '@phosphor-icons/react'
 import StatusTabs from '@/components/common/StatusTabs'
 import TableEmptyState from '@/components/common/TableEmptyState'
 import {
@@ -99,16 +99,6 @@ export default function DomainExpertQueuePage() {
 
   const groups = queue.data.groups
   const total = SECTIONS.reduce((sum, section) => sum + sectionTotal(groups, section.key), 0)
-  if (total === 0) {
-    return (
-      <EmptyState
-        icon={<ListChecksIcon className="h-8 w-8" />}
-        title={t('Không có việc gì đang chờ')}
-        description={t('Cảnh báo cần kết luận, thay đổi và đề xuất của Chủ nhà yến sẽ hiện ở đây.')}
-      />
-    )
-  }
-
   const rows = queueRows(groups, tab)
   const hidden = hiddenCounts(groups, tab)
 
@@ -133,7 +123,7 @@ export default function DomainExpertQueuePage() {
           onRowClick={open}
           rowHeight={72}
           emptyNotice={t('Không có việc gì đang chờ')}
-          emptyContent={<TableEmptyState title={t('Không có việc gì đang chờ')} />}
+          emptyContent={<TableEmptyState title={t('Không có việc gì đang chờ')} description={t('Cảnh báo cần kết luận, thay đổi và đề xuất của Chủ nhà yến sẽ hiện ở đây.')} />}
           mobileCard={row => (
             <div className="flex flex-col gap-1.5">
               <p className="text-small text-warmGray">{kindTitle(row.kind)}</p>
