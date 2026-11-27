@@ -1,18 +1,15 @@
-import { Pressable, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { getMetricLabel } from '@/utils/label.utils'
 import type { SensorTile } from '@/utils/sensorTile.utils'
-import type { SensorMetric } from '@/utils/threshold.utils'
 import { t } from '@/utils/i18n.utils'
 
 interface SensorTileGridProps {
   tiles: SensorTile[]
   // Phút tới lúc dự báo vượt ngưỡng (FORECAST_BREACH) của nhiệt độ / độ ẩm; không có thì null
   forecastMinutes: { temperature: number | null; humidity: number | null }
-  // Chạm một ô: mở biểu đồ chỉ số đó ở tab Phân tích (đặc tả Menu Phân tích §2)
-  onPressTile?: (metric: SensorMetric) => void
 }
 
 // Câu dưới số giống web: trong ngưỡng "An toàn …" / "Cảnh báo khi …" (NH3, CO2), ngoài ngưỡng thì báo; tiếng ồn để trống
@@ -23,8 +20,9 @@ function getRangeLine(tile: SensorTile): string | null {
 }
 
 // Lưới 6 ô cảm biến của zone đang chọn, 2 cột × 3 hàng, ô thấp gọn để cả lưới nằm trong màn đầu dưới camera:
-// tên, số lớn kèm đơn vị nhỏ (như web), câu ngưỡng một dòng; ngoài ngưỡng thì số màu cam
-export function SensorTileGrid({ tiles, forecastMinutes, onPressTile }: SensorTileGridProps) {
+// tên, số lớn kèm đơn vị nhỏ (như web), câu ngưỡng một dòng; ngoài ngưỡng thì số màu cam. Chỉ để xem, không bấm được: biểu đồ
+// mở bằng nút Phân tích ở đầu màn nhà
+export function SensorTileGrid({ tiles, forecastMinutes }: SensorTileGridProps) {
   const palette = usePalette()
 
   return (
@@ -35,13 +33,10 @@ export function SensorTileGrid({ tiles, forecastMinutes, onPressTile }: SensorTi
           tile.metric === 'temperature' || tile.metric === 'humidity' ? forecastMinutes[tile.metric] : null
         const valueColor = tile.isOutOfRange ? palette.alert : palette.text
         return (
-          <Pressable
+          <View
             key={tile.metric}
             style={[styles.tile, { backgroundColor: palette.surface }]}
-            onPress={onPressTile ? () => onPressTile(tile.metric) : undefined}
-            disabled={!onPressTile}
-            accessibilityRole={onPressTile ? 'button' : undefined}
-            accessibilityHint={onPressTile ? t('Mở biểu đồ ở Phân tích') : undefined}
+            accessible
             accessibilityLabel={[
               `${label} ${tile.valueText}`,
               getRangeLine(tile),
@@ -83,7 +78,7 @@ export function SensorTileGrid({ tiles, forecastMinutes, onPressTile }: SensorTi
                 {t('Dự kiến vượt ngưỡng sau {minutes} phút', { minutes: forecast })}
               </Text>
             )}
-          </Pressable>
+          </View>
         )
       })}
     </View>

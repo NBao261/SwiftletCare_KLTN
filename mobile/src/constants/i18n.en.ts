@@ -634,7 +634,6 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Không tải được biểu đồ': 'Could not load the chart',
   'Chưa có dữ liệu trong khoảng này': 'No data in this range',
   'Mở biểu đồ đàn chim ở Phân tích': 'Opens the bird chart in Analytics',
-  'Mở biểu đồ ở Phân tích': 'Opens the chart in Analytics',
   'Mở báo cáo ở Phân tích': 'Opens the report in Analytics',
   'Quản trị viên': 'Administrator',
   'Chủ trại': 'Farm owner',
