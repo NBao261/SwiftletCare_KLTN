@@ -5,7 +5,7 @@ const enExpert: Record<string, string> = {
   'Quyết định thay': 'Acting as expert',
   'Chỉ xem': 'View only',
   'Chuyên gia và chủ nhà yến đặt các thông số này. Bạn xem để đối chiếu khi làm việc tại nhà yến.': 'The expert and the farm owner set these values. You read them to check your work at the house.',
-  'Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.':
+  'Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kiểm chứng cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.':
     'This farm has no expert: you decide in their place on alert verdicts, detection parameters, the counting schedule, the counting ring and weather rules. Report and season conclusions and profile approval are for an expert only.',
   'Không có cảnh báo chờ kiểm chứng': 'No incidents awaiting review',
   'Mọi cảnh báo suy luận trong phạm vi đang xem đã có kết luận.': 'Every inferred alert in the current scope has been reviewed.',
@@ -593,7 +593,7 @@ const enExpert: Record<string, string> = {
   'Vòng đếm': 'Counting ring',
   'Chưa có': 'None',
   'Bộ điều khiển nhận lại giá trị cũ và mục này chuyển sang Đã hoàn tác.': 'The controllers receive the old values again and this item becomes Reverted.',
-  'Trang trại đã có chuyên gia: tham số, lịch đếm, vòng đếm bạn sửa có hiệu lực ngay và chuyên gia xem lại. Luật thời tiết, hồ sơ, luật khuyến nghị chạy khi chuyên gia duyệt. Kết luận cảnh báo do chuyên gia ghi, bạn nhắc được.': 'This farm has an expert: your changes to parameters, the counting schedule and ring apply at once and the expert reviews them. Weather rules, profiles and recommendation rules run once the expert approves them. The expert records alert verdicts; you can remind them.',
+  'Trang trại đã có chuyên gia: tham số, lịch đếm, vòng đếm bạn sửa có hiệu lực ngay và chuyên gia xem lại. Luật thời tiết, hồ sơ, luật khuyến nghị chạy khi chuyên gia duyệt. Kiểm chứng cảnh báo do chuyên gia làm, bạn nhắc được.': 'This farm has an expert: your changes to parameters, the counting schedule and ring apply at once and the expert reviews them. Weather rules, profiles and recommendation rules run once the expert approves them. The expert records alert verdicts; you can remind them.',
   'Cần mời chuyên gia để duyệt': 'Invite an expert to approve it',
   'Nhiệt độ cao nhất': 'Highest temperature',
   'NH3 tối đa': 'Max NH3',

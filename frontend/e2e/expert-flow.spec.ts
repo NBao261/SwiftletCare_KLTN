@@ -187,7 +187,7 @@ test('B5 — tạo hồ sơ cấu hình, duyệt rồi lưu trữ (EXPERT-FR-014
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
-test('B6 — thêm luật phun sương theo thời tiết theo thời tiết rồi xoá (ENV-FR-030, BR-38)', async ({ page, request }) => {
+test('B6 — thêm luật phun sương theo thời tiết rồi xoá (ENV-FR-030, BR-38)', async ({ page, request }) => {
   const expertApi = await signIn(request, 'expert');
   const crashes = await openAsExpert(page, '/domain-expert/weather-rules', { farmId, houseId: houseA });
   await expect(page.getByRole('heading', { name: 'Phun sương theo thời tiết' })).toBeVisible();

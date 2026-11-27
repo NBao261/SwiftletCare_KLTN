@@ -37,8 +37,8 @@ export default function ExpertReadOnlyBadge() {
 
   const label = canDecide ? t('Quyết định thay') : t('Chuyên gia duyệt lại');
   const explanation = canDecide
-    ? t('Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kết luận cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.')
-    : t('Trang trại đã có chuyên gia: tham số, lịch đếm, vòng đếm bạn sửa có hiệu lực ngay và chuyên gia xem lại. Luật thời tiết, hồ sơ, luật khuyến nghị chạy khi chuyên gia duyệt. Kết luận cảnh báo do chuyên gia ghi, bạn nhắc được.');
+    ? t('Trang trại chưa có chuyên gia: bạn quyết định thay chuyên gia ở kiểm chứng cảnh báo, tham số phát hiện, lịch đếm, vòng đếm và luật thời tiết. Kết luận báo cáo, mùa vụ và duyệt hồ sơ chỉ chuyên gia làm.')
+    : t('Trang trại đã có chuyên gia: tham số, lịch đếm, vòng đếm bạn sửa có hiệu lực ngay và chuyên gia xem lại. Luật thời tiết, hồ sơ, luật khuyến nghị chạy khi chuyên gia duyệt. Kiểm chứng cảnh báo do chuyên gia làm, bạn nhắc được.');
 
   return (
     <HeaderTitleBadge>

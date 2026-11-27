@@ -7,7 +7,7 @@ import type { WeatherRule } from '@/types/expert.types'
 import { t, translated } from '@/i18n'
 
 const METRIC_LABELS: Record<WeatherRule['metric'], string> = translated({
-  temperature: 'Nhiệt độ tối đa',
+  temperature: 'Nhiệt độ cao nhất',
   humidity:    'Độ ẩm ngoài trời cao nhất',
   rain:        'Tổng mưa',
 })

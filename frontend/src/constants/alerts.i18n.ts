@@ -75,7 +75,7 @@ const vi = {
 
   // Kiểm tra tại chỗ của Kỹ thuật viên (cảnh báo suy luận)
   'onsite.title': 'Kiểm tra tại chỗ',
-  'onsite.pending': 'Chuyên gia cần biết bạn thấy gì tại nhà yến trước khi kết luận cảnh báo này.',
+  'onsite.pending': 'Chuyên gia cần biết bạn thấy gì tại nhà yến trước khi kiểm chứng cảnh báo này.',
   'onsite.answer': 'Trả lời kiểm tra tại chỗ',
   'onsite.observation': 'Bạn thấy gì tại nhà yến?',
   'onsite.note': 'Ghi chú',
