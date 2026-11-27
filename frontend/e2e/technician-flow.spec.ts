@@ -57,11 +57,11 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await signInUi(page, 'technician');
   await expect(page).toHaveURL(/\/alerts$/);
 
-  // Mọi việc của thợ ở nhà được giao (G-33); không có trang quyết định của chuyên gia, cài đặt hệ thống
-  for (const label of ['Cảnh báo', 'Tổng quan', 'Chim ra vào', 'Sức khoẻ & báo cáo', 'Phân tích', 'Công việc', 'Thiết bị', 'Trang trại', 'Thu hoạch', 'Tham số điều khiển', 'Cài đặt đếm chim']) {
+  // Việc của thợ tại nhà được giao (G-33); không có trang quyết định của chuyên gia, phân tích, tham số, cài đặt hệ thống
+  for (const label of ['Cảnh báo', 'Tổng quan', 'Chim ra vào', 'Sức khoẻ & báo cáo', 'Công việc', 'Điều khiển tay', 'Thiết bị', 'Trang trại', 'Thu hoạch', 'Cài đặt đếm chim']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
-  for (const label of ['Hàng đợi việc', 'Kiểm chứng cảnh báo', 'Luật khuyến nghị', 'Cài đặt']) {
+  for (const label of ['Hàng đợi việc', 'Kiểm chứng cảnh báo', 'Luật khuyến nghị', 'Phân tích', 'Tham số điều khiển', 'Cài đặt']) {
     await expect(sidebar(page).getByRole('link', { name: label, exact: true })).toHaveCount(0);
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);

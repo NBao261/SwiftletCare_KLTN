@@ -99,7 +99,8 @@ interface SectionPlan {
 }
 
 // Nhóm việc chính của vai trò đứng đầu; dock điện thoại là 4 trang vai trò đó dùng nhiều nhất
-const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[] }> = {
+// hide: mục hoặc tab ẩn khỏi menu của vai trò này, ở mọi nhóm (trang vẫn mở được bằng đường dẫn)
+const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[]; hide?: string[] }> = {
   ADMIN: {
     sections: [{ group: 'monitor' }, { group: 'manage' }, { group: 'system' }],
     dock: ['/system/health', '/devices', '/alerts', '/users'],
@@ -109,9 +110,10 @@ const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[] }> = {
     dock: ['/dashboard', '/alerts', '/vision', '/health'],
   },
   FARM_TECHNICIAN: {
-    // Vòng đếm thợ vẽ được nên nhóm Chuyên môn không ghi "chỉ đọc"
+    // Vòng đếm thợ vẽ được nên nhóm Chuyên môn không ghi "chỉ đọc"; phân tích, khuyến nghị, ngưỡng và lịch đếm là việc của chủ nhà yến và chuyên gia nên thợ không cần ở menu
     sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise' }],
     dock: ['/alerts', '/work-orders', '/dashboard', '/health'],
+    hide: ['/analytics', '/recommendations', '/domain-expert/tuning', '/domain-expert/weather-rules', '/domain-expert/counting-schedule'],
   },
   DOMAIN_EXPERT: {
     // Chuyên gia quyết định ở nhóm Chuyên môn; chỉ giữ ba trang số liệu để đối chiếu khi quyết định, còn việc vận hành, thiết bị là của chủ nhà yến
@@ -121,9 +123,9 @@ const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[] }> = {
 }
 
 // Mục mở trang đầu tiên vai trò vào được; còn một tab thì thôi hiện tab
-function itemFor(role: Role, item: MenuItem): MenuItem | null {
-  if (!item.tabs) return canAccessPath(role, item.path) ? item : null
-  const tabs = item.tabs.filter(tab => canAccessPath(role, tab.path))
+function itemFor(role: Role, item: MenuItem, hide: string[] = []): MenuItem | null {
+  if (!item.tabs) return canAccessPath(role, item.path) && !hide.includes(item.path) ? item : null
+  const tabs = item.tabs.filter(tab => canAccessPath(role, tab.path) && !hide.includes(tab.path))
   if (tabs.length === 0) return null
   return tabs.length === 1 ? { ...item, path: tabs[0].path, tabs: undefined } : { ...item, path: tabs[0].path, tabs }
 }
@@ -136,7 +138,7 @@ export function roleMenu(role: Role): { sections: MenuSection[]; dock: MenuItem[
       collapsible: true,
       items: CATALOG[group]
         .filter(item => !only || only.includes(item.path))
-        .map(item => itemFor(role, item))
+        .map(item => itemFor(role, item, plan.hide))
         .filter((item): item is MenuItem => item !== null),
     }))
     .filter(section => section.items.length > 0)
