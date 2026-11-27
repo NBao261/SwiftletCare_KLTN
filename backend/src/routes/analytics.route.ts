@@ -11,7 +11,11 @@ router.use(authenticate)
 router.use(requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'))
 
 router.get('/env/summary',       query('zoneId').isMongoId(), validate, analyticsController.envSummary)
-router.get('/env/compare',       query('zoneIds').notEmpty(), validate, analyticsController.envCompare)
+// Danh sách ID cách nhau bằng dấu phẩy, tối đa 6 (service cũng kiểm)
+router.get('/env/compare',       query('zoneIds').isString().bail().custom((value: string) => {
+  const ids = value.split(',').filter(Boolean)
+  return ids.length >= 1 && ids.length <= 6 && ids.every(id => /^[a-fd]{24}$/i.test(id))
+}).withMessage('zoneIds là 1-6 ID cách nhau bằng dấu phẩy'), validate, analyticsController.envCompare)
 router.get('/control/performance', query('zoneId').isMongoId(), validate, analyticsController.controlPerformance)
 router.get('/autonomy',            query('zoneId').isMongoId(), validate, analyticsController.autonomy)
 router.get('/control/suggestion', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), query('zoneId').isMongoId(), validate, analyticsController.tuningSuggestion)

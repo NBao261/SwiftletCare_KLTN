@@ -9,14 +9,19 @@ import { MAX_AUDIO_BYTES } from '@/services/audioTrack.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 import { CAMERA_HOST_PATTERN, CAMERA_PATH_PATTERN } from '@/utils/cameraSource.util'
+import { DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
+import { LIMITS, reasonField } from '@/utils/inputRules.util'
 
 const router = Router()
 router.use(authenticate)
 
 const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_AUDIO_BYTES, files: 1 } })
 const trackParams = [param('id').isMongoId(), param('trackId').isMongoId()]
+// Mã in trên nhãn: cùng mẫu và độ dài với route kho thiết bị (tối đa 40 như firmware nhận qua USB)
+const deviceIdField = (field: string) => body(field).isString().bail().trim().isLength({ min: 1, max: 40 }).matches(DEVICE_ID_PATTERN)
+const secretKeyField = () => body('secret_key').isString().bail().trim().notEmpty().isLength({ max: LIMITS.secretKey })
 
-router.post('/sensor-nodes/register',        requireRole('FARM_OWNER','FARM_TECHNICIAN'), body('device_id').trim().notEmpty(), body('zone_id').isMongoId(), body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerSensorNode)
+router.post('/sensor-nodes/register',        requireRole('FARM_OWNER','FARM_TECHNICIAN'), deviceIdField('device_id'), body('zone_id').isMongoId(), secretKeyField(), validate, deviceController.registerSensorNode)
 // Thiết bị gỡ trong 24 giờ còn khôi phục được
 router.get ('/sensor-nodes',
   query('zoneId').optional().isString().isMongoId(), query('removed').optional().isString().isIn(['recent']), validate,
@@ -24,14 +29,16 @@ router.get ('/sensor-nodes',
 router.get ('/sensor-nodes/:id',             param('id').isMongoId(), validate, deviceController.getSensorNode)
 // Firmware chỉ có 2 khung giờ tròn
 router.put ('/sensor-nodes/:id/speaker-schedule', requireRole('FARM_OWNER'), param('id').isMongoId(),
-  body('enabled').optional().isBoolean(),
+  body('enabled').optional().isBoolean({ strict: true }),
   body('windows').optional().isArray({ min: 1, max: 2 }).withMessage('windows phải có 1-2 khung giờ'),
   body('windows.*.start').matches(/^([01]\d|2[0-3]):00$/).withMessage('start phải là giờ tròn HH:00'),
   body('windows.*.end').matches(/^(([01]\d|2[0-3]):00|24:00)$/).withMessage('end phải là giờ tròn HH:00 (tối đa 24:00)'),
   body('volume').optional().isInt({ min: 0, max: 30 }).toInt(),
-  body('track').optional().isInt({ min: 1 }).toInt(),
+  body('track').optional().isInt({ min: 1, max: 255 }).toInt(),
   validate, deviceController.updateSpeakerSchedule)
-router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('relayName').notEmpty(), body('state').isBoolean(),
+router.post('/sensor-nodes/:id/relay',       requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('relayName').isString().isIn([...RELAY_NAMES]),
+  // toBoolean(): isBoolean() không đổi kiểu, "false" lọt xuống service và được gửi nguyên chuỗi cho thiết bị
+  body('state').isBoolean().toBoolean(),
   // Giá trị cực lớn làm Zone bị tính 0% tự động mãi
   body('durationMs').optional().isInt({ min: MIN_OVERRIDE_MS, max: MAX_OVERRIDE_MS }).toInt(),
   // Giới hạn 30 phút của bơm kiểm ở service
@@ -42,7 +49,7 @@ router.get   ('/sensor-nodes/:id/relay-overrides', requireRole('FARM_OWNER','DOM
 
 router.post  ('/sensor-nodes/:id/audio-tracks', requireRole('FARM_OWNER'), audioUpload.single('file'), param('id').isMongoId(),
   body('track_number').isInt({ min: 1, max: 255 }).withMessage('track_number phải là số nguyên 1-255 (0001.mp3 … 0255.mp3)').toInt(),
-  body('display_name').trim().notEmpty().withMessage('Cần tên bài').isLength({ max: 100 }),
+  body('display_name').isString().bail().trim().notEmpty().withMessage('Cần tên bài').isLength({ max: 100 }),
   validate, audioTrackController.uploadTrack)
 router.get   ('/sensor-nodes/:id/audio-tracks', param('id').isMongoId(), validate, audioTrackController.listTracks)
 router.put   ('/sensor-nodes/:id/audio-tracks/:trackId/sync-status', requireRole('FARM_OWNER'), ...trackParams, body('synced_to_sd').isBoolean().toBoolean(), validate, audioTrackController.setSyncStatus)
@@ -54,13 +61,13 @@ router.delete('/sensor-nodes/:id/audio-tracks/:trackId', requireRole('FARM_OWNER
 router.put ('/sensor-nodes/:id/reassign-zone', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('newZoneId').isMongoId(), validate, deviceController.reassignZone)
 
 router.post('/sensor-nodes/:id/decommission', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
-  body('reason').trim().notEmpty(),
+  reasonField(),
   // toBoolean(): isBoolean() không đổi kiểu, "false" lọt xuống service là truthy
   body('force').optional().isBoolean().toBoolean(),
   validate, deviceController.decommission('sensor'))
-router.post('/sensor-nodes/:id/restore', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('sensor'))
+router.post('/sensor-nodes/:id/restore', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), reasonField(), validate, deviceController.restore('sensor'))
 router.post('/sensor-nodes/:id/replace',      requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
-  body('new_device_id').trim().notEmpty(), body('secret_key').isString().trim().notEmpty(), body('reason').trim().notEmpty(),
+  deviceIdField('new_device_id'), secretKeyField(), reasonField(),
   validate, deviceController.replaceSensorNode)
 // Farm Owner, Farm Technician chỉ RESTART (service kiểm)
 router.post('/sensor-nodes/:id/commands', requireRole('ADMIN','FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
@@ -71,16 +78,16 @@ router.post('/sensor-nodes/:id/commands', requireRole('ADMIN','FARM_OWNER','FARM
   body('ota.sha256').if(body('command').equals('OTA')).isHash('sha256'),
   validate, deviceController.sendCommand)
 router.post('/camera-nodes/:id/decommission', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
-  body('reason').trim().notEmpty(),
+  reasonField(),
   // toBoolean(): như trên
   body('force').optional().isBoolean().toBoolean(),
   validate, deviceController.decommission('camera'))
-router.post('/camera-nodes/:id/restore', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), body('reason').trim().notEmpty(), validate, deviceController.restore('camera'))
+router.post('/camera-nodes/:id/restore', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), reasonField(), validate, deviceController.restore('camera'))
 // zone_id cũ: quy ra House chứa Zone
-router.post('/camera-nodes/register',        requireRole('FARM_OWNER','FARM_TECHNICIAN'), body('device_id').trim().notEmpty(),
+router.post('/camera-nodes/register',        requireRole('FARM_OWNER','FARM_TECHNICIAN'), deviceIdField('device_id'),
   body('house_id').if(body('zone_id').not().exists()).isString().isMongoId().withMessage('Cần house_id'),
   body('zone_id').optional().isString().isMongoId(),
-  body('secret_key').isString().trim().notEmpty(), validate, deviceController.registerCameraNode)
+  secretKeyField(), validate, deviceController.registerCameraNode)
 router.get ('/camera-nodes',
   query('houseId').optional().isString().isMongoId(), query('zoneId').optional().isString().isMongoId(),
   query('removed').optional().isString().isIn(['recent']), validate,
@@ -106,7 +113,7 @@ router.get ('/camera-nodes/:id/source', requireRole('FARM_OWNER'), param('id').i
 router.put ('/camera-nodes/:id/source', requireRole('FARM_OWNER'), param('id').isMongoId(),
   body('host').isString().trim().matches(CAMERA_HOST_PATTERN),
   body('port').isInt({ min: 1, max: 65535 }).toInt(),
-  body('username').isString().trim().isLength({ max: 64 }),
+  body('username').isString().bail().trim().isLength({ max: 64 }),
   body('password').optional().isString().isLength({ max: 128 }),
   body('path').isString().trim().matches(CAMERA_PATH_PATTERN),
   validate, deviceController.updateCameraSource)

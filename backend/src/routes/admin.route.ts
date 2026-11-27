@@ -7,6 +7,7 @@ import { validate } from '@/middlewares/validate.middleware'
 import type { Role } from '@/types'
 import { CHIP_MAC_PATTERN, DEVICE_ID_PATTERN } from '@/utils/deviceCommand.util'
 import { FIRMWARE_VERSION_PATTERN, MAX_FACTORY_IMAGE_BYTES } from '@/utils/firmwareImage.util'
+import { LIMITS, PHONE_PATTERN, emailField, reasonField } from '@/utils/inputRules.util'
 
 const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
@@ -26,8 +27,9 @@ router.get('/users',
   adminController.listUsers,
 )
 router.post('/farm-owners',
-  body('email').isString().bail().trim().isEmail(), body('full_name').isString().bail().trim().notEmpty(),
-  body('phone').optional().isString().bail().trim(), validate,
+  emailField(), body('full_name').isString().bail().trim().notEmpty().isLength({ max: LIMITS.fullName }),
+  // Chuỗi rỗng = không nhập số điện thoại
+  body('phone').optional({ values: 'falsy' }).isString().bail().trim().matches(PHONE_PATTERN), validate,
   adminController.createFarmOwner,
 )
 // toBoolean(): isBoolean() không đổi kiểu, "false" lọt xuống service là truthy
@@ -44,7 +46,7 @@ router.put('/delete-requests/:id/complete',
   adminController.completeDeletionRequest,
 )
 router.put('/delete-requests/:id/reject',
-  param('id').isMongoId(), body('reason').isString().trim().notEmpty(), validate,
+  param('id').isMongoId(), reasonField(), validate,
   adminController.rejectDeletionRequest,
 )
 
@@ -64,7 +66,7 @@ router.get('/provisioned-devices',
   adminController.listProvisionedDevices,
 )
 router.put('/provisioned-devices/:id/revoke',
-  param('id').isMongoId(), body('reason').isString().trim().notEmpty(), validate,
+  param('id').isMongoId(), reasonField(), validate,
   adminController.revokeProvisionedDevice,
 )
 router.post('/provisioned-devices/:id/rotate-key', param('id').isMongoId(), validate, adminController.rotateProvisionedKey)

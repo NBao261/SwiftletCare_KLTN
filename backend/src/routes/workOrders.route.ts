@@ -4,6 +4,7 @@ import multer from 'multer'
 import * as workOrderController from '@/controllers/workOrders.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { isoRange } from '@/utils/inputRules.util'
 import { SITE_CAUSES, WORK_ORDER_STATUSES } from '@/models/workOrder.model'
 import { MAX_PHOTO_BYTES, MAX_WORK_ORDER_PHOTOS } from '@/services/workOrder.service'
 
@@ -39,8 +40,8 @@ router.get('/metrics',
   requireRole('FARM_OWNER', 'DOMAIN_EXPERT'),
   query('farmId').isString().isMongoId(),
   query('houseId').optional().isString().isMongoId(),
-  query('from').isString().isISO8601(),
-  query('to').isString().isISO8601(),
+  // Thứ tự from/to do service trả 400
+  ...isoRange(true, false),
   validate, workOrderController.metrics)
 router.get('/:id', requireRole(...READERS), idParam, validate, workOrderController.getOne)
 

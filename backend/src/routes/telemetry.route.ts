@@ -3,6 +3,7 @@ import { param, query } from 'express-validator'
 import * as telemetryController from '@/controllers/telemetry.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { isoRange } from '@/utils/inputRules.util'
 
 const router = Router()
 router.use(authenticate)
@@ -13,7 +14,7 @@ router.get('/zones/:id/latest',  param('id').isMongoId(), validate, telemetryCon
 
 router.get(
   '/zones/:id/history',
-  [param('id').isMongoId(), query('from').optional().isISO8601(), query('to').optional().isISO8601()],
+  [param('id').isMongoId(), ...isoRange(), query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 })],
   validate,
   telemetryController.getHistory,
 )

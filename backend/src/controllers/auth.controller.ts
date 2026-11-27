@@ -20,9 +20,11 @@ function isMobileClient(req: Request): boolean {
   return req.headers['x-client'] === 'mobile'
 }
 
+// Body là JSON tuỳ ý: chỉ chuỗi mới là token, kẻo hashToken ném lỗi 500
 function readRefreshToken(req: Request): string | undefined {
-  return (req.body as Record<string, string | undefined>)?.refreshToken ??
-    (req.cookies as Record<string, string | undefined>)?.refreshToken
+  const token = (req.body as Record<string, unknown> | undefined)?.refreshToken
+    ?? (req.cookies as Record<string, unknown> | undefined)?.refreshToken
+  return typeof token === 'string' ? token : undefined
 }
 
 export const login = asyncHandler(async (req: Request, res: Response) => {

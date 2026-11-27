@@ -8,8 +8,8 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.29 (Review 2, final scope) |
-| Date | 27/11/2026 |
+| Document version | 4.2.30 (Review 2, final scope) |
+| Date | 28/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -769,6 +769,13 @@ Values picked by the team so that the system can run. None comes from swiftlet-f
 | Complete harvest cycle | at least 80 % of its days assessed | BR-43 |
 | Harvest amounts typed in the mobile app | nest count and weight up to 6 digits before the decimal point; weight up to 2 decimals | A typing check against slips (HARVEST-FR-001): checked while typing only, so a harvest saved earlier with larger figures still saves; the backend sets no upper limit; chosen by the team (A-4) |
 | Season conclusion text | conclusion and recommendations ≤ 2,000 characters each | Input check; a season summary, not a report (EXPERT-FR-020) |
+| Account and farm text | farm address ≤ 200 characters; house description ≤ 500; full name ≤ 100; e-mail ≤ 254; phone 8–20 characters of digits, spaces and `+ - ( )`; reason of a device or account action ≤ 500; device activation code ≤ 128 | Input check; stops a form or a script from storing unbounded text (all of Section 3 forms) |
+| Password length | new password 8–72 characters (72 is the limit of the hash, which would cut a longer one silently); the password typed at sign-in ≤ 128 | Input check (AUTH-FR-002, 005c, 010) |
+| Harvest batch limits | at most 100,000 nests and 1,000,000 g a batch; at most 5 image links of at most 2,048 characters, `http` or `https` only | Input check against a mistyped digit and against a link that is not a picture (HARVEST-FR-001) |
+| Readings of a device | temperature, humidity, light, NH3 and CO2 within the sensor range of the thresholds (humidity up to 101 %, Section 4.4); noise 0–140 dB; a reading outside its range is stored as missing, like a failed sensor | A broken sensor cannot store or raise an impossible value (ENV-FR-001, ALERT-FR-012) |
+| Diagnostics of a device | RSSI −127…0 dBm; FPS 0–1,000; firmware version ≤ 32 characters, model version ≤ 64; a value of another type is ignored, never rejects the heartbeat | A wrong field cannot make a working device look offline (FARM-FR-006) |
+| Alert text of a device | message ≤ 500 characters; picture link `http` or `https` ≤ 2,048; raw message kept only up to 8 KB | Input check on what a controller sends (ALERT-FR-001) |
+| Bird counts of a device | at most 1,000,000 a session; confidence 0–1; time not before 01/01/2025 and not more than 5 min after the receiving time, else the receiving time is used | A clock not yet synchronised cannot put a count on the wrong day (VISION-FR-006, 008) |
 
 ---
 
@@ -1180,6 +1187,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.30 | 28/11/2026 | Input limits of text, passwords, harvests, device readings, alerts and bird counts in Section 4.5 (audit of validation, `docs/reports/todo-validation-audit-1128.md`) |
 | 4.2.29 | 27/11/2026 | §4.5 adds two typing checks of the mobile app (A-4): the session window limits (morning 05:00–07:00, evening 17:00–19:00) around BR-13, checked on an edited time only, and the 6-digit harvest amounts (HARVEST-FR-001), checked while typing only; neither is checked by the backend or the web |
 | 4.2.28 | 27/11/2026 | BR-36 lists the Work Orders with their photos, maintenance plans and records and recommendations among the data kept for the life of the installation, as the code does; the privacy policy (version 1.2) is rewritten from the permissions of Section 2.4, the retention of BR-36 and the services the system uses |
 | 4.2.27 | 27/11/2026 | OPS-FR-006: a due plan is reminded every day at 07:00 (the technician of its Work Order, and the Farm Owners once it is overdue) until the maintenance is recorded, instead of one notice after 7 days; OPS-FR-008: a preventive Work Order needs at least one photo to be reported done; §4.5 constants `maintenance_remind_days` and the photo minimum; Section 6.19 state row |
