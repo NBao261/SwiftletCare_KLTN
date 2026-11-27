@@ -122,8 +122,15 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Chưa có dữ liệu đếm': 'No count data yet',
   'Thêm camera AI': 'Add an AI camera',
   'Chờ phiên chiều để tính tỷ lệ': 'Waiting for the evening session',
-  '{houses}/{total} nhà đủ dữ liệu': '{houses}/{total} houses with full data',
-  ' · thấp nhất: {house} {rate}': ' · lowest: {house} {rate}',
+  'Tỷ lệ về tổ · {house}': 'Return rate · {house}',
+  'Ra {exit} · Về {entry}': 'Out {exit} · In {entry}',
+  'Chờ phiên chiều': 'Waiting for the evening session',
+  '{farm} · {birds}': '{farm} · {birds}',
+  'Thấp nhất trước': 'Lowest first',
+  'Cao nhất trước': 'Highest first',
+  'Sắp xếp theo tỷ lệ về tổ': 'Sort by return rate',
+  'Xem phân tích {house}': 'View analytics of {house}',
+  'Chọn nhà khác hoặc xem phân tích': 'Choose another house or view analytics',
   'Ngày {date}': 'Date {date}',
 
   // Khung cảnh báo khẩn

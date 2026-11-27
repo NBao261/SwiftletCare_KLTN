@@ -4,6 +4,7 @@ import { preferenceStateStorage } from '@/services/storage/preferenceStorage'
 import type { AlertType, AnalyticsRange } from '@/types'
 import type { VerdictFilter } from '@/utils/alertList.utils'
 import type { BirdPeriod } from '@/utils/analytics.utils'
+import type { ReturnRateOrder } from '@/utils/returnRate.utils'
 import type { SeverityLevel } from '@/utils/severity.utils'
 import type { SensorMetric } from '@/utils/threshold.utils'
 
@@ -53,6 +54,8 @@ export interface FarmPrefs {
   // Tầng đang xem ở Phân tích theo nhà; null là "Tất cả khu vực"
   analyticsZoneIdByHouse?: Record<string, string | null>
   alerts?: Partial<AlertsPrefs>
+  // Thanh tỷ lệ về tổ ở Trang chủ: thấy nhà thấp nhất hay cao nhất trước; chưa chọn thì thấp nhất trước
+  homeReturnRateOrder?: ReturnRateOrder
 }
 
 // Giá trị mặc định dùng chung, đông cứng để selector trả về cùng một object khi chưa có gì
@@ -77,6 +80,7 @@ interface FarmPrefsState {
   setAnalyticsPrefs: (userId: string, change: Partial<AnalyticsPrefs>) => void
   setAnalyticsZone: (userId: string, houseId: string, zoneId: string | null) => void
   setAlertsPrefs: (userId: string, change: Partial<AlertsPrefs>) => void
+  setHomeReturnRateOrder: (userId: string, order: ReturnRateOrder) => void
   markAutoOpened: (farmId: string) => void
 }
 
@@ -147,6 +151,8 @@ export const useFarmPrefsStore = create<FarmPrefsState>()(
         ),
       setAlertsPrefs: (userId, change) =>
         set(state => updatePrefs(state, userId, prefs => ({ alerts: { ...prefs.alerts, ...change } }))),
+      setHomeReturnRateOrder: (userId, order) =>
+        set(state => updatePrefs(state, userId, () => ({ homeReturnRateOrder: order }))),
       markAutoOpened: farmId =>
         set(state =>
           state.autoOpenedFarmIds.includes(farmId) ? state : { autoOpenedFarmIds: [...state.autoOpenedFarmIds, farmId] },

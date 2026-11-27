@@ -42,6 +42,13 @@ describe('farmPrefsStore', () => {
     expect(useFarmPrefsStore.getState().byUserId['user-a'].pinnedHouseIds).toEqual([])
   })
 
+  it('nhớ cách sắp thanh tỷ lệ về tổ của từng tài khoản', () => {
+    useFarmPrefsStore.getState().setHomeReturnRateOrder('user-a', 'highest-first')
+    const { byUserId } = useFarmPrefsStore.getState()
+    expect(byUserId['user-a'].homeReturnRateOrder).toBe('highest-first')
+    expect(byUserId['user-b']).toBeUndefined()
+  })
+
   it('mỗi farm chỉ đánh dấu đã tự mở một lần', () => {
     const { markAutoOpened } = useFarmPrefsStore.getState()
     markAutoOpened('farm-1')
