@@ -156,7 +156,6 @@ const en: Record<string, string> = {
   'Tài khoản đang bị khoá': 'Account is locked',
 
   // Tổng quan hệ thống
-  'Chỉ số vận hành toàn hệ thống': 'System-wide operating metrics',
   'Trang trại hoạt động': 'Active farms',
   'Gồm {{n}} Zone': '{{n}} zones in total',
   'Thiết bị online': 'Devices online',
@@ -169,7 +168,6 @@ const en: Record<string, string> = {
   'Firmware chưa hỗ trợ lệnh này': 'The firmware does not support this command yet',
   'Bộ điều khiển {{device}} khởi động lại và chạy tiếp với cấu hình đã lưu; Chủ nhà yến được báo trong ứng dụng.': 'Controller {{device}} restarts and resumes with its stored configuration; the Farm Owners are notified in the app.',
   '{{n}} bị khoá': '{{n}} locked',
-  'Số liệu trên mọi trang trại': 'Figures across every farm',
   'Chưa có thiết bị': 'No devices yet',
   'Tất cả đang online': 'All online',
   lỗi: 'error',
@@ -180,8 +178,15 @@ const en: Record<string, string> = {
   '{{n}} quá hạn': '{{n}} overdue',
   '{{today}} mới hôm nay · {{waiting}} chờ nhận': '{{today}} new today · {{waiting}} awaiting pickup',
   'Cảnh báo khẩn cấp': 'Critical alerts',
-  'Chủ nhà yến chưa phản hồi': 'Farm Owner has not responded',
-  'Không có cảnh báo mới': 'No new alerts',
+  'Cảnh báo đang mở': 'Open alerts',
+  '{{n}} khẩn cấp': '{{n}} critical',
+  'Không có cảnh báo đang mở': 'No open alert',
+  'Không có cảnh báo khẩn cấp': 'No critical alert',
+  'Thiết bị cần chú ý': 'Devices to check',
+  'Thiết bị chưa online ở mọi trang trại': 'Devices that are not online, on every farm',
+  'Tất cả thiết bị đang online': 'Every device is online',
+  'và {{n}} thiết bị khác': 'and {{n}} more devices',
+  'Không tải được thiết bị': 'Could not load the devices',
   'Không tải được số liệu hệ thống': 'Could not load system metrics',
   // Khoảng thời gian, chỉ số trung bình
   'Khoảng thời gian': 'Time range',
