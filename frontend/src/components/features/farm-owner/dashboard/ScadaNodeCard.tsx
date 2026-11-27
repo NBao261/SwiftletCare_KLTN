@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DropIcon, SpeakerHighIcon, WarningIcon, WindIcon, type Icon } from '@phosphor-icons/react';
+import { DropIcon, HandIcon, SpeakerHighIcon, WindIcon, type Icon } from '@phosphor-icons/react';
 
 import { pumpConfirmAlerts, relayMinutes, type PumpConfirmAlert } from '@/components/features/farm-owner/dashboard/scadaRelay';
 import { Button, Modal } from '@/components/ui';
@@ -13,7 +13,7 @@ import { useToastStore } from '@/stores/toastStore';
 import type { ControlOutput, RelayName, SensorNode } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
-// 3 relay (phun sương, quạt, loa), nhãn dùng chung với khung Phân hệ điều khiển
+// 3 relay (phun sương, quạt, loa), nhãn dùng chung với khung Trạng thái điều khiển
 const RELAYS: Array<{ key: Extract<RelayName, 'misting' | 'ventilation' | 'speaker'>; labelKey: 'relay.misting' | 'relay.ventilation' | 'relay.speaker'; icon: Icon }> = [
   { key: 'misting', labelKey: 'relay.misting', icon: DropIcon },
   { key: 'ventilation', labelKey: 'relay.ventilation', icon: WindIcon },
@@ -42,7 +42,7 @@ interface ScadaNodeCardProps {
   overriddenRelays?: ReadonlySet<RelayName>;
 }
 
-// 1 Zone một hàng (FO-02): tên Zone · chế độ, 3 rơ-le với nút bật/tắt có thời hạn; chỉ vẽ bộ điều khiển online
+// 1 Zone một thẻ: tên Zone và chế độ ở đầu, 3 ô rơ-le (trạng thái, nguồn lệnh, nút Bật hoặc Tắt); chỉ vẽ bộ điều khiển online
 export default function ScadaNodeCard({ node, zoneLabel, controlOutput, durationMinutes, durationText, overriddenRelays }: ScadaNodeCardProps): JSX.Element {
   const { t, hourMinute, dateTime } = useTranslation(dashboardDict);
   const controlRelay = useControlRelay();
@@ -52,6 +52,9 @@ export default function ScadaNodeCard({ node, zoneLabel, controlOutput, duration
   const [pendingRelay, setPendingRelay] = useState<RelayName | null>(null);
   const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
   const isManual = node.control_mode === 'MANUAL';
+  // Nút về tự động riêng từng rơ-le chỉ cần khi có nhiều hơn 1 rơ-le bị giữ tay; 1 rơ-le thì nút ở đầu thẻ đã đủ
+  const canReleaseEach = (overriddenRelays?.size ?? 0) > 1;
+  const manualUntil = node.override_expiry ? hourMinute(node.override_expiry) : NO_VALUE;
 
   // Thời hạn thật của nút: bật bơm tối đa 30 phút, còn lại theo thời hạn đang chọn
   function relayDuration(relay: RelayName, turnOn: boolean): { minutes: number; label: string } {
@@ -101,69 +104,76 @@ export default function ScadaNodeCard({ node, zoneLabel, controlOutput, duration
   }
 
   return (
-    <div className="grid gap-4 rounded-2xl border border-warmGray/15 p-4 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
-      {/* Trái: Zone, bộ điều khiển, chế độ; đang điều khiển tay thì kèm giờ tự về và nút về tự động ngay */}
-      <div className="flex min-w-0 flex-col gap-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="min-w-0 truncate text-h3 text-charcoal" title={zoneLabel}>{zoneLabel}</h3>
-          <span className={cn('rounded-full px-2.5 py-0.5 text-small font-semibold', isManual ? 'bg-statusYellow/70 text-charcoal' : 'bg-warmGray/15 text-graphite')}>
-            {isManual ? t('scada.modeManual') : t('scada.modeAuto')}
-          </span>
+    <section className="flex flex-col gap-4 rounded-2xl border border-warmGray/15 p-5" aria-label={zoneLabel}>
+      {/* Đầu thẻ: Zone, bộ điều khiển; chế độ ở bên phải, đang điều khiển tay thì có nút về tự động cả thiết bị */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-h3 text-charcoal" title={zoneLabel}>{zoneLabel}</h3>
+          <p className="flex items-center gap-2 text-small text-warmGray">
+            {node.device_id}
+            <SimulatedBadge simulated={node.simulated} />
+          </p>
         </div>
-        <p className="flex items-center gap-2 text-small text-warmGray">
-          {node.device_id}
-          <SimulatedBadge simulated={node.simulated} />
-        </p>
-        {isManual && (
-          <>
-            <p className="flex items-start gap-1.5 text-small text-charcoal">
-              <WarningIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-safetyOrange" aria-hidden="true" />
-              {t('scada.manualUntil', { time: node.override_expiry ? hourMinute(node.override_expiry) : NO_VALUE })}
-            </p>
-            <Button variant="secondary" size="sm" className="self-start" loading={clearOverride.isPending && pendingRelay === null} onClick={() => handleBackToAuto()}>
+        {isManual ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-statusYellow/70 px-3 py-1 text-small font-semibold text-charcoal">
+              <HandIcon size={14} weight="bold" aria-hidden />
+              {t('scada.manualUntil', { time: manualUntil })}
+            </span>
+            <Button variant="secondary" size="sm" loading={clearOverride.isPending && pendingRelay === null} onClick={() => handleBackToAuto()}>
               {t('scada.backToAuto')}
             </Button>
-          </>
+          </div>
+        ) : (
+          <span className="rounded-full bg-warmGray/15 px-3 py-1 text-small font-semibold text-graphite">{t('scada.modeAuto')}</span>
         )}
       </div>
 
-      {/* Phải: 3 rơ-le, mỗi ô: tên · trạng thái · nút bật/tắt theo thời hạn đang chọn */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {/* 3 ô rơ-le: biểu tượng, tên, BẬT/TẮT lớn, nguồn lệnh, nút */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {RELAYS.map(relay => {
           const RelayIcon = relay.icon;
           const isOn = node.relay_states[relay.key];
           const output = relay.key === 'misting' || relay.key === 'ventilation' ? controlOutput?.[relay.key] : undefined;
-          const { minutes, label } = relayDuration(relay.key, !isOn);
-          const isCapped = minutes < durationMinutes;
+          const { minutes } = relayDuration(relay.key, !isOn);
+          const isCapped = !isOn && minutes < durationMinutes;
+          const isHeld = isManual && overriddenRelays?.has(relay.key);
           return (
-            <div key={relay.key} className="flex flex-col gap-2 rounded-xl bg-warmGray/5 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex min-w-0 items-center gap-2 text-body font-semibold text-charcoal">
-                  <RelayIcon size={16} className="shrink-0" aria-hidden="true" />
-                  <span className="truncate">{t(relay.labelKey)}</span>
+            <div key={relay.key} className={cn('flex flex-col gap-3 rounded-2xl border p-4 transition-colors', isOn ? 'border-accent-600/60 bg-accent-600/10' : 'border-warmGray/15 bg-white')}>
+              <div className="flex items-center gap-3">
+                <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', isOn ? 'bg-accent-600 text-charcoal' : 'bg-warmGray/10 text-warmGray')}>
+                  <RelayIcon size={20} aria-hidden />
                 </span>
-                <span className={cn('shrink-0 rounded-full px-2 py-px text-small font-semibold', isOn ? 'bg-accent-600 text-charcoal' : 'bg-warmGray/15 text-warmGray')}>
-                  {isOn ? t('relay.on') : t('relay.off')}
-                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-small font-semibold text-graphite">{t(relay.labelKey)}</p>
+                  <p className={cn('text-2xl font-extrabold leading-none', isOn ? 'text-charcoal' : 'text-warmGray')}>{isOn ? t('relay.on') : t('relay.off')}</p>
+                </div>
               </div>
-              {output !== undefined && !isManual && <p className="text-small text-warmGray">{t('scada.output', { percent: output })}</p>}
-              {isCapped && <p className="text-small text-warmGray">{t('scada.pumpCap', { n: minutes })}</p>}
+
+              {/* Nguồn lệnh: tay (kèm giờ tự về) hoặc tự động (kèm công suất khi có) */}
+              <p className="min-h-5 text-small text-warmGray">
+                {isHeld
+                  ? <span className="font-semibold text-charcoal">{t('scada.sourceManual')}</span>
+                  : (output !== undefined && !isManual ? t('scada.autoOutput', { percent: output }) : t('scada.modeAuto'))}
+              </p>
+
               <Button
-                variant="secondary"
+                variant={isOn ? 'secondary' : 'primary'}
                 size="sm"
                 className="mt-auto w-full"
                 disabled={controlRelay.isPending && pendingRelay !== relay.key}
                 loading={controlRelay.isPending && pendingRelay === relay.key}
                 onClick={() => handleSetRelay(relay.key, relay.labelKey, !isOn)}
               >
-                {isOn ? t('scada.turnOff', { duration: label }) : t('scada.turnOn', { duration: label })}
+                {isOn ? t('scada.turnOffShort') : t('scada.turnOnShort')}
               </Button>
-              {isManual && overriddenRelays?.has(relay.key) && (
+              {isCapped && <p className="-mt-1 text-small text-warmGray">{t('scada.pumpCapShort', { n: minutes })}</p>}
+              {isHeld && canReleaseEach && (
                 <button
                   type="button"
                   disabled={clearOverride.isPending}
                   onClick={() => handleBackToAuto({ key: relay.key, labelKey: relay.labelKey })}
-                  className="self-start text-small font-semibold text-graphite underline underline-offset-4 hover:text-charcoal disabled:cursor-not-allowed disabled:opacity-50 max-sm:min-h-11"
+                  className="-mt-1 self-start text-small font-semibold text-graphite underline underline-offset-4 hover:text-charcoal disabled:cursor-not-allowed disabled:opacity-50 max-sm:min-h-11"
                 >
                   {t('scada.relayToAuto')}
                 </button>
@@ -200,6 +210,6 @@ export default function ScadaNodeCard({ node, zoneLabel, controlOutput, duration
           </div>
         )}
       </Modal>
-    </div>
+    </section>
   );
 }

@@ -6,6 +6,7 @@ import ScopeFilter from '@/components/common/ScopeFilter';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import DisagreementsSection from '@/components/common/DisagreementsSection';
 import HealthDayDrawer from '@/components/features/farm-owner/health/HealthDayDrawer';
+import HealthDayOverview from '@/components/features/farm-owner/health/HealthDayOverview';
 import HealthDayTable from '@/components/features/farm-owner/health/HealthDayTable';
 import HealthLevelsModal from '@/components/common/HealthLevelsModal';
 import HealthRatingModal from '@/components/features/farm-owner/health/HealthRatingModal';
@@ -179,18 +180,10 @@ export default function FarmOwnerHealthPage(): JSX.Element {
             </div>
           }
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {canRate ? (
-              <div className="flex flex-wrap gap-2">
-                <FilterChip active={!isToRateOnly} label={t('filter.all')} onClick={() => setIsToRateOnly(false)} />
-                <FilterChip active={isToRateOnly} label={t('filter.toRate', { n: pendingDays.length })} onClick={() => setIsToRateOnly(true)} />
-              </div>
-            ) : <span />}
-            <div className="flex flex-wrap gap-2">
-              {RANGE_DAYS.map(value => (
-                <FilterChip key={value} active={rangeDays === value} label={t(`filter.days${value}`)} onClick={() => setRangeDays(value)} />
-              ))}
-            </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            {RANGE_DAYS.map(value => (
+              <FilterChip key={value} active={rangeDays === value} label={t(`filter.days${value}`)} onClick={() => setRangeDays(value)} />
+            ))}
           </div>
 
           {/* Đang tải: LoadingSkeleton (FE_Design 13.5); rỗng: khung viền đứt chứa hình minh hoạ bảng */}
@@ -202,15 +195,36 @@ export default function FarmOwnerHealthPage(): JSX.Element {
               description={apiErrorMessage(error)}
               action={<Button variant="secondary" size="sm" onClick={refetch}>{t('page.retry')}</Button>}
             />
-          ) : shownDays.length === 0 ? (
+          ) : days.length === 0 ? (
             <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12">
-              <TableEmptyState
-                title={isToRateOnly ? t('table.emptyToRateTitle') : t('table.emptyTitle')}
-                description={isToRateOnly ? t('table.emptyToRateHint') : t('table.emptyHint')}
-              />
+              <TableEmptyState title={t('table.emptyTitle')} description={t('table.emptyHint')} />
             </div>
           ) : (
-            <HealthDayTable days={shownDays} canRate={canRate} onRate={openRating} onView={openView} />
+            <>
+              <HealthDayOverview days={days} from={from} to={to} canRate={canRate} onRate={openRating} onView={openView} />
+
+              {/* Bảng đầy đủ các ngày: gập lại để trang không lặp dải ô ngày */}
+              <details className="group rounded-2xl border border-warmGray/15">
+                <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-5 py-3 text-sm font-semibold text-charcoal">
+                  {t('overview.tableToggle', { n: days.length })}
+                </summary>
+                <div className="flex flex-col gap-4 px-5 pb-5">
+                  {canRate && (
+                    <div className="flex flex-wrap gap-2">
+                      <FilterChip active={!isToRateOnly} label={t('filter.all')} onClick={() => setIsToRateOnly(false)} />
+                      <FilterChip active={isToRateOnly} label={t('filter.toRate', { n: pendingDays.length })} onClick={() => setIsToRateOnly(true)} />
+                    </div>
+                  )}
+                  {shownDays.length === 0 ? (
+                    <div className="flex items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-10">
+                      <TableEmptyState title={t('table.emptyToRateTitle')} description={t('table.emptyToRateHint')} />
+                    </div>
+                  ) : (
+                    <HealthDayTable days={shownDays} canRate={canRate} onRate={openRating} onView={openView} />
+                  )}
+                </div>
+              </details>
+            </>
           )}
         </SectionCard>
       ) : tab === 'report' ? (

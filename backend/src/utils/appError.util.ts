@@ -13,9 +13,10 @@ export class AppError extends Error {
 }
 
 export const NotFoundError   = (message: string): AppError => new AppError(404, 'NOT_FOUND', message)
-export const ForbiddenError  = (message: string): AppError => new AppError(403, 'FORBIDDEN', message)
-export const ConflictError   = (message: string): AppError => new AppError(409, 'CONFLICT', message)
-export const BadRequestError = (message: string): AppError => new AppError(400, 'BAD_REQUEST', message)
+// code riêng cho lỗi mà màn hình cần nói đúng lý do (VD thiết lập thiết bị)
+export const ForbiddenError  = (message: string, code = 'FORBIDDEN'): AppError => new AppError(403, code, message)
+export const ConflictError   = (message: string, code = 'CONFLICT'): AppError => new AppError(409, code, message)
+export const BadRequestError = (message: string, code = 'BAD_REQUEST'): AppError => new AppError(400, code, message)
 export const UnauthorizedError = (message: string): AppError => new AppError(401, 'UNAUTHORIZED', message)
 // Phía còn lại (VD firmware) chưa hỗ trợ
 export const NotImplementedError = (message: string): AppError => new AppError(501, 'NOT_IMPLEMENTED', message)

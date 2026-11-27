@@ -10,7 +10,7 @@ import { createAlert } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
 import { LOAD_OF_EQUIPMENT } from '@/services/maintenanceRecord.service'
 import { findRecipients, notifyUser } from '@/services/notification.service'
-import { cancelPlanWorkOrders, openPreventiveWorkOrder } from '@/services/workOrder.service'
+import { cancelPlanWorkOrders, openPreventiveWorkOrder, remindPreventiveWorkOrder } from '@/services/workOrder.service'
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import {
   assertFarmAccess, assertHouseAccess, listAccessibleFarmIds, listAssignedHouseIds,
@@ -192,6 +192,8 @@ async function markDue(plan: IMaintenancePlan, now: Date): Promise<void> {
   if (plan.state !== 'SCHEDULED') return
   plan.state = 'DUE'
   plan.due_since = now
+  // Phiếu vừa mở đã báo người nhận, nhắc từ ngày hôm sau
+  plan.last_reminder_at = now
   await plan.save()
 }
 
@@ -243,7 +245,7 @@ async function checkCalendarPlan(plan: IMaintenancePlan, now: Date): Promise<num
   return (await openPreventiveWorkOrder({ plan, title, description: message, alertId: alert?._id })) ? 1 : 0
 }
 
-// Báo đúng 1 lần
+// Lần đầu quá hạn báo Farm Owner ngay; các ngày sau do remindDuePlans nhắc
 async function escalateOverdue(now: Date): Promise<number> {
   const plans = await MaintenancePlan.find({
     state: 'DUE', due_since: { $lte: new Date(now.getTime() - MAINTENANCE_GRACE_DAYS * DAY_MS) }, overdue_notified_at: null,
@@ -251,7 +253,7 @@ async function escalateOverdue(now: Date): Promise<number> {
   let notified = 0
   for (const plan of plans) {
     const { modifiedCount } = await MaintenancePlan.updateOne(
-      { _id: plan._id, state: 'DUE', overdue_notified_at: null }, { $set: { state: 'OVERDUE', overdue_notified_at: now } },
+      { _id: plan._id, state: 'DUE', overdue_notified_at: null }, { $set: { state: 'OVERDUE', overdue_notified_at: now, last_reminder_at: now } },
     )
     if (modifiedCount === 0) continue
     const owners = await findRecipients(String(plan.farm_id))
@@ -262,6 +264,42 @@ async function escalateOverdue(now: Date): Promise<number> {
     notified++
   }
   return notified
+}
+
+const startOfVnDay = (now: Date): Date => new Date(endOfVnDay(now).getTime() - DAY_MS)
+
+// Mỗi ngày một lần cho tới khi ghi bảo trì: người giữ phiếu (Farm Owner nếu nhà chưa có thợ), thêm Farm Owner khi đã quá hạn
+async function remindDuePlans(now: Date): Promise<number> {
+  const today = startOfVnDay(now)
+  const notRemindedToday = { $or: [{ last_reminder_at: null }, { last_reminder_at: { $lt: today } }] }
+  const plans = await MaintenancePlan.find({ state: { $in: ['DUE', 'OVERDUE'] }, ...notRemindedToday })
+  let reminded = 0
+  for (const plan of plans) {
+    try {
+      // Hai lượt chạy cùng lúc không nhắc hai lần
+      const { modifiedCount } = await MaintenancePlan.updateOne(
+        { _id: plan._id, state: { $in: ['DUE', 'OVERDUE'] }, ...notRemindedToday }, { $set: { last_reminder_at: now } },
+      )
+      if (modifiedCount === 0) continue
+      const days = Math.max(1, Math.floor((now.getTime() - (plan.due_since ?? now).getTime()) / DAY_MS))
+      const orders = await WorkOrder.find({ plan_id: plan._id, kind: 'PREVENTIVE', is_open: true })
+      // Không còn phiếu nào đang mở (đã huỷ, hay chưa mở được): nhắc thẳng Farm Owner để kế hoạch không im lặng
+      if (orders.length === 0) {
+        const owners = await findRecipients(String(plan.farm_id))
+        await Promise.all(owners.map(o => notifyUser(String(o._id), {
+          title: `Nhắc bảo trì: ${EQUIPMENT_LABEL[plan.equipment]}`, body: `Đã đến hạn ${days} ngày mà chưa ghi bảo trì và chưa có phiếu công việc nào đang mở.`,
+        })))
+        reminded++
+      }
+      for (const order of orders) {
+        await remindPreventiveWorkOrder(order, plan.state === 'OVERDUE', `Nhắc bảo trì: ${order.title}`, `Đã đến hạn ${days} ngày mà chưa ghi bảo trì.`)
+        reminded++
+      }
+    } catch (err) {
+      logger.error('Nhắc kế hoạch bảo trì thất bại', { planId: String(plan._id), err })
+    }
+  }
+  return reminded
 }
 
 // calendar: lượt 07:00
@@ -278,7 +316,10 @@ export async function checkDuePlans(now = new Date(), opts: { calendar?: boolean
       logger.error('Kiểm tra kế hoạch bảo trì thất bại', { planId: String(plan._id), err })
     }
   }
-  return { opened, overdue: await escalateOverdue(now) }
+  const overdue = await escalateOverdue(now)
+  // Nhắc một lần mỗi ngày, ở lượt 07:00
+  const reminded = opts.calendar ? await remindDuePlans(now) : 0
+  return { opened, overdue, reminded }
 }
 
 // Mẫu số chỉ gồm cái đã đóng hoặc quá hạn chót; bị huỷ không tính. null khi không có

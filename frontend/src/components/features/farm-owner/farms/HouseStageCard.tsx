@@ -7,6 +7,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { useSetHouseStage } from '@/hooks/shared/useFarms'
 import { cn } from '@/lib/cn'
 import { useToastStore } from '@/stores/toastStore'
+import { NO_VALUE } from '@/constants/display'
 import type { House, HouseStage } from '@/types'
 
 const STAGES: HouseStage[] = ['ATTRACTING', 'OCCUPIED']
@@ -22,6 +23,8 @@ export default function HouseStageCard({ house, canEdit }: { house: House; canEd
   const current = house.stage ?? 'OCCUPIED'
   const history = house.stage_history ?? []
   const lastChange = history[history.length - 1]?.changed_at
+  // Mức giảm tỷ lệ chim về do chuyên gia đặt cho cả nhà, chủ nhà yến chỉ xem
+  const returnRateDrop = house.bird_count_tuning?.return_rate_drop_pct
 
   function handleConfirm(): void {
     if (!target) return
@@ -35,7 +38,7 @@ export default function HouseStageCard({ house, canEdit }: { house: House; canEd
   }
 
   return (
-    <FarmFrame title={t('stage.title')} description={t('stage.desc')}>
+    <FarmFrame title={t('stage.title')} help={t('stage.desc')}>
       <div role="radiogroup" aria-label={t('stage.title')} className="grid grid-cols-2 gap-2">
         {STAGES.map(stage => {
           const isActive = stage === current
@@ -61,7 +64,17 @@ export default function HouseStageCard({ house, canEdit }: { house: House; canEd
         })}
       </div>
       {/* mt-auto: dòng cuối nằm sát đáy khi thẻ cao bằng thẻ bên cạnh */}
-      <p className="mt-auto text-xs italic text-warmGray">{lastChange ? t('stage.lastChange', { date: date(lastChange) }) : t('stage.neverChanged')}</p>
+      <p className="text-xs italic text-warmGray">{lastChange ? t('stage.lastChange', { date: date(lastChange) }) : t('stage.neverChanged')}</p>
+
+      <div className="mt-auto flex items-center justify-between gap-4 border-t border-warmGray/15 pt-4">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-charcoal">{t('tuning.birdDrop')}</p>
+          <p className="text-xs text-warmGray">{t('tuning.birdDropHint')} · {t('tuning.birdBy')}</p>
+        </div>
+        <p className={cn('shrink-0 text-2xl font-extrabold leading-none tracking-tight', returnRateDrop === undefined ? 'text-warmGray' : 'text-charcoal')}>
+          {returnRateDrop === undefined ? NO_VALUE : `${returnRateDrop}%`}
+        </p>
+      </div>
 
       <ConfirmModal
         open={!!target}

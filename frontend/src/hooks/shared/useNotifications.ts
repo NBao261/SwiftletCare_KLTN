@@ -6,11 +6,11 @@ import { useToastStore } from '@/stores/toastStore'
 
 const NOTIFICATIONS_KEY = ['notifications']
 
-// hộp thông báo trong ứng dụng, tải thêm khi cuộn
-export function useNotificationsInfinite(pageSize: number, enabled: boolean) {
+// hộp thông báo trong ứng dụng, tải thêm khi cuộn; unreadOnly: chỉ thông báo chưa đọc
+export function useNotificationsInfinite(pageSize: number, enabled: boolean, unreadOnly = false) {
   return useInfiniteQuery({
-    queryKey: [...NOTIFICATIONS_KEY, 'infinite', pageSize],
-    queryFn: ({ pageParam }) => notificationApi.list({ page: pageParam, limit: pageSize }).then(response => response.data),
+    queryKey: [...NOTIFICATIONS_KEY, 'infinite', pageSize, unreadOnly],
+    queryFn: ({ pageParam }) => notificationApi.list({ page: pageParam, limit: pageSize, unread: unreadOnly ? true : undefined }).then(response => response.data),
     enabled,
     initialPageParam: 1,
     getNextPageParam: (lastPage, pages) => {

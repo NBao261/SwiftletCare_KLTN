@@ -37,7 +37,7 @@ export default function AuditLogFilters({ table }: { table: AuditLogTableState }
       </div>
       {actors.truncated && (
         <p className="text-xs text-warmGray">
-          {t('Ô "người thực hiện" chỉ liệt kê {{shown}}/{{total}} tài khoản đầu tiên (giới hạn 1 trang của /admin/users).', { shown: actors.records.length, total: actors.total })}
+          {t('Ô "người thực hiện" chỉ liệt kê {{shown}}/{{total}} tài khoản đầu tiên.', { shown: actors.records.length, total: actors.total })}
         </p>
       )}
     </div>

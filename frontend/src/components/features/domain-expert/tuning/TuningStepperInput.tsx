@@ -35,13 +35,13 @@ export default function TuningStepperInput({
 
   return (
     <div className={cn(
-      'flex items-center justify-between gap-3 py-2.5 px-0 border-b border-stone-100 last:border-b-0 transition-colors duration-300',
-      highlighted && 'bg-[#ECFFA9]/40 rounded-lg px-2 -mx-2',
+      'flex items-center justify-between gap-3 py-2.5 transition-colors duration-300',
+      highlighted && '-mx-2 rounded-lg bg-accent-50 px-2',
     )}>
       {/* "Phạm vi · Mặc định" ở nút (i) đầu khối (TuningRangeTip), ô chỉ còn nhãn và dòng phụ */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-charcoal leading-tight">{label}</p>
-        {subLabel && <p className="text-small text-warmGray mt-0.5 italic">{t(subLabel)}</p>}
+        <p className="text-sm font-medium leading-tight text-charcoal">{label}</p>
+        {subLabel && <p className="mt-0.5 text-small italic text-warmGray">{t(subLabel)}</p>}
       </div>
 
       {/* Stepper control */}

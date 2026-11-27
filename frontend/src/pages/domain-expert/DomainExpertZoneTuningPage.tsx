@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight, MapPin } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { useToastStore } from '@/stores/toastStore';
 import { t } from '@/i18n';
@@ -27,7 +27,7 @@ import { usePermission } from '@/hooks/common/usePermission';
 
 // Ngưỡng & hệ số mờ: nơi duy nhất sửa ngưỡng và hệ số mờ của một Zone trên web
 export default function DomainExpertZoneTuningPage() {
-  const { selectedFarmId, selectedZoneId, selectedZoneName } = useZoneStore();
+  const { selectedFarmId, selectedZoneId } = useZoneStore();
   const zoneId = selectedZoneId ?? undefined;
   const push = useToastStore(state => state.push);
   const apiErrorMessage = useApiErrorMessage();
@@ -118,50 +118,24 @@ export default function DomainExpertZoneTuningPage() {
   }
 
   return (
-    <div className="relative w-full flex-1 flex flex-col gap-6">
-      <div className="w-full max-w-screen-xl mx-auto space-y-6">
-        {/* Zone đang sửa: đặt rõ trên đầu để không sửa nhầm Zone */}
-        {selectedZoneName && (
-          <p className="inline-flex items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-sm font-semibold text-charcoal">
-            <MapPin className="h-4 w-4 shrink-0 text-accent-700" aria-hidden />
-            {t('Đang chỉnh Zone {{zone}}', { zone: selectedZoneName })}
-          </p>
-        )}
+    <div className="relative flex w-full flex-1 flex-col gap-6">
+      {/* Zone đang sửa nằm ở bộ lọc trên header; đề xuất chờ duyệt là việc cần làm nên giữ một dòng */}
+      {pendingProposalsCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-climateOrange/10 px-4 py-3 text-sm text-charcoal">
+          <span className="flex items-center gap-2.5">
+            <Sparkles className="h-4 w-4 shrink-0 text-climateOrange" />
+            {t('Zone này có {{n}} đề xuất hệ số mờ của chủ nhà yến đang chờ chuyên gia duyệt.', { n: pendingProposalsCount })}
+          </span>
+          <Link to="/domain-expert/reviews" className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline">
+            {t('Xem đề xuất')}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      )}
 
-        {pendingProposalsCount > 0 && (
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-sm">
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>{t('Zone này có {{n}} đề xuất hệ số mờ của chủ nhà yến đang chờ chuyên gia duyệt.', { n: pendingProposalsCount })}</span>
-            </div>
-            <Link
-              to="/domain-expert/reviews"
-              className="flex items-center gap-1 font-semibold text-amber-800 hover:text-amber-950 underline px-3 py-1 rounded-lg bg-amber-100/60 hover:bg-amber-100 transition-colors"
-            >
-              <span>{t('Xem đề xuất')}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        )}
-
-        {/* key theo Zone: đổi Zone thì khối dựng lại, không mang số chưa lưu của Zone trước sang Zone mới */}
-        <fieldset disabled={!canEditParameters} className="contents">
-          <FuzzyTuningColumn
-            key={zoneId ?? 'none'}
-            ref={fuzzyRef}
-            data={fuzzy.data}
-            isLoading={fuzzy.isLoading}
-            isSaving={updateFuzzy.isPending}
-            onSave={changed => notify(updateFuzzy.mutateAsync(changed), 'Đã lưu hệ số mờ')}
-            onDirtyChange={onFuzzyDirty}
-            suggestion={suggestion.data}
-            isSuggestionLoading={suggestion.isLoading}
-            suggestionAction={suggestionAction}
-            showSuggestion={!isTechnician}
-          />
-        </fieldset>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      {/* key theo Zone: đổi Zone thì khối dựng lại, không mang số chưa lưu của Zone trước sang Zone mới */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-6">
           <fieldset disabled={!canEditParameters} className="contents">
             <ThresholdColumn
               key={zoneId ?? 'none'}
@@ -173,6 +147,37 @@ export default function DomainExpertZoneTuningPage() {
               onSave={values => notify(updateThresholds.mutateAsync(values), 'Đã lưu ngưỡng môi trường')}
               onReset={() => notify(resetThresholds.mutateAsync(), 'Đã khôi phục ngưỡng mặc định')}
               onDirtyChange={onThresholdDirty}
+            />
+          </fieldset>
+
+          <fieldset disabled={!canEditParameters} className="contents">
+            <ReturnRateDropCard
+              ref={returnRateRef}
+              houseName={house?.name}
+              value={house?.bird_count_tuning?.return_rate_drop_pct}
+              isSaving={returnRateDrop.update.isPending}
+              isResetting={returnRateDrop.reset.isPending}
+              onDirtyChange={onReturnRateDirty}
+              onSave={value => house && notify(returnRateDrop.update.mutateAsync({ houseId: house._id, value }), 'Đã lưu mức giảm tỷ lệ chim về của nhà')}
+              onReset={() => house && notify(returnRateDrop.reset.mutateAsync(house._id), 'Đã khôi phục mức giảm tỷ lệ chim về mặc định')}
+            />
+          </fieldset>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-6">
+          <fieldset disabled={!canEditParameters} className="contents">
+            <FuzzyTuningColumn
+              key={zoneId ?? 'none'}
+              ref={fuzzyRef}
+              data={fuzzy.data}
+              isLoading={fuzzy.isLoading}
+              isSaving={updateFuzzy.isPending}
+              onSave={changed => notify(updateFuzzy.mutateAsync(changed), 'Đã lưu hệ số mờ')}
+              onDirtyChange={onFuzzyDirty}
+              suggestion={suggestion.data}
+              isSuggestionLoading={suggestion.isLoading}
+              suggestionAction={suggestionAction}
+              showSuggestion={!isTechnician}
             />
           </fieldset>
 
@@ -191,24 +196,11 @@ export default function DomainExpertZoneTuningPage() {
             />
           </fieldset>
         </div>
-
-        <fieldset disabled={!canEditParameters} className="contents">
-          <ReturnRateDropCard
-            ref={returnRateRef}
-            houseName={house?.name}
-            value={house?.bird_count_tuning?.return_rate_drop_pct}
-            isSaving={returnRateDrop.update.isPending}
-            isResetting={returnRateDrop.reset.isPending}
-            onDirtyChange={onReturnRateDirty}
-            onSave={value => house && notify(returnRateDrop.update.mutateAsync({ houseId: house._id, value }), 'Đã lưu mức giảm tỷ lệ chim về của nhà')}
-            onReset={() => house && notify(returnRateDrop.reset.mutateAsync(house._id), 'Đã khôi phục mức giảm tỷ lệ chim về mặc định')}
-          />
-        </fieldset>
       </div>
 
       {/* Thanh lưu dính đáy chung cho 4 khối, nằm trên dock ở điện thoại; mỗi khối tự validate và gọi API của mình */}
       {totalDirty > 0 && (
-        <div className="sticky bottom-4 z-10 mx-auto flex w-full max-w-screen-xl items-center justify-between gap-3 rounded-2xl border border-warmGray/15 bg-white px-4 py-3 shadow-dock max-lg:bottom-24">
+        <div className="sticky bottom-4 z-10 flex w-full items-center justify-between gap-3 rounded-2xl border border-warmGray/15 bg-white px-4 py-3 shadow-dock max-lg:bottom-24">
           <span className="text-sm font-medium text-charcoal">
             {t('{{n}} thay đổi', { n: totalDirty })}
           </span>

@@ -1,7 +1,8 @@
 import { useEffect, useState, forwardRef, useImperativeHandle } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react'
+import { Button, SectionCard } from '@/components/ui'
 import TuningStepperInput from '@/components/features/domain-expert/tuning/TuningStepperInput'
-import TuningRangeTip from '@/components/features/domain-expert/tuning/TuningRangeTip'
+import { TuningRangeList } from '@/components/features/domain-expert/tuning/TuningRangeTip'
 import type { TuningBlockHandle } from '@/components/features/domain-expert/tuning/tuning.utils'
 import { t } from '@/i18n'
 
@@ -36,28 +37,18 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
   }))
 
   return (
-    <div className="flex flex-col gap-3 bg-white rounded-2xl p-5 border border-stone-200/80 shadow-2xs">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100">
-        <div>
-          <h3 className="flex items-center gap-1 text-base font-bold text-charcoal">
-            {t('4. Mức giảm tỷ lệ chim về của nhà')}
-            {houseName && (
-              <TuningRangeTip hints={[{ label: t('Ngưỡng sụt giảm tỷ lệ chim về'), range: 'Phạm vi: 5–50%', defaultValue: `Mặc định: ${DEFAULT_RETURN_RATE_DROP_PCT}%` }]} />
-            )}
-          </h3>
-          <p className="text-small text-warmGray mt-0.5">
-            {houseName ? t('Áp cho cả nhà "{{house}}": cảnh báo khi tỷ lệ chim về giảm', { house: houseName }) : t('Chọn một Zone để biết nhà cần chỉnh')}
-          </p>
-        </div>
-        {houseName && (
-          <button type="button" onClick={onReset} disabled={isResetting}
-            className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-stone-500 hover:bg-warmGray/10 hover:text-charcoal whitespace-nowrap shrink-0 transition-colors disabled:opacity-50 max-sm:h-11">
-            <RotateCcw className="w-3.5 h-3.5" />
-            {t('Khôi phục mặc định')}
-          </button>
-        )}
-      </div>
-
+    <SectionCard
+      title={t('Mức giảm tỷ lệ chim về của nhà')}
+      description={houseName ? t('Áp cho cả nhà "{{house}}": cảnh báo khi tỷ lệ chim về giảm', { house: houseName }) : t('Chọn một Zone để biết nhà cần chỉnh')}
+      help={houseName
+        ? <TuningRangeList hints={[{ label: t('Ngưỡng sụt giảm tỷ lệ chim về'), range: 'Phạm vi: 5–50%', defaultValue: `Mặc định: ${DEFAULT_RETURN_RATE_DROP_PCT}%` }]} />
+        : undefined}
+      action={houseName && (
+        <Button variant="icon" size="sm" onClick={onReset} disabled={isResetting} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>
+            <ArrowCounterClockwiseIcon size={16} weight="bold" />
+          </Button>
+      )}
+    >
       {/* Nút Lưu chung ở thanh dính đáy của trang */}
       {houseName && (
         <fieldset disabled={isSaving} className="contents">
@@ -65,7 +56,7 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
             onChange={setDraft} min={5} max={50} step={5} unit="%" />
         </fieldset>
       )}
-    </div>
+    </SectionCard>
   )
 })
 

@@ -3,14 +3,18 @@ import { useBreadcrumbStore, type Crumb } from '@/stores/breadcrumbStore'
 import { useHeaderSlotStore } from '@/stores/headerSlotStore'
 import { cn } from '@/lib/cn'
 import { useNavigationLabel } from '@/hooks/common/useNavigationLabel'
+import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import { activeTabPath, isMenuItemActive } from '@/lib/menuMatch'
 import NotificationPopover from '@/components/common/NotificationPopover'
 import ProfilePopover from '@/components/common/ProfilePopover'
 import LanguageToggle from '@/components/common/LanguageToggle'
 
-// Trang không nằm trên sidebar mà mở từ menu avatar (SH-03): Cài đặt và Quyền riêng tư
-const AVATAR_MENU_PAGES: Pick<MenuItem, 'label' | 'path' | 'tabs'>[] = [{ label: 'Cài đặt', path: '/settings' }]
+// Trang không nằm trên sidebar: Cài đặt (và Quyền riêng tư) mở từ menu avatar, Thông báo mở từ chuông
+const AVATAR_MENU_PAGES: Pick<MenuItem, 'label' | 'path' | 'tabs'>[] = [
+  { label: 'Cài đặt', path: '/settings' },
+  { label: 'Thông báo', path: '/notifications' },
+]
 
 // Tên trang + base path theo route hiện tại, tra trong chính menu của role đang đăng nhập.
 function usePageTitle(menuSections: MenuSection[]): { label: string; to: string } {
@@ -28,11 +32,14 @@ function usePageTitle(menuSections: MenuSection[]): { label: string; to: string 
 // `elevated` = nội dung đang cuộn bên dưới header → hiện viền mờ để tách header khỏi nội dung
 export default function AppHeader({ menuSections, elevated = false }: { menuSections: MenuSection[]; elevated?: boolean }) {
   const setHeaderSlot = useHeaderSlotStore(state => state.setSlot)
+  const setTitleSlot = useHeaderSlotStore(state => state.setTitleSlot)
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const page = usePageTitle(menuSections)
   const registeredTrail = useBreadcrumbStore(s => s.trail)
   const rootState = useBreadcrumbStore(s => s.rootState)
+  // Tab trình duyệt ghi trang đang xem: mục con (VD tên nhà, Zone) trước, tên trang sau
+  useDocumentTitle(registeredTrail.at(-1)?.label, page.label === 'SwiftletCare' ? undefined : page.label)
 
   // Chỉ trang tự đăng ký breadcrumb (VD Farms drill-down) mới có cấp con
   const trail: Crumb[] = [
@@ -79,6 +86,8 @@ export default function AppHeader({ menuSections, elevated = false }: { menuSect
             </CrumbTag>
           )
         })}
+        {/* Chỗ cho huy hiệu của trang, cạnh tên trang; trống thì ẩn */}
+        <div ref={setTitleSlot} className="flex shrink-0 items-center self-center empty:hidden" />
       </nav>
 
       {/* Thanh phạm vi: từ xl cùng hàng tên trang, dưới xl xuống hàng riêng */}

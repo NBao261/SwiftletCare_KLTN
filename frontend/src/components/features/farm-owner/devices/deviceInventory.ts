@@ -54,7 +54,7 @@ interface InventoryInput {
   zoneId?: string;
 }
 
-function sensorItem(sensor: SensorNode, houseId: string): DeviceItem {
+export function sensorItem(sensor: SensorNode, houseId: string): DeviceItem {
   return {
     id: sensor._id, deviceId: sensor.device_id, type: 'sensor', status: sensor.status, houseId, zoneId: sensor.zone_id,
     rssi: sensor.rssi, version: sensor.firmware_version, lastHeartbeat: sensor.last_heartbeat, registeredAt: sensor.registered_at,
@@ -132,47 +132,17 @@ export function uptimeParts(bootedAt: string | undefined, now = Date.now()): { d
   return { days: Math.floor(elapsedMinutes / 1440), hours: Math.floor((elapsedMinutes % 1440) / 60), minutes: elapsedMinutes % 60 };
 }
 
-// Tình trạng tổng hợp của 1 nhà: tốt · có thiết bị lỗi / offline · chưa có thiết bị
-export type HouseHealth = 'good' | 'fault' | 'empty';
-
-export function houseHealthOf(tally: DeviceTally): HouseHealth {
-  if (tally.total === 0) return 'empty';
-  return tally.faulty > 0 ? 'fault' : 'good';
+// 1 dòng bảng Thiết bị: thiết bị kèm nhà và Zone (camera thuộc cả nhà nên không có Zone)
+export interface DeviceRow {
+  device: DeviceItem;
+  house: House;
+  zone?: Zone;
 }
 
-export type InventorySortKey = 'name' | 'devices' | 'faulty';
-
-export interface InventoryQuery {
-  keyword: string;
-  health: HouseHealth | '';
-  sortKey: InventorySortKey;
-  sortDirection: 'asc' | 'desc';
-}
-
-// Giá trị dùng để sắp xếp nhà theo từng tiêu chí (tên so theo bảng chữ tiếng Việt)
-const SORT_VALUE: Record<Exclude<InventorySortKey, 'name'>, (item: HouseInventory) => number> = {
-  devices: item => item.tally.total,
-  faulty: item => item.tally.faulty,
-};
-
-// Trả thêm nhà khớp nhờ Zone hoặc thiết bị để tự xổ ra; O(nhà + thiết bị)
-export function queryInventory(inventory: HouseInventory[], query: InventoryQuery): { items: HouseInventory[]; matchedInside: Set<string> } {
-  const keyword = query.keyword.trim().toLowerCase();
-  const matchedInside = new Set<string>();
-  const items = inventory.filter(item => {
-    if (query.health && houseHealthOf(item.tally) !== query.health) return false;
-    if (!keyword || item.house.name.toLowerCase().includes(keyword)) return true;
-    const isInside = item.zoneGroups.some(group => group.zone.name.toLowerCase().includes(keyword)
-      || group.devices.some(device => device.deviceId.toLowerCase().includes(keyword)))
-      || item.cameras.some(camera => camera.deviceId.toLowerCase().includes(keyword));
-    if (isInside) matchedInside.add(item.house._id);
-    return isInside;
-  });
-  const direction = query.sortDirection === 'asc' ? 1 : -1;
-  items.sort((first, second) => {
-    if (query.sortKey === 'name') return first.house.name.localeCompare(second.house.name, 'vi') * direction;
-    const value = SORT_VALUE[query.sortKey];
-    return (value(first) - value(second)) * direction || first.house.name.localeCompare(second.house.name, 'vi');
-  });
-  return { items, matchedInside };
+// Trải cây Nhà → Zone → thiết bị thành danh sách phẳng, giữ thứ tự nhà, Zone, rồi camera; O(thiết bị)
+export function listDeviceRows(inventory: HouseInventory[]): DeviceRow[] {
+  return inventory.flatMap(({ house, zoneGroups, cameras }) => [
+    ...zoneGroups.flatMap(({ zone, devices }) => devices.map(device => ({ device, house, zone }))),
+    ...cameras.map(device => ({ device, house })),
+  ]);
 }

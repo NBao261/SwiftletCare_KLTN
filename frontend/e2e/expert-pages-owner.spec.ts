@@ -14,10 +14,10 @@ async function farmOf(request: APIRequestContext, account: Account, withExpert: 
   return farm!;
 }
 
-// Badge quyền ở đầu trang, câu đầy đủ nằm trong nút (i) của chính badge đó
+// Badge quyền ở header cạnh tên trang (màn hẹp chỉ còn nút (i)); tên quyền mở đầu câu giải thích trong nút đó
 async function openBadgeExplanation(page: Page, label: string): Promise<void> {
-  await expect(page.getByText(label, { exact: true })).toBeVisible();
-  await page.locator('span').filter({ has: page.getByText(label, { exact: true }) }).getByRole('button', { name: 'Giải thích' }).click();
+  await page.getByRole('banner').getByRole('button', { name: 'Giải thích' }).click();
+  await expect(page.getByText(`${label}.`, { exact: true })).toBeVisible();
 }
 
 test.describe('Trang quyết định của chuyên gia cho Farm Owner (BR-22)', () => {

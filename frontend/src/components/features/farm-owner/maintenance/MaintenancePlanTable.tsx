@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ActionsMenu, Badge, type ActionsMenuItem, type BadgeTone, type DataTableColumn } from '@/components/ui';
+import { ActionsMenu, Badge, Button, type ActionsMenuItem, type BadgeTone, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { NO_VALUE } from '@/constants/display';
 import { maintenanceDict } from '@/constants/maintenance.i18n';
@@ -37,24 +37,26 @@ export default function MaintenancePlanTable({
   const { t, num, date } = useTranslation(maintenanceDict);
 
   const columns = useMemo<DataTableColumn<MaintenancePlan>[]>(() => {
-    // Hạn: đang đến hạn thì từ lúc nào; theo lịch thì ngày kế tiếp; bơm, quạt thì theo bộ đếm của bộ điều khiển
+    // Hạn ở dòng trên: đang đến hạn thì từ lúc nào; theo lịch thì ngày kế tiếp; bơm, quạt thì theo bộ đếm của bộ điều khiển
+    // Dòng dưới: số phiếu đang mở khi đến hạn, nếu không thì lần bảo trì gần nhất
     function dueCell(plan: MaintenancePlan): JSX.Element {
-      if ((plan.state === 'DUE' || plan.state === 'OVERDUE') && plan.due_since) {
-        return (
-          <div className="flex flex-col">
-            <span className="text-sm text-charcoal">{t('cell.dueSince', { date: date(plan.due_since) })}</span>
-            {plan.open_work_orders && plan.open_work_orders.length > 0 && (
-              <span className="text-xs text-warmGray">{t('cell.openWorkOrders', { count: plan.open_work_orders.length })}</span>
-            )}
-          </div>
-        );
-      }
-      if (plan.basis !== 'CALENDAR') return <span className="text-sm text-warmGray">{t('cell.byCounter')}</span>;
-      return <span className="text-sm text-charcoal">{plan.next_due_at ? date(plan.next_due_at) : NO_VALUE}</span>;
+      const isDue = (plan.state === 'DUE' || plan.state === 'OVERDUE') && Boolean(plan.due_since);
+      let main = <span className="text-sm font-semibold text-charcoal">{plan.next_due_at ? date(plan.next_due_at) : NO_VALUE}</span>;
+      if (isDue && plan.due_since) main = <span className="text-sm font-semibold text-charcoal">{t('cell.dueSince', { date: date(plan.due_since) })}</span>;
+      else if (plan.basis !== 'CALENDAR') main = <span className="text-sm font-semibold text-warmGray">{t('cell.byCounter')}</span>;
+      let note: string | null = plan.last_done_at ? t('cell.lastDone', { date: date(plan.last_done_at) }) : null;
+      if (isDue && plan.open_work_orders && plan.open_work_orders.length > 0) note = t('cell.openWorkOrders', { count: plan.open_work_orders.length });
+      return (
+        <div className="flex flex-col">
+          {main}
+          {note && <span className="text-xs text-warmGray">{note}</span>}
+        </div>
+      );
     }
 
+    // Menu ⋯ chỉ chứa thao tác ngoài "Xem": sửa, xoá, góp ý
     function menuItems(plan: MaintenancePlan): ActionsMenuItem[] {
-      const items: ActionsMenuItem[] = [{ label: t('action.view'), onClick: () => onAction('view', plan) }];
+      const items: ActionsMenuItem[] = [];
       if (canManage && plan.state !== 'RETIRED') {
         items.push({ label: t('action.edit'), onClick: () => onAction('edit', plan) });
         items.push({ label: t('action.retire'), onClick: () => onAction('retire', plan), danger: true });
@@ -67,7 +69,7 @@ export default function MaintenancePlanTable({
       {
         key: 'equipment',
         header: t('col.equipment'),
-        className: 'w-[24%]',
+        className: 'w-[26%]',
         render: plan => (
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-semibold text-charcoal">{t(`equipment.${plan.equipment}`)}</span>
@@ -78,7 +80,7 @@ export default function MaintenancePlanTable({
       {
         key: 'house',
         header: t('col.house'),
-        className: 'w-[16%]',
+        className: 'w-[18%]',
         render: plan => <span className="block truncate whitespace-nowrap text-sm text-charcoal">{houseNames.get(plan.house_id) ?? NO_VALUE}</span>,
       },
       {
@@ -93,24 +95,22 @@ export default function MaintenancePlanTable({
         className: 'w-[12%] whitespace-nowrap',
         render: plan => <Badge tone={PLAN_STATE_TONE[plan.state]}>{t(`state.${plan.state}`)}</Badge>,
       },
-      { key: 'due', header: t('col.due'), className: 'w-[14%] whitespace-nowrap', render: dueCell },
-      {
-        key: 'lastDone',
-        header: t('col.lastDone'),
-        className: 'w-[12%] whitespace-nowrap',
-        render: plan => <span className="text-sm text-charcoal">{plan.last_done_at ? date(plan.last_done_at) : NO_VALUE}</span>,
-      },
+      { key: 'due', header: t('col.due'), className: 'w-[18%] whitespace-nowrap', render: dueCell },
       {
         key: 'actions',
-        header: t('col.actions'),
-        align: 'center',
-        className: 'w-24 whitespace-nowrap',
-        render: plan => (
-          // Bấm menu (kể cả mục trong portal) không mở chi tiết của dòng
-          <div className="flex items-center justify-center" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
-            <ActionsMenu items={menuItems(plan)} />
-          </div>
-        ),
+        header: '',
+        align: 'right',
+        className: 'w-[16%] whitespace-nowrap',
+        render: plan => {
+          const items = menuItems(plan);
+          return (
+            // Bấm nút hoặc menu (kể cả mục trong portal) không mở chi tiết của dòng
+            <div className="flex items-center justify-end gap-1" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
+              <Button size="sm" variant="secondary" onClick={() => onAction('view', plan)}>{t('action.open')}</Button>
+              {items.length > 0 && <ActionsMenu items={items} />}
+            </div>
+          );
+        },
       },
     ];
   }, [t, num, date, houseNames, canManage, canComment, onAction]);

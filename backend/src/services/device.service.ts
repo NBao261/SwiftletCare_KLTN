@@ -88,9 +88,9 @@ async function assertNotRegistered(
     ? await findHouseChainOrThrow(String(existing.houseId)).catch(() => null)
     : await findZoneChainOrThrow(String(existing.zoneId)).catch(() => null)
   if (chain && String(chain.farm._id) !== targetFarmId) {
-    throw ConflictError('Thiết bị đã thuộc về Farm khác')
+    throw ConflictError('Thiết bị đã thuộc về Farm khác', 'DEVICE_IN_OTHER_FARM')
   }
-  throw ConflictError('device_id đã được đăng ký')
+  throw ConflictError('device_id đã được đăng ký', 'DEVICE_ALREADY_REGISTERED')
 }
 
 // device_id unique nên đổi tên bản ghi cũ; giữ _id để lịch sử vẫn trỏ đúng
@@ -112,9 +112,21 @@ async function notifyOwnersOfTechnicianAction(
   }
 }
 
+// Vị trí lắp không thuộc người đăng ký: code riêng để màn thiết lập nói đúng lý do
+async function inSetupLocation<T>(find: () => Promise<T>): Promise<T> {
+  try {
+    return await find()
+  } catch (err) {
+    if (err instanceof AppError && err.statusCode === 403) {
+      throw ForbiddenError('Bạn không thiết lập được thiết bị ở vị trí này', 'SETUP_LOCATION_NOT_ALLOWED')
+    }
+    throw err
+  }
+}
+
 // Tạo ở PENDING, chỉ ONLINE khi có heartbeat đầu tiên
 export async function registerSensorNode(user: CurrentUser, input: RegisterDeviceInput): Promise<ISensorNode> {
-  const { zone, farm } = await assertZoneAccess(input.zone_id, user, 'device')
+  const { zone, farm } = await inSetupLocation(() => assertZoneAccess(input.zone_id, user, 'device'))
   const { simulated } = await verifyActivationKey(input.device_id, 'SENSOR', input.secret_key)
 
   const existing = await SensorNode.findOne({ device_id: input.device_id }).select('zone_id decommissioned_at').lean()
@@ -317,7 +329,7 @@ export interface RegisterCameraInput {
 
 // Camera ở cửa của cả nhà nên gắn House
 export async function registerCameraNode(user: CurrentUser, input: RegisterCameraInput) {
-  const { house, farm } = await assertHouseAccessByParams({ houseId: input.house_id, zoneId: input.zone_id }, user, 'device')
+  const { house, farm } = await inSetupLocation(() => assertHouseAccessByParams({ houseId: input.house_id, zoneId: input.zone_id }, user, 'device'))
   const { simulated } = await verifyActivationKey(input.device_id, 'CAMERA', input.secret_key)
 
   const existing = await CameraNode.findOne({ device_id: input.device_id }).select('house_id decommissioned_at').lean()
@@ -646,7 +658,7 @@ const RETIRED_SUFFIX = '#retired-'
 
 // Cùng điều kiện với restoreDevice
 async function listRestorableDevices(kind: DeviceKind, scope: Record<string, unknown>, user: CurrentUser) {
-  if (user.role !== 'FARM_OWNER') throw ForbiddenError('Chỉ chủ nhà yến xem và khôi phục thiết bị đã gỡ')
+  if (user.role !== 'FARM_OWNER' && user.role !== 'FARM_TECHNICIAN') throw ForbiddenError('Chỉ chủ nhà yến và kỹ thuật viên của nhà xem và khôi phục thiết bị đã gỡ')
   const Model = DEVICE_MODELS[kind]
   const removed = await Model.find({
     ...scope,

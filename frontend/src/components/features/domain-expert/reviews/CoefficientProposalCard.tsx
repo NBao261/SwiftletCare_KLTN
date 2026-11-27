@@ -1,19 +1,8 @@
 // CoefficientProposalCard.tsx: Thẻ đề xuất hệ số mờ Fuzzy của Farm Owner
 
 import { useState } from 'react';
-import {
-  Sparkles,
-  CheckCircle,
-  XCircle,
-  Clock,
-  ArrowRight,
-  TrendingUp,
-  Sliders,
-  User,
-  AlertTriangle,
-  MapPin,
-} from 'lucide-react';
-import { Button } from '@/components/ui';
+import { ArrowRightIcon } from '@phosphor-icons/react';
+import { Badge, Button, type BadgeTone } from '@/components/ui';
 import { formatDateTime } from '@/lib/i18n';
 import { useAllZones } from '@/hooks/shared/useFarms';
 import ProposalRejectModal from './ProposalRejectModal';
@@ -32,42 +21,19 @@ interface CoefficientProposalCardProps {
   readOnly?: boolean;
 }
 
-const STATUS_CONFIG: Record<
-  CoefficientProposalStatus,
-  { label: string; bg: string; text: string; border: string }
-> = {
-  PROPOSED: {
-    label: 'Chờ duyệt',
-    bg: 'bg-orange-50',
-    text: 'text-orange-700',
-    border: 'border-orange-200',
-  },
-  APPROVED: {
-    label: 'Đã duyệt áp dụng',
-    bg: 'bg-accent-50',
-    text: 'text-accent-900',
-    border: 'border-accent-600/30',
-  },
-  REJECTED: {
-    label: 'Đã từ chối',
-    bg: 'bg-red-50',
-    text: 'text-alertRed',
-    border: 'border-red-200',
-  },
-  SUPERSEDED: {
-    label: 'Đã bị thay thế',
-    bg: 'bg-stone',
-    text: 'text-graphite',
-    border: 'border-warmGray/20',
-  },
+const STATUS_TONE: Record<CoefficientProposalStatus, { label: string; tone: BadgeTone }> = {
+  PROPOSED: { label: 'Chờ duyệt', tone: 'warning' },
+  APPROVED: { label: 'Đã duyệt áp dụng', tone: 'positive' },
+  REJECTED: { label: 'Đã từ chối', tone: 'critical' },
+  SUPERSEDED: { label: 'Đã bị thay thế', tone: 'neutral' },
 };
 
 const FUZZY_LABELS: Record<string, string> = translated({
   fuzzy_humidity_band: 'Dải biên độ ẩm (%RH)',
   fuzzy_temp_band: 'Dải biên nhiệt độ (°C)',
-  fuzzy_fan_dry_level: 'Mức quạt hút khử ẩm (%)',
+  fuzzy_fan_dry_level: 'Mức quạt khử ẩm (%)',
   fuzzy_window_sec: 'Chu kỳ điều khiển (giây)',
-  fuzzy_input_filter: 'Lọc nhiễu cảm biến',
+  fuzzy_input_filter: 'Lọc nhiễu số đo',
 });
 
 // Định dạng giá trị hệ số mờ hiển thị
@@ -92,7 +58,7 @@ export function formatFuzzyProposalValue(keyOrValue: unknown, optionalValue?: un
   return String(value);
 }
 
-// Thẻ hiển thị đề xuất hệ số mờ Fuzzy của Farm Owner gửi lên
+// Thẻ đề xuất hệ số mờ của Farm Owner: tên và trạng thái, Zone · người gửi · giờ, từng hệ số hiện tại → đề xuất, dự báo tác động
 export default function CoefficientProposalCard({
   proposal,
   onApprove,
@@ -101,7 +67,7 @@ export default function CoefficientProposalCard({
   readOnly = false,
 }: CoefficientProposalCardProps): JSX.Element {
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const statusConfig = STATUS_CONFIG[proposal.status] || STATUS_CONFIG.PROPOSED;
+  const status = STATUS_TONE[proposal.status] || STATUS_TONE.PROPOSED;
   const isPending = proposal.status === 'PROPOSED';
 
   const { data: allZones } = useAllZones();
@@ -119,181 +85,75 @@ export default function CoefficientProposalCard({
 
   const suggestedKeys = Object.keys(proposal.suggested_values || {});
 
+  // Dự báo tác động: mỗi chỉ số một đoạn "tên now% → mới%", ghép thành một dòng
+  const predicted = proposal.predicted;
+  const predictedParts: string[] = [];
+  if (predicted?.inRangeSuggested !== undefined) predictedParts.push(`${t('Thời gian đạt chuẩn')} ${predicted.inRangeNow ?? '—'}% → ${predicted.inRangeSuggested}%`);
+  if (predicted?.mistingSuggested !== undefined) predictedParts.push(`${t('Tần suất phun sương')} ${predicted.mistingNow ?? '—'}% → ${predicted.mistingSuggested}%`);
+  if (predicted?.in_range_pct !== undefined) predictedParts.push(`${t('Đạt chuẩn môi trường')} ${predicted.in_range_pct}%`);
+
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-card border border-warmGray/15 flex flex-col gap-4 transition-all hover:border-warmGray/30">
-      {/* 1. Header Card: Badges & Created Time */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-warmGray/10">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-accent-50 text-accent-900 border border-accent-600/30">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{t('Đề xuất hệ số mờ')}</span>
-          </div>
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
-          >
-            {t(statusConfig.label)}
-          </span>
+    <div className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold text-charcoal">{t('Đề xuất hệ số mờ')}</h4>
+          <p className="mt-0.5 text-small text-warmGray">
+            <span className="font-semibold text-charcoal">{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}</span> · {authorName} · {formatDateTime(proposal.created_at)}
+          </p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 text-xs text-warmGray">
-          <div className="flex items-center gap-1 font-semibold text-charcoal">
-            <MapPin className="w-3.5 h-3.5 text-accent-700" />
-            <span>{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}</span>
-          </div>
-          <span>•</span>
-          <div className="flex items-center gap-1">
-            <User className="w-3.5 h-3.5" />
-            <span>{authorName}</span>
-          </div>
-          <span>•</span>
-          <div className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
-            <span>{formatDateTime(proposal.created_at)}</span>
-          </div>
-        </div>
+        <Badge tone={status.tone}>{t(status.label)}</Badge>
       </div>
 
-      {/* 2. Body: So sánh các hệ số mờ giữa Hiện tại vs Đề xuất */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-charcoal">
-          <Sliders className="w-3.5 h-3.5 text-accent-700" />
-          <span>{t('Hệ số đề xuất:')}</span>
-        </div>
+      {/* Từng hệ số: hiện tại gạch ngang, đề xuất đậm */}
+      <ul className="divide-y divide-warmGray/10 rounded-xl bg-warmGray/5 px-3">
+        {suggestedKeys.map(key => (
+          <li key={key} className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span className="min-w-0 truncate text-charcoal">{FUZZY_LABELS[key] || key}</span>
+            <span className="flex shrink-0 items-center gap-1.5">
+              <span className="text-warmGray line-through">{formatFuzzyProposalValue(key, proposal.current_values?.[key])}</span>
+              <ArrowRightIcon size={12} className="text-warmGray" />
+              <span className="font-bold text-charcoal">{formatFuzzyProposalValue(key, proposal.suggested_values?.[key])}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {suggestedKeys.map((key) => {
-            const currentVal = proposal.current_values?.[key];
-            const suggestedVal = proposal.suggested_values?.[key];
-
-            return (
-              <div
-                key={key}
-                className="flex flex-col justify-between p-2.5 rounded-xl border border-warmGray/15 bg-warmGray/5 text-xs gap-1.5"
-              >
-                <span className="text-xs font-medium text-charcoal">
-                  {FUZZY_LABELS[key] || key}
-                </span>
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <div className="flex items-center gap-1 text-warmGray">
-                    <span className="text-small text-warmGray font-normal">{t('Hiện tại:')}</span>
-                    <span>{formatFuzzyProposalValue(key, currentVal)}</span>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-warmGray/40" />
-                  <div className="flex items-center gap-1 text-accent-900">
-                    <span className="text-small text-accent-700 font-normal">{t('Đề xuất:')}</span>
-                    <span className="font-bold">{formatFuzzyProposalValue(key, suggestedVal)}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. Hiển thị dự báo tác động nếu có */}
-      {proposal.predicted && (
-        <div className="rounded-xl border border-warmGray/10 bg-warmGray/5 p-3 flex flex-col gap-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-charcoal">
-            <TrendingUp className="w-4 h-4 text-accent-700" />
-            <span>{t('Hiệu quả dự báo mô phỏng')}</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-            {proposal.predicted.inRangeSuggested !== undefined && (
-              <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-small text-warmGray">{t('Thời gian đạt chuẩn')}</span>
-                <span className="font-bold text-charcoal">
-                  {proposal.predicted.inRangeNow ?? '—'}% →{' '}
-                  <span className="text-accent-700 font-bold">{proposal.predicted.inRangeSuggested}%</span>
-                </span>
-              </div>
-            )}
-            {proposal.predicted.mistingSuggested !== undefined && (
-              <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-small text-warmGray">{t('Tần suất phun sương')}</span>
-                <span className="font-bold text-charcoal">
-                  {proposal.predicted.mistingNow ?? '—'}% →{' '}
-                  <span className="text-accent-900 font-bold">{proposal.predicted.mistingSuggested}%</span>
-                </span>
-              </div>
-            )}
-            {proposal.predicted.in_range_pct !== undefined && (
-              <div className="flex flex-col bg-white p-2 rounded-lg border border-warmGray/15">
-                <span className="text-small text-warmGray">{t('Đạt chuẩn môi trường')}</span>
-                <span className="font-bold text-accent-700">
-                  {proposal.predicted.in_range_pct}%
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
+      {predictedParts.length > 0 && (
+        <p className="text-small text-graphite">
+          <span className="font-semibold text-charcoal">{t('Hiệu quả dự báo mô phỏng')}:</span> {predictedParts.join(' · ')}
+        </p>
       )}
 
-      {/* 4. Ghi chú lý do từ chối (nếu status là REJECTED) */}
+      {/* Lý do từ chối hoặc người đã duyệt */}
       {proposal.status === 'REJECTED' && proposal.note && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 flex items-start gap-2.5">
-          <AlertTriangle className="w-4 h-4 text-alertRed shrink-0 mt-0.5" />
-          <div className="flex flex-col gap-0.5 text-xs">
-            <span className="font-bold text-alertRed">
-              {t('Lý do từ chối của chuyên gia ({{name}}):', { name: deciderName })}
-            </span>
-            <p className="text-alertRed leading-relaxed italic">{proposal.note}</p>
-          </div>
-        </div>
+        <p className="rounded-xl bg-alertRed/10 px-3 py-2 text-small text-alertRed">
+          <span className="font-semibold">{t('Lý do từ chối của chuyên gia ({{name}}):', { name: deciderName })}</span> {proposal.note}
+        </p>
       )}
-
-      {/* 5. Thông tin chuyên gia đã duyệt (nếu APPROVED) */}
       {proposal.status === 'APPROVED' && proposal.decided_at && (
-        <div className="rounded-xl border border-accent-600/30 bg-accent-50/60 p-2.5 flex items-center justify-between text-xs text-accent-900">
-          <div className="flex items-center gap-1.5">
-            <CheckCircle className="w-4 h-4 text-accent-700" />
-            <span>
-              {t('Đã được duyệt áp dụng bởi')} <strong>{deciderName}</strong>
-            </span>
-          </div>
-          <span className="text-small text-warmGray">
-            {formatDateTime(proposal.decided_at)}
-          </span>
-        </div>
+        <p className="rounded-xl bg-accent-50 px-3 py-2 text-small text-graphite">
+          {t('Đã được duyệt áp dụng bởi')} <strong className="text-charcoal">{deciderName}</strong> · {formatDateTime(proposal.decided_at)}
+        </p>
       )}
 
-      {/* 6. Footer Actions: Chuyên gia duyệt hoặc từ chối */}
       {isPending && !readOnly && (
-        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-warmGray/10">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowRejectModal(true)}
-            disabled={isProcessing}
-            className="text-warmGray hover:text-alertRed hover:bg-red-50 border-warmGray/20 font-medium"
-          >
-            <XCircle className="w-4 h-4 mr-1.5" />
+        <div className="flex items-center justify-end gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => setShowRejectModal(true)} disabled={isProcessing}>
             {t('Từ chối đề xuất')}
           </Button>
-
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={() => onApprove(proposal._id)}
-            loading={isProcessing}
-            className="font-semibold shadow-sm gap-1.5"
-          >
-            <CheckCircle className="w-4 h-4 text-limeMist" />
+          <Button type="button" size="sm" onClick={() => onApprove(proposal._id)} loading={isProcessing}>
             {t('Duyệt & Áp dụng')}
           </Button>
         </div>
       )}
 
-      {/* Modal từ chối với lý do bắt buộc (Đóng sau khi hoàn thành) */}
+      {/* Từ chối phải có lý do */}
       <ProposalRejectModal
         isOpen={showRejectModal}
         onClose={() => setShowRejectModal(false)}
         onConfirm={async (note) => {
           const isSuccess = await onReject(proposal._id, note);
-          if (isSuccess) {
-            setShowRejectModal(false);
-          }
+          if (isSuccess) setShowRejectModal(false);
         }}
         isSubmitting={isProcessing}
       />

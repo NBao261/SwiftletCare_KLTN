@@ -66,26 +66,24 @@ test('B2 — kiểm chứng cảnh báo suy luận: bác bỏ thiếu lý do b�
   const [noise] = await owner.data<Alert[]>(await owner.get(`/alerts?farmId=${farmId}&type=NOISE_ANOMALY`));
   expect(noise, 'cảnh báo ồn của DS-07 — chạy `npm run seed:demo`').toBeTruthy();
 
-  const crashes = await openAsExpert(page, '/domain-expert/alert-verdicts', { farmId });
-  await expect(page.getByRole('heading', { name: 'Danh sách cảnh báo' })).toBeVisible();
-
-  // Cảnh báo đã có kết luận ở lần chạy trước thì nút là "Chi tiết"; ngăn kéo vẫn cho ghi lại kết luận
-  await page.locator(`#btn-verdict-${noise._id}, #btn-detail-${noise._id}`).click();
+  // Mở thẳng ngăn kéo của cảnh báo bằng ?alertId= (như link từ thông báo): cảnh báo đã có kết luận ở lần chạy trước vẫn mở được để ghi lại
+  const crashes = await openAsExpert(page, `/domain-expert/alert-verdicts?alertId=${noise._id}`, { farmId });
+  await expect(page.getByRole('tab', { name: /Chờ kiểm chứng/ })).toBeVisible();
 
   // Bác bỏ phải có lý do: thiếu ghi chú thì nút lưu khoá; ngăn kéo điền lại ghi chú cũ nên xoá trước khi kiểm
-  await page.getByRole('button', { name: 'Bác bỏ - Báo động giả' }).click();
+  await page.getByRole('radio', { name: 'Bác bỏ - Báo động giả' }).click();
   await page.locator('#expert-note').fill('');
   await expect(page.getByRole('button', { name: 'Lưu kết luận' })).toBeDisabled();
 
-  await page.getByRole('button', { name: 'Xác nhận sự cố thật' }).click();
+  await page.getByRole('radio', { name: 'Xác nhận sự cố thật' }).click();
   await page.locator('#expert-note').fill('E2E: mức ồn cao hơn nền, đúng là sự cố thật');
   const saving = page.waitForResponse(
     response => response.url().includes(`/alerts/${noise._id}/verdict`) && response.request().method() === 'PUT',
   );
   await page.getByRole('button', { name: 'Lưu kết luận' }).click();
   expect((await saving).ok()).toBe(true);
-  // Cảnh báo đã có kết luận: ô thao tác của dòng đó đổi từ "Kiểm chứng" sang "Chi tiết"
-  await expect(page.locator(`#btn-detail-${noise._id}`)).toBeVisible();
+  // Cảnh báo đã có kết luận: dòng đó không còn nút "Kiểm chứng"
+  await expect(page.locator(`#btn-verdict-${noise._id}`)).toHaveCount(0);
 
   const saved = await owner.data<Alert>(await owner.get(`/alerts/${noise._id}`));
   expect(saved.expert_verdict?.result).toBe('CONFIRMED');
@@ -97,7 +95,7 @@ test('B3 — sửa ngưỡng khí CO2 của Zone rồi khôi phục, quyền s�
   const before = await readThresholds(expertApi, zoneA);
 
   const crashes = await openAsExpert(page, '/domain-expert/tuning', { farmId, houseId: houseA, zoneId: zoneA });
-  await expect(page.getByRole('heading', { name: '2. Ngưỡng vi khí hậu & khí độc' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ngưỡng vi khí hậu & khí độc' })).toBeVisible();
 
   // Cả 4 khối dùng một thanh lưu dính đáy, chỉ hiện khi có thay đổi
   const saveBar = page.getByRole('button', { name: 'Lưu', exact: true });
@@ -150,8 +148,8 @@ test('B4 — duyệt thay đổi ngưỡng của chủ nhà yến (BR-22, EXPERT
 
   const crashes = await openAsExpert(page, '/domain-expert/reviews', { farmId });
   await expect(page.getByText('Thay đổi ngưỡng vi khí hậu').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Chấp thuận thay đổi' }).first().click();
-  await expect(page.getByText('Đã chấp thuận thay đổi tham số thành công.')).toBeVisible();
+  await page.getByRole('button', { name: 'Giữ thay đổi' }).first().click();
+  await expect(page.getByText('Đã giữ thay đổi tham số.')).toBeVisible();
 
   const accepted = await expertApi.data<Review[]>(
     await expertApi.get(`/expert-activity/reviews?farmId=${farmId}&zoneId=${zoneA}&status=ACCEPTED`),
@@ -192,7 +190,7 @@ test('B5 — tạo hồ sơ cấu hình, duyệt rồi lưu trữ (EXPERT-FR-014
 test('B6 — thêm luật bù phun sương theo thời tiết rồi xoá (ENV-FR-030, BR-38)', async ({ page, request }) => {
   const expertApi = await signIn(request, 'expert');
   const crashes = await openAsExpert(page, '/domain-expert/weather-rules', { farmId, houseId: houseA });
-  await expect(page.getByRole('heading', { name: 'Luật bù phun sương theo thời tiết' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Phun sương theo thời tiết' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Thêm luật' }).click();
   const form = page.getByRole('dialog');
@@ -228,9 +226,10 @@ test('B6 — thêm luật bù phun sương theo thời tiết rồi xoá (ENV-FR
 
 test('B7 — lịch đếm chim: thêm khung tạm vào bản nháp rồi huỷ, vòng đếm mở được (VISION-FR-018, 019)', async ({ page }) => {
   const crashes = await openAsExpert(page, '/domain-expert/counting-schedule', { farmId, houseId: houseB });
-  await expect(page.getByRole('heading', { name: /Hồ sơ theo mùa/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Hồ sơ theo mùa/ })).toBeVisible();
 
-  // Thêm một khung tạm vào bản nháp: hiện hàng giờ sáng/chiều và nút lưu
+  // Thêm một khung tạm vào bản nháp (tab Khung tạm): hiện hàng giờ sáng/chiều và nút lưu
+  await page.getByRole('tab', { name: /Khung tạm/ }).click();
   await page.getByRole('button', { name: 'Thêm khung tạm' }).click();
   await expect(page.getByRole('button', { name: 'Lưu lịch' })).toBeVisible();
   await page.getByRole('button', { name: 'Huỷ thay đổi' }).click();
@@ -239,7 +238,7 @@ test('B7 — lịch đếm chim: thêm khung tạm vào bản nháp rồi huỷ,
   // Vòng đếm là tab thứ hai của mục Đếm chim
   await page.getByRole('link', { name: 'Vòng đếm' }).click();
   await expect(page).toHaveURL(/\/domain-expert\/counting-ring$/);
-  await expect(page.getByRole('heading', { name: 'Vòng đếm camera' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vòng đếm', exact: true })).toBeVisible();
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
@@ -291,7 +290,7 @@ test('B8 — thêm hoặc sửa luật khuyến nghị rồi tắt, xem tab hi�
 
 test('B9 — báo cáo & kết luận mở được, đổi sang tab Ngày lệch (EXPERT-FR-005, 022)', async ({ page }) => {
   const crashes = await openAsExpert(page, '/domain-expert/reports', { farmId, houseId: houseA });
-  const disagreements = page.getByRole('button', { name: /Ngày lệch/ });
+  const disagreements = page.getByRole('button', { name: /Ngày đánh giá khác/ });
   await expect(disagreements).toBeVisible();
   await disagreements.click();
   await expect(disagreements).toHaveAttribute('aria-current', 'page');
@@ -300,7 +299,7 @@ test('B9 — báo cáo & kết luận mở được, đổi sang tab Ngày lệc
 
 test('B10 — lịch sử quyết định ghi lại các việc vừa làm (EXPERT-FR-009)', async ({ page }) => {
   const crashes = await openAsExpert(page, '/domain-expert/history', { farmId });
-  await expect(page.getByRole('heading', { name: 'Nhật ký quyết định' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lịch sử quyết định' })).toBeVisible();
   // Kết luận cảnh báo của B2 và các lần sửa ngưỡng của B3, B4 phải nằm trong nhật ký
   await expect(page.getByText('Không có dữ liệu', { exact: false })).toHaveCount(0);
   expect(crashes, crashes.join('\n')).toHaveLength(0);

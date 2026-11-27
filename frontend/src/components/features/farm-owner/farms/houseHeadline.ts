@@ -25,3 +25,13 @@ export function houseHeadlineText(headline: HouseNode['headline'], translate: Fa
 
   return translate('banner.offline', { n: headline.offlineDevices ?? 0, zone: zoneLabel });
 }
+
+// Lý do ngắn dưới nhãn tình trạng của nhà: sự cố của Zone, rồi camera mất kết nối, rồi cảnh báo cấp nhà; nhà bình thường không cần lý do
+export function houseReasonText(node: HouseNode, translate: FarmTranslate, formatNumber: FormatNumber): string {
+  if (node.health === 'EMPTY') return translate('banner.empty');
+  if (node.headline) return houseHeadlineText(node.headline, translate, formatNumber);
+  const offlineCameras = node.cameraDevices.filter(device => device.status === 'OFFLINE').length;
+  if (offlineCameras > 0) return translate('banner.cameraOffline', { n: formatNumber(offlineCameras) });
+  const houseAlert = node.alerts.find(alert => !alert.zone_id);
+  return houseAlert ? translate(`alert.${houseAlert.type}`) : '';
+}

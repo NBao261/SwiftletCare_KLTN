@@ -1,18 +1,19 @@
 import {
   BasketIcon, BirdIcon, ChartBarIcon, ClipboardTextIcon, ClockCounterClockwiseIcon, CloudArrowUpIcon, CpuIcon, CrosshairIcon,
-  FileTextIcon, GaugeIcon, GearSixIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon, ScrollIcon,
-  ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, UsersIcon, WarningIcon, WrenchIcon,
+  FileTextIcon, GaugeIcon, GearSixIcon, HandPointingIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon,
+  ScrollIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, UsersIcon, WarningIcon, WrenchIcon,
 } from '@phosphor-icons/react'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
 import { canAccessPath } from '@/constants/roles'
 import type { Role } from '@/types'
 
 // Một danh mục cho mọi vai trò: cùng trang thì cùng tên, icon, nhóm tab; mỗi vai trò chỉ thấy phần MENU_ACCESS cho phép
-type MenuGroup = 'monitor' | 'operations' | 'expertise' | 'system'
+type MenuGroup = 'monitor' | 'operations' | 'manage' | 'expertise' | 'system'
 
 const GROUP_TITLE: Record<MenuGroup, string> = {
   monitor: 'Theo dõi',
   operations: 'Vận hành',
+  manage: 'Quản lý',
   expertise: 'Chuyên môn',
   system: 'Hệ thống',
 }
@@ -20,21 +21,13 @@ const GROUP_TITLE: Record<MenuGroup, string> = {
 const CATALOG: Record<MenuGroup, MenuItem[]> = {
   monitor: [
     { label: 'Tổng quan hệ thống', path: '/system/health', icon: GaugeIcon },
-    {
-      label: 'Tổng quan',
-      path: '/dashboard',
-      icon: SquaresFourIcon,
-      tabs: [
-        { label: 'Tình trạng các nhà', path: '/dashboard' },
-        { label: 'So sánh nhà', path: '/overview' },
-        { label: 'Điều khiển tay', path: '/dashboard/scada' },
-      ],
-    },
+    { label: 'Tổng quan', path: '/dashboard', icon: SquaresFourIcon },
     { label: 'Cảnh báo', path: '/alerts', icon: WarningIcon },
-    { label: 'Đàn chim', path: '/vision', icon: BirdIcon },
+    { label: 'Chim ra vào', path: '/vision', icon: BirdIcon },
     { label: 'Sức khoẻ & báo cáo', path: '/health', icon: HeartbeatIcon },
     { label: 'Phân tích', path: '/analytics', icon: ChartBarIcon },
   ],
+  // Việc làm hằng ngày: phiếu và bảo trì, bật tắt tay, ghi thu hoạch
   operations: [
     {
       label: 'Công việc',
@@ -46,11 +39,15 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
         { label: 'Khuyến nghị', path: '/recommendations' },
       ],
     },
+    { label: 'Điều khiển tay', path: '/relay-control', icon: HandPointingIcon },
+    { label: 'Thu hoạch', path: '/harvests', icon: BasketIcon },
+  ],
+  // Tài sản và cấu trúc, thiết lập một lần rồi ít đụng tới
+  manage: [
     { label: 'Thiết bị', path: '/devices', icon: CpuIcon },
     { label: 'Kho thiết bị', path: '/system/device-stock', icon: PackageIcon },
     { label: 'Cập nhật firmware', path: '/ota', icon: CloudArrowUpIcon },
     { label: 'Trang trại', path: '/farms', icon: HouseIcon },
-    { label: 'Thu hoạch', path: '/harvests', icon: BasketIcon },
   ],
   expertise: [
     { label: 'Hàng đợi việc', path: '/domain-expert/queue', icon: ClipboardTextIcon },
@@ -63,11 +60,11 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
         { label: 'Ngưỡng & hệ số mờ', path: '/domain-expert/tuning' },
         { label: 'Duyệt & đề xuất', path: '/domain-expert/reviews' },
         { label: 'Hồ sơ cấu hình', path: '/domain-expert/profiles' },
-        { label: 'Bù thời tiết', path: '/domain-expert/weather-rules' },
+        { label: 'Phun sương theo thời tiết', path: '/domain-expert/weather-rules' },
       ],
     },
     {
-      label: 'Đếm chim',
+      label: 'Cài đặt đếm chim',
       path: '/domain-expert/counting-schedule',
       icon: CrosshairIcon,
       tabs: [
@@ -94,31 +91,29 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
   ],
 }
 
-// readOnly: nhóm chỉ để xem của vai trò này, thu gọn được và ghi rõ "(chỉ đọc)"
+// readOnly: nhóm chỉ để xem của vai trò này, ghi rõ "(chỉ đọc)"; mọi nhóm đều thu gọn được như nhau
 interface SectionPlan {
   group: MenuGroup
   readOnly?: boolean
-  collapsible?: boolean
 }
 
 // Nhóm việc chính của vai trò đứng đầu; dock điện thoại là 4 trang vai trò đó dùng nhiều nhất
 const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[] }> = {
   ADMIN: {
-    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'system' }],
+    sections: [{ group: 'monitor' }, { group: 'manage' }, { group: 'system' }],
     dock: ['/system/health', '/devices', '/alerts', '/users'],
   },
   FARM_OWNER: {
-    // Chuyên môn ít dùng hằng ngày (farm có chuyên gia thì chỉ xem, nhắc) nên thu gọn được
-    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'expertise', collapsible: true }],
+    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise' }],
     dock: ['/dashboard', '/alerts', '/vision', '/health'],
   },
   FARM_TECHNICIAN: {
-    // Vòng đếm thợ vẽ được nên nhóm Chuyên môn không ghi "chỉ đọc", chỉ thu gọn
-    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'expertise', collapsible: true }],
+    // Vòng đếm thợ vẽ được nên nhóm Chuyên môn không ghi "chỉ đọc"
+    sections: [{ group: 'monitor' }, { group: 'operations' }, { group: 'manage' }, { group: 'expertise' }],
     dock: ['/alerts', '/work-orders', '/dashboard', '/health'],
   },
   DOMAIN_EXPERT: {
-    sections: [{ group: 'expertise' }, { group: 'monitor', readOnly: true }, { group: 'operations', readOnly: true }],
+    sections: [{ group: 'expertise' }, { group: 'monitor', readOnly: true }, { group: 'operations', readOnly: true }, { group: 'manage', readOnly: true }],
     dock: ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/domain-expert/tuning', '/domain-expert/counting-schedule'],
   },
 }
@@ -134,9 +129,9 @@ function itemFor(role: Role, item: MenuItem): MenuItem | null {
 export function roleMenu(role: Role): { sections: MenuSection[]; dock: MenuItem[] } {
   const plan = ROLE_PLAN[role]
   const sections = plan.sections
-    .map(({ group, readOnly, collapsible }) => ({
+    .map(({ group, readOnly }) => ({
       title: readOnly ? `${GROUP_TITLE[group]} (chỉ đọc)` : GROUP_TITLE[group],
-      collapsible: readOnly || collapsible,
+      collapsible: true,
       items: CATALOG[group].map(item => itemFor(role, item)).filter((item): item is MenuItem => item !== null),
     }))
     .filter(section => section.items.length > 0)

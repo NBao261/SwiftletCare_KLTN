@@ -1,125 +1,65 @@
 import { useMemo, useState } from 'react';
-import { DownloadSimpleIcon, PlusIcon, WarningCircleIcon } from '@phosphor-icons/react';
+import { WarningCircleIcon } from '@phosphor-icons/react';
 
 import TableEmptyState from '@/components/common/TableEmptyState';
-import {
-  Badge, Button, Card, ClearFiltersButton, DataTable, SearchInput, SelectMenu, SortChips, type DataTableColumn,
-} from '@/components/ui';
+import { Badge, Button, FilterChip, SelectMenu, type DataTableColumn } from '@/components/ui';
 import ActionsMenu from '@/components/ui/ActionsMenu';
-import { CAPSULE_ACTION_CLASS } from '@/components/features/farm-owner/farms/farmStructure.constants';
+import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import NestTypeStatus from '@/components/features/farm-owner/harvest/NestTypeStatus';
 import { KILOGRAM_DIGITS, NEST_TYPES } from '@/components/features/farm-owner/harvest/harvest.constants';
 import type { HarvestGroup } from '@/components/features/farm-owner/harvest/harvestMetrics';
-import { cn } from '@/lib/cn';
 import { harvestDict } from '@/constants/harvest.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import type { FlatZone } from '@/hooks/shared/useFarms';
 import { formatStandardDate } from '@/lib/i18n';
-import type { House, NestType, SortDirection } from '@/types';
+import type { NestType } from '@/types';
 import { NO_VALUE } from '@/constants/display';
 
-// Khung bảng cao cố định 4 dòng từ sm, cuộn dọc
-const VISIBLE_ROWS = 4;
+// Cùng chiều cao dòng các bảng khác của Farm Owner
 const ROW_HEIGHT = 68;
-// Tiêu đề cột (~46px) + 4 dòng × 68px: chiều cao cố định của vùng bảng khi chưa tới màn xl
-const TABLE_AREA_CLASS = 'sm:h-[318px] xl:h-auto xl:min-h-0 xl:flex-1';
-// Bảng nằm trong cột 8/12 nên hạ bề rộng tối thiểu để không cuộn ngang ở màn rộng
-const TABLE_MIN_WIDTH = 640;
-// Ô đệm ngang hẹp hơn mặc định để 6 cột vừa cột 8/12
-const CELL_PADDING = 'px-3';
 const GRAMS_PER_KILOGRAM = 1000;
-type SortKey = 'date' | 'weight';
-// Lọc theo trạng thái xác nhận: lần thu còn lô chờ Farm Owner xác nhận hay đã xác nhận hết
-type StatusFilter = '' | 'PENDING' | 'CONFIRMED';
-const DEFAULT_SORT_KEY: SortKey = 'date';
-const DEFAULT_SORT_DIRECTION: SortDirection = 'desc';
-
-// Giá trị dùng để sắp xếp theo từng tiêu chí
-const SORT_VALUE: Record<SortKey, (group: HarvestGroup) => number> = {
-  date: group => new Date(group.harvest_date).getTime(),
-  weight: group => group.weight_grams,
-};
 
 interface HarvestTableProps {
   groups: HarvestGroup[];
   // Zone trong phạm vi, để tra nhà yến của từng lần thu (backend lưu lần thu theo Zone)
   zones: FlatZone[] | undefined;
-  // Nhà yến cho ô lọc; rỗng thì ẩn ô lọc (đã lọc 1 nhà ở khung trên)
-  houses: House[];
   // Tên người tạo lần thu
   creatorName: (group: HarvestGroup) => string;
   onOpenDetail: (group: HarvestGroup) => void;
-  // Không truyền (Domain Expert chỉ đọc) thì ẩn nút ghi, sửa, xoá
+  // Không truyền (Domain Expert chỉ đọc) thì ẩn sửa, xoá
   onEdit?: (group: HarvestGroup) => void;
   onDelete?: (group: HarvestGroup) => void;
   // Lần thu nào được sửa, xoá (Kỹ thuật viên: chỉ lần chưa xác nhận của mình); mặc định mọi lần
   canChange?: (group: HarvestGroup) => boolean;
   // Chỉ Farm Owner: xác nhận các lô DRAFT của lần thu
   onConfirm?: (group: HarvestGroup) => void;
-  onCreate?: () => void;
-  onExport: () => void;
-  // Có thì khoá nút ghi đợt thu và hiện lý do (phạm vi đang lọc chưa có Zone)
+  // Có thì hiện lý do chưa ghi được đợt thu (phạm vi đang lọc chưa có Zone)
   createBlockedReason?: string;
+  // Có thể ghi đợt thu: để chữ rỗng nhắc bấm "Ghi đợt thu hoạch"
+  canCreate: boolean;
 }
 
-// Bảng lần thu, không bù dòng trống
-export default function HarvestTable({ groups, zones, houses, creatorName, onOpenDetail, onEdit, onDelete, canChange = () => true, onConfirm, onCreate, onExport, createBlockedReason }: HarvestTableProps): JSX.Element {
+// Bảng lần thu: lọc theo loại tổ và "chờ xác nhận"; nhà yến đã chọn ở bộ lọc trên header; bấm cả dòng để mở chi tiết
+export default function HarvestTable({
+  groups, zones, creatorName, onOpenDetail, onEdit, onDelete, canChange = () => true, onConfirm, createBlockedReason, canCreate,
+}: HarvestTableProps): JSX.Element {
   const { t, num } = useTranslation(harvestDict);
-  const [search, setSearch] = useState('');
-  const [houseFilter, setHouseFilter] = useState('');
   const [nestTypeFilter, setNestTypeFilter] = useState<NestType | ''>('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
-  const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(DEFAULT_SORT_DIRECTION);
-
-  // Bấm lại đúng tiêu chí đang sắp thì đảo chiều, đổi tiêu chí thì về tăng dần
-  function handleSortChange(key: string): void {
-    if (key === sortKey) {
-      setSortDirection(current => (current === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-    setSortKey(key as SortKey);
-    setSortDirection('asc');
-  }
-
-  // Số điều kiện lọc đang bật: hiện trên nút Hủy lọc
-  const activeFilterCount = [search, houseFilter, nestTypeFilter, statusFilter].filter(value => value !== '').length
-    + (sortKey !== DEFAULT_SORT_KEY || sortDirection !== DEFAULT_SORT_DIRECTION ? 1 : 0);
-  const isFiltering = activeFilterCount > 0;
-
-  function handleClearFilters(): void {
-    setSearch('');
-    setHouseFilter('');
-    setNestTypeFilter('');
-    setStatusFilter('');
-    setSortKey(DEFAULT_SORT_KEY);
-    setSortDirection(DEFAULT_SORT_DIRECTION);
-  }
+  const [isPendingOnly, setIsPendingOnly] = useState(false);
 
   const zoneById = useMemo(() => new Map((zones ?? []).map(zone => [zone._id, zone])), [zones]);
+  const pendingCount = useMemo(() => groups.filter(group => group.pendingIds.length > 0).length, [groups]);
 
-  // Lọc theo nhà yến, loại yến (giữ lần thu có loại đó) và tìm theo tên nhà
-  const filteredGroups = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    const matched = groups.filter(group => {
-      const zone = zoneById.get(group.zone_id);
-      if (houseFilter && zone?.house_id !== houseFilter) return false;
-      if (nestTypeFilter && !group.nestTypes.includes(nestTypeFilter)) return false;
-      const isPending = group.pendingIds.length > 0;
-      if (statusFilter === 'PENDING' && !isPending) return false;
-      if (statusFilter === 'CONFIRMED' && isPending) return false;
-      if (keyword && !(zone?.houseName ?? '').toLowerCase().includes(keyword)) return false;
-      return true;
-    });
-    const direction = sortDirection === 'asc' ? 1 : -1;
-    const value = SORT_VALUE[sortKey];
-    return matched.sort((first, second) => (value(first) - value(second)) * direction);
-  }, [groups, zoneById, houseFilter, nestTypeFilter, statusFilter, search, sortKey, sortDirection]);
+  // Mới nhất lên đầu; lọc loại tổ giữ lần thu có loại đó
+  const rows = useMemo(() => groups
+    .filter(group => (!nestTypeFilter || group.nestTypes.includes(nestTypeFilter)) && (!isPendingOnly || group.pendingIds.length > 0))
+    .sort((first, second) => new Date(second.harvest_date).getTime() - new Date(first.harvest_date).getTime()),
+  [groups, nestTypeFilter, isPendingOnly]);
+  const isFiltering = nestTypeFilter !== '' || isPendingOnly;
 
-  // Không hiện mã trace_code (mã định danh nội bộ của mẻ, FE_Design 13.16a)
-  const columns: DataTableColumn<HarvestGroup>[] = [
+  const columns = useMemo<DataTableColumn<HarvestGroup>[]>(() => [
     {
-      key: 'date', header: t('col.date'), className: cn('w-[17%] whitespace-nowrap', CELL_PADDING),
+      key: 'date', header: t('col.date'), className: 'w-[20%] whitespace-nowrap',
       render: group => (
         <div className="flex flex-col items-start gap-1">
           <span className="text-sm font-semibold text-charcoal">{formatStandardDate(group.harvest_date)}</span>
@@ -128,83 +68,47 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
       ),
     },
     {
-      key: 'house', header: t('col.house'), className: cn('w-[16%]', CELL_PADDING),
-      render: group => (
-        <span className="block truncate text-sm font-semibold text-charcoal">{zoneById.get(group.zone_id)?.houseName ?? NO_VALUE}</span>
-      ),
+      key: 'house', header: t('col.house'), className: 'w-[20%]',
+      render: group => <span className="block truncate text-sm font-semibold text-charcoal">{zoneById.get(group.zone_id)?.houseName ?? NO_VALUE}</span>,
     },
+    { key: 'nestType', header: t('col.nestType'), className: 'w-[17%]', render: group => <NestTypeStatus nestTypes={group.nestTypes} /> },
     {
-      key: 'nestType', header: t('col.nestType'), className: cn('w-[17%]', CELL_PADDING),
-      render: group => <NestTypeStatus nestTypes={group.nestTypes} />,
-    },
-    {
-      key: 'yield', header: t('col.yield'), className: cn('w-[15%]', CELL_PADDING),
+      key: 'yield', header: t('col.yield'), className: 'w-[15%] whitespace-nowrap',
       render: group => (
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-charcoal">{t('cell.nests', { n: num(group.nest_count) })}</span>
-          <span className="mt-0.5 text-xs text-warmGray">{t('cell.kilograms', { kg: num(group.weight_grams / GRAMS_PER_KILOGRAM, KILOGRAM_DIGITS) })}</span>
+          <span className="text-xs text-warmGray">{t('cell.kilograms', { kg: num(group.weight_grams / GRAMS_PER_KILOGRAM, KILOGRAM_DIGITS) })}</span>
         </div>
       ),
     },
+    { key: 'creator', header: t('col.creator'), className: 'w-[16%]', render: group => <span className="block truncate text-sm text-charcoal">{creatorName(group)}</span> },
+    // Một việc chính ngay trên dòng (xác nhận lần chờ); sửa, xoá nằm trong menu ⋯
     {
-      key: 'creator', header: t('col.creator'), className: cn('w-[21%]', CELL_PADDING),
-      render: group => <span className="block truncate text-sm text-charcoal">{creatorName(group)}</span>,
+      key: 'actions', header: '', align: 'right', className: 'w-[12%] whitespace-nowrap',
+      render: group => {
+        const menuItems = canChange(group)
+          ? [
+            ...(onEdit ? [{ label: t('action.edit'), onClick: () => onEdit(group) }] : []),
+            ...(onDelete ? [{ label: t('action.delete'), onClick: () => onDelete(group), danger: true }] : []),
+          ]
+          : [];
+        const canConfirm = onConfirm !== undefined && group.pendingIds.length > 0;
+        return (
+          // Bấm nút hoặc menu không mở chi tiết của dòng
+          <div className="flex items-center justify-end gap-1" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
+            {canConfirm && <Button size="sm" onClick={() => onConfirm(group)}>{t('action.confirmShort')}</Button>}
+            {menuItems.length > 0 && <ActionsMenu items={menuItems} />}
+          </div>
+        );
+      },
     },
-    {
-      key: 'actions', header: t('col.actions'), align: 'center', className: cn('w-[14%] whitespace-nowrap', CELL_PADDING),
-      render: group => (
-        // Chặn click lan lên dòng để mở menu không mở luôn chi tiết
-        <div onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} className="flex items-center justify-center">
-          <ActionsMenu
-            items={[
-              { label: t('action.detail'), onClick: () => onOpenDetail(group) },
-              ...(onConfirm && group.pendingIds.length > 0 ? [{ label: t('action.confirm'), onClick: () => onConfirm(group) }] : []),
-              ...(onEdit && canChange(group) ? [{ label: t('action.edit'), onClick: () => onEdit(group) }] : []),
-              ...(onDelete && canChange(group) ? [{ label: t('action.delete'), onClick: () => onDelete(group), danger: true }] : []),
-            ]}
-          />
-        </div>
-      ),
-    },
-  ];
+  ], [t, num, zoneById, creatorName, canChange, onEdit, onDelete, onConfirm]);
 
-  const houseOptions = [
-    { value: '', label: t('table.allHouses') },
-    ...houses.map(house => ({ value: house._id, label: house.name })),
-  ];
-  const nestTypeOptions: Array<{ value: NestType | ''; label: string }> = [
-    { value: '', label: t('table.allNestTypes') },
-    ...NEST_TYPES.map(nestType => ({ value: nestType, label: t(`nestType.${nestType}`) })),
-  ];
-  const statusOptions: Array<{ value: StatusFilter; label: string }> = [
-    { value: '', label: t('table.allStatuses') },
-    { value: 'PENDING', label: t('status.pending') },
-    { value: 'CONFIRMED', label: t('status.confirmed') },
-  ];
-  const emptyTitle = isFiltering ? t('table.emptyFilteredTitle') : t('table.emptyTitle');
+  const emptyTitle = t(isFiltering ? 'table.emptyFilteredTitle' : 'table.emptyTitle');
+  const emptyHint = isFiltering ? t('table.emptyFilteredHint') : canCreate ? t('table.emptyHint') : undefined;
 
   return (
-    <Card size="lg" className="flex h-full min-h-0 flex-col gap-4">
-      {/* Tiêu đề bên trái, nút Xuất dữ liệu + Ghi đợt thu bên phải: cùng mẫu đầu khung trang Trang trại */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-h2 text-charcoal">{t('table.title')}</h2>
-          <p className="mt-1 text-sm text-warmGray">{t('table.subtitle')}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" size="sm" className={cn('h-9 text-xs', CAPSULE_ACTION_CLASS)} onClick={onExport} disabled={groups.length === 0}>
-            <DownloadSimpleIcon size={14} weight="bold" />
-            {t('page.export')}
-          </Button>
-          {onCreate && (
-            <Button size="sm" className="h-9 text-xs" onClick={onCreate} disabled={Boolean(createBlockedReason)} title={createBlockedReason}>
-              <PlusIcon size={14} weight="bold" />
-              {t('page.create')}
-            </Button>
-          )}
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-4">
       {createBlockedReason && (
         <p className="flex items-start gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-3.5 py-2.5 text-small text-graphite" role="status">
           <WarningCircleIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-safetyOrange" />
@@ -212,69 +116,43 @@ export default function HarvestTable({ groups, zones, houses, creatorName, onOpe
         </p>
       )}
 
-      {/* Hàng lọc: ô tìm giãn hết chỗ trống, 2 ô lọc bên phải */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="min-w-[12rem] flex-1">
-            <SearchInput placeholder={t('table.search')} value={search} onChange={setSearch} />
-          </div>
-          {houses.length > 1 && (
-            <SelectMenu ariaLabel={t('table.filterHouse')} value={houseFilter} onChange={setHouseFilter} options={houseOptions} />
-          )}
-          <SelectMenu ariaLabel={t('table.filterNestType')} value={nestTypeFilter} onChange={setNestTypeFilter} options={nestTypeOptions} />
-          <SelectMenu ariaLabel={t('table.filterStatus')} value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
-        </div>
-        {/* Hàng sắp xếp bên trái, nút Hủy lọc bên phải (chỉ hiện khi đang lọc): giữ cao cố định để bảng không nhảy */}
-        <div className="flex min-h-[2.25rem] flex-wrap items-center justify-between gap-2">
-          <SortChips
-            fields={[{ key: 'date', label: t('table.sortDate') }, { key: 'weight', label: t('table.sortWeight') }]}
-            sortBy={sortKey}
-            sortDir={sortDirection}
-            onChange={handleSortChange}
-          />
-          {isFiltering && (
-            <ClearFiltersButton onClick={handleClearFilters} label={t('table.clearFilters')} count={activeFilterCount} tone="danger" />
-          )}
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <SelectMenu
+          ariaLabel={t('table.filterNestType')}
+          value={nestTypeFilter}
+          onChange={setNestTypeFilter}
+          options={[{ value: '' as const, label: t('table.allNestTypes') }, ...NEST_TYPES.map(nestType => ({ value: nestType, label: t(`nestType.${nestType}`) }))]}
+        />
+        {pendingCount > 0 && (
+          <FilterChip active={isPendingOnly} label={`${t('status.pending')} ${num(pendingCount)}`} onClick={() => setIsPendingOnly(current => !current)} />
+        )}
       </div>
 
-      {filteredGroups.length === 0 ? (
-        // Thu minh hoạ còn 80% để không tràn khung 318px
-        <div className={cn('flex items-center justify-center overflow-hidden rounded-2xl border border-warmGray/15 pt-8', TABLE_AREA_CLASS)}>
-          <div className="scale-[0.8]">
-            <TableEmptyState title={emptyTitle} description={isFiltering ? t('table.emptyFilteredHint') : onCreate ? t('table.emptyHint') : undefined} />
+      <FixedRowsTable
+        columns={columns}
+        rows={rows}
+        getRowKey={group => group.key}
+        onRowClick={onOpenDetail}
+        rowHeight={ROW_HEIGHT}
+        emptyNotice={emptyTitle}
+        emptyContent={<TableEmptyState title={emptyTitle} description={emptyHint} />}
+        mobileCard={group => (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-start justify-between gap-3">
+              <p className="flex flex-wrap items-center gap-2 text-body font-semibold text-charcoal">
+                {formatStandardDate(group.harvest_date)} · {zoneById.get(group.zone_id)?.houseName ?? NO_VALUE}
+              </p>
+              {group.pendingIds.length > 0 && <Badge tone="warning">{t('status.pending')}</Badge>}
+            </div>
+            <NestTypeStatus nestTypes={group.nestTypes} />
+            <p className="text-small text-warmGray">
+              {t('cell.nests', { n: num(group.nest_count) })} · {t('cell.kilograms', { kg: num(group.weight_grams / GRAMS_PER_KILOGRAM, KILOGRAM_DIGITS) })}
+            </p>
+            {/* Cùng nút xác nhận và menu với cột cuối */}
+            {columns[columns.length - 1].render(group, 0)}
           </div>
-        </div>
-      ) : (
-        <div className={TABLE_AREA_CLASS}>
-          <DataTable
-            columns={columns}
-            rows={filteredGroups}
-            getRowKey={group => group.key}
-            onRowClick={onOpenDetail}
-            rowHeight={ROW_HEIGHT}
-            minTableWidth={TABLE_MIN_WIDTH}
-            visibleRows={VISIBLE_ROWS}
-            fillHeight
-            mobileCard={group => (
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <p className="flex flex-wrap items-center gap-2 text-body font-semibold text-charcoal">
-                    {formatStandardDate(group.harvest_date)} · {zoneById.get(group.zone_id)?.houseName ?? NO_VALUE}
-                    {group.pendingIds.length > 0 && <Badge tone="warning">{t('status.pending')}</Badge>}
-                  </p>
-                  <NestTypeStatus nestTypes={group.nestTypes} />
-                  <p className="text-small text-warmGray">
-                    {t('cell.nests', { n: num(group.nest_count) })} · {t('cell.kilograms', { kg: num(group.weight_grams / GRAMS_PER_KILOGRAM, KILOGRAM_DIGITS) })}
-                  </p>
-                </div>
-                {/* Menu ⋯ dùng chung với cột Thao tác */}
-                {columns[columns.length - 1].render(group, 0)}
-              </div>
-            )}
-          />
-        </div>
-      )}
-    </Card>
+        )}
+      />
+    </div>
   );
 }

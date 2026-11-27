@@ -75,9 +75,9 @@
 
 | # | Thay đổi |
 |---|---|
-| 1 | **Menu Farm Owner 10 mục, 3 nhóm** (Theo dõi · Vận hành · Chuyên môn): Tổng quan = Tình trạng các nhà · So sánh nhà · Điều khiển tay; Công việc = Phiếu công việc · Bảo trì định kỳ · Khuyến nghị; Chuyên môn = 9 trang `/domain-expert/*`. Badge: Cảnh báo, Công việc (phiếu chờ duyệt), Chuyên môn (cảnh báo chờ kết luận ở trang trại chưa có chuyên gia, BR-22), gom ở `hooks/common/useMenuBadges`. Tab đang mở là tab có đường dẫn dài nhất chứa trang (`activeTabPath`), nên `/dashboard/scada` không sáng cả tab `/dashboard`. |
+| 1 | **Menu Farm Owner 10 mục, 3 nhóm** (Theo dõi · Vận hành · Chuyên môn): Tổng quan (1 nhà một lúc: camera, cảm biến, điều khiển; Điều khiển tay là mục riêng; So sánh nhà là nhóm thứ tư của Phân tích, `/overview` chuyển sang đó); Công việc = Phiếu công việc · Bảo trì định kỳ · Khuyến nghị; Chuyên môn = 9 trang `/domain-expert/*`. Badge: Cảnh báo, Công việc (phiếu chờ duyệt), Chuyên môn (cảnh báo chờ kết luận ở trang trại chưa có chuyên gia, BR-22), gom ở `hooks/common/useMenuBadges`. Tab đang mở là tab có đường dẫn dài nhất chứa trang (`activeTabPath`), nên tab con không sáng cả tab cha. |
 | 2 | **Tổng quan:** 4 ô KPI (Nhà cần chú ý · Cảnh báo chưa xử lý, dòng phụ số chờ xác nhận · Thiết bị mất kết nối (chỉ OFFLINE) · Phiếu chờ duyệt) · lưới thẻ nhà (số đo từng Zone tô theo ngưỡng kèm icon, chế độ tự động/tay, giai đoạn, trạng thái hôm nay, cảnh báo chưa xử lý và phiếu đang mở, chim về, ANALYTICS-FR-015; ô KPI và thẻ cùng lấy số từ overview) · Việc cần làm. Không ảnh, không dải tình trạng, không bảng cảnh báo lặp trang Cảnh báo. "Ổn định" chỉ khi nhà có ít nhất 1 bộ điều khiển, mọi bộ online và số đo trong ngưỡng (`houseLiveStatus`), ô "Nhà cần chú ý" đếm theo cùng luật. Dock điện thoại có mục "Thêm" (`Drawer side="bottom"`) mở các mục còn lại. |
-| 3 | **Một trang không lồng tab:** So sánh nhà chỉ còn bảng so sánh (tình hình từng nhà đã ở thẻ nhà của Tổng quan). |
+| 3 | **So sánh nhà** là nhóm thứ tư của Phân tích (`/analytics?tab=houses`): một ma trận, bấm tên cột để sắp xếp (tình hình từng nhà đã ở trang Tổng quan). |
 | 4 | **Thanh phạm vi chỉ ở header** ở mọi khổ màn; trang không vẽ bản sao `ScopeFilter` cho điện thoại. Điện thoại: khung lọc thành lưới 2 cột, hàng tab xuống dòng. |
 | 5 | **Biểu đồ:** đường đếm chim nối thẳng các điểm (`tension: 0`); so sánh Zone chỉ còn bảng (không cột từ 0); phân bổ loại tổ là thanh ngang một màu có số kg, % ghi bên cạnh (không vòng tổng 100 %). |
 
@@ -847,14 +847,14 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 | Tự động · Điều khiển tay | Automatic · Manual override | SCADA, "Logic mờ" làm nhãn chế độ | |
 | Trực tiếp | Live | realtime, thời gian thực | |
 | Ngưỡng | Threshold | | |
-| Hệ số mờ | Fuzzy coefficient | Fuzzy, hệ số Fuzzy, hệ số logic mờ | |
+| Hệ số mờ | Fuzzy coefficient | Fuzzy, hệ số Fuzzy, hệ số logic mờ, hệ số điều khiển (mờ) | Bốn hệ số: Dải biên độ ẩm · Dải biên nhiệt độ · Mức quạt khử ẩm · Chu kỳ điều khiển; một tên ở mọi màn |
 | Lọc nhiễu số đo | Reading noise filter | median + Kalman | |
-| Tham số phát hiện · Mức ồn vượt nền | Detection parameter · Noise above baseline | P90 | EXPERT-FR-008 |
+| Tham số phát hiện · Mức ồn vượt nền | Detection parameter · Noise above baseline | P90, tham số phát hiện lỗi | EXPERT-FR-008; năm tham số: Mức ồn vượt nền · Thời gian ồn kéo dài tối thiểu · Thời gian bơm chạy không tăng ẩm · Độ ẩm cần tăng tối thiểu · Độ sụt âm lượng báo hỏng loa |
 | Cảnh báo | Alert | | |
 | Xác nhận (cảnh báo) | Acknowledge | | Trạng thái: Mới · Tiếp nhận · Bác bỏ · Đã xử lý |
 | Cảnh báo suy luận | Inferred alert | AI | `NOISE_ANOMALY`, `SENSOR_ANOMALY`, `FORECAST_BREACH`, `LOW_RETURN_RATE` |
 | Kiểm chứng cảnh báo · Kết luận · Xác nhận đúng · Bác bỏ | Verdict · Conclusion · Confirm · Reject | thẩm định, phán quyết, đối soát | Việc của chuyên gia (EXPERT-FR-003), khác "Xác nhận (cảnh báo)" |
-| Duyệt thay đổi · Giữ · Hoàn tác | Review · Accept · Revert | thẩm định, hoàn nguyên | Chuyên gia duyệt thay đổi ngưỡng, hệ số của chủ nhà yến (EXPERT-FR-010) |
+| Duyệt thay đổi · Giữ · Hoàn tác | Review · Accept · Revert | thẩm định, hoàn nguyên, chấp thuận | Chuyên gia duyệt thay đổi ngưỡng, hệ số của chủ nhà yến (EXPERT-FR-010); trạng thái: Chờ duyệt · Đã giữ · Đã hoàn tác |
 | Đề xuất hệ số · Duyệt · Từ chối | Proposal · Approve · Reject | | EXPERT-FR-011 |
 | Bằng chứng | Evidence | | ALERT-FR-014 |
 | Mức độ: Khẩn cấp · Cao · Thường | Level: Urgent · High · Normal | CRITICAL (chữ enum) | 2.4 |
@@ -862,10 +862,10 @@ Màn nhận dữ liệu qua socket (Dashboard, cảnh báo, trạng thái thiế
 | Trạng thái sức khoẻ: Tốt · Cần theo dõi · Cần xử lý · Không đủ dữ liệu | Good · Watch · Action needed · Insufficient data | | MF-06; là chỉ báo, không phải chẩn đoán |
 | Chỉ số sức khoẻ: Bình thường · Lệch nhẹ · Lệch rõ | Normal · Slight · Clear | | BR-28 |
 | Đánh giá ngày | Daily rating | chấm thực địa | EXPERT-FR-012 |
-| Đếm chim · Tỷ lệ chim về · Vòng đếm · Lịch đếm | Bird count · Return rate · Counting ring · Counting schedule | tỉ lệ, vạch đếm | |
+| Đếm chim · Tỷ lệ chim về · Vòng đếm · Lịch đếm | Bird count · Return rate · Counting ring · Counting schedule | tỉ lệ, vạch đếm | Menu Chuyên gia: "Cài đặt đếm chim" (Lịch đếm, Vòng đếm), để khỏi nhầm với trang "Chim ra vào" của chủ nhà yến |
 | Thu hoạch | Harvest | | |
 | Phiếu công việc · Tạo · Chưa đóng · Duyệt · Mở lại · Huỷ · Giao lại | Work order · Create · Open · Approve · Reopen · Cancel · Reassign | Work Order, mở phiếu | MF-02 |
-| Thời gian xác nhận TB · Thời gian xử lý TB | Mean time to acknowledge · Mean time to resolve | MTTA, MTTR | OPS-FR-009 |
+| Thời gian xác nhận trung bình · Thời gian xử lý trung bình | Mean time to acknowledge · Mean time to resolve | MTTA, MTTR, TB | OPS-FR-009; không viết tắt "TB" trên màn |
 | Vị trí (trang trại) · Vĩ độ · Kinh độ | Location · Latitude · Longitude | | Một trang trại là một địa điểm (FARM-FR-001) |
 
 **Tên loại cảnh báo** (`alertTypeDict`, nguồn duy nhất): Vượt ngưỡng môi trường · Thiết bị mất kết nối · Lỗi loa ru · Phun sương không hiệu quả · Tiếng ồn bất thường · Tỷ lệ chim về thấp · Camera đếm chim gặp sự cố · Thiết bị tự khởi động lại · Lỗi cảm biến · Lỗi đường truyền cảm biến · Cảm biến bất thường · Sắp vượt ngưỡng · Đến hạn bảo trì bơm/quạt · Bơm, quạt hoặc loa không chạy · Thiết bị chưa nhận cấu hình mới. Tên viết theo điều người nuôi thấy, không theo tên linh kiện (không "bus RS485", "cơ cấu chấp hành", "suy giảm").
@@ -1328,9 +1328,9 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
    | Nhóm | Gồm | Dùng cho |
    |---|---|---|
-   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | So sánh nhà (`/overview`), chi tiết thiết bị theo nhà (`/devices/detail`) |
+   | `FARM_SIDE_ROLES` | Farm Owner · Domain Expert | So sánh nhà (`/analytics?tab=houses`, `/overview` chuyển sang đó), chi tiết thiết bị theo nhà (`/devices/detail`) |
    | `FARM_WORK_ROLES` | Farm Owner · Domain Expert · Farm Technician | Màn của nhà yến cho cả ba vai trò trại: tổng quan, phân tích, đếm chim, sức khoẻ và đánh giá ngày, phiếu công việc, bảo trì, khuyến nghị, vòng đếm, tham số chỉ đọc. Kỹ thuật viên chỉ thấy nhà được giao; nút backend trả 403 thì ẩn bằng `usePermission` |
-   | `RELAY_CONTROL_ROLES` | Farm Owner · Farm Technician | Điều khiển tay relay (`/dashboard/scada`) |
+   | `RELAY_CONTROL_ROLES` | Farm Owner · Farm Technician | Điều khiển tay relay (`/relay-control`) |
    | `HARVEST_ROLES` | Farm Owner · Domain Expert · Farm Technician | Thu hoạch: Farm Owner ghi và xác nhận, kỹ thuật viên ghi lần chờ xác nhận, chuyên gia chỉ xem |
    | `FARM_STRUCTURE_ROLES` | Farm Owner · Domain Expert · Farm Technician | Trang trại, nhà, Zone |
    | `DEVICE_LIST_ROLES` | Admin + `FARM_STRUCTURE_ROLES` | `/devices` (mỗi role một trang) |

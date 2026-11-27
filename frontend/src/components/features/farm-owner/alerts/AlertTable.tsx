@@ -1,13 +1,12 @@
 import { useCallback, useMemo } from 'react';
 import SeverityBadge from '@/components/common/SeverityBadge';
 import { STATUS_BADGE_CLASS } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
-import { ActionsMenu, Badge, type ActionsMenuItem, type DataTableColumn } from '@/components/ui';
+import { Badge, Button, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { alertsDict } from '@/constants/alerts.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { isAlertFinished } from '@/constants/severity';
 import { useTranslation } from '@/hooks/common/useTranslation';
-import { cn } from '@/lib/cn';
 import { ALERT_PAGE_SIZE } from '@/hooks/shared/useAlerts';
 import type { Alert } from '@/types';
 import SimulatedBadge from '@/components/common/SimulatedBadge';
@@ -26,19 +25,25 @@ interface AlertTableProps {
   onAction: (action: AlertAction, alert: Alert) => void;
 }
 
-// bảng cảnh báo: mức, loại, vị trí, thiết bị, trạng thái, lúc tạo, menu thao tác
+// Bảng cảnh báo: mức, loại kèm nội dung, nơi xảy ra (vị trí và thiết bị chung một ô), trạng thái, thời gian, 1 nút hành động
 export default function AlertTable({ alerts, serverPagination, locationOf, canAcknowledge, onAction }: AlertTableProps): JSX.Element {
-  const { t, dateTime } = useTranslation(alertsDict);
-  // Bấm menu, kể cả mục trong portal, không mở chi tiết của dòng
-  const rowMenu = useCallback((alert: Alert, alignClass: string) => {
-    const items: ActionsMenuItem[] = [{ label: t('action.view'), onClick: () => onAction('view', alert) }];
-    if (canAcknowledge && alert.status === 'ACTIVE') {
-      items.push({ label: t('action.acknowledge'), onClick: () => onAction('acknowledge', alert) });
-    }
+  const { t, dateTime, ago } = useTranslation(alertsDict);
+
+  // Cảnh báo chờ xác nhận có nút Xác nhận ngay trên dòng, các dòng khác có nút Xem; bấm cả dòng cũng mở chi tiết
+  const actionButton = useCallback((alert: Alert, className?: string) => {
+    const isAcknowledge = canAcknowledge && alert.status === 'ACTIVE';
     return (
-      <div className={cn('flex items-center', alignClass)} onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
-        <ActionsMenu items={items} />
-      </div>
+      <Button
+        size="sm"
+        variant={isAcknowledge ? 'primary' : 'secondary'}
+        className={className}
+        onClick={event => {
+          event.stopPropagation();
+          onAction(isAcknowledge ? 'acknowledge' : 'view', alert);
+        }}
+      >
+        {t(isAcknowledge ? 'action.acknowledge' : 'action.open')}
+      </Button>
     );
   }, [t, canAcknowledge, onAction]);
 
@@ -52,50 +57,61 @@ export default function AlertTable({ alerts, serverPagination, locationOf, canAc
     {
       key: 'alert',
       header: t('col.alert'),
-      className: 'w-[25%]',
-      // Một dòng: loại cảnh báo; tiêu đề chi tiết xem trong ngăn chi tiết
-      render: alert => <span title={alert.title} className="block truncate text-sm font-semibold text-charcoal">{t(`type.${alert.type}`)}</span>,
-    },
-    {
-      key: 'location',
-      header: t('col.location'),
-      className: 'w-[17%]',
+      className: 'w-[32%]',
+      // Dòng 1: loại cảnh báo; dòng 2: nội dung cụ thể khi khác tên loại
       render: alert => {
-        const { location } = locationOf(alert);
-        return <span title={location} className="block truncate whitespace-nowrap text-sm text-charcoal">{location}</span>;
+        const typeLabel = t(`type.${alert.type}`);
+        return (
+          <div className="min-w-0">
+            <span title={typeLabel} className="block truncate text-sm font-semibold text-charcoal">{typeLabel}</span>
+            {alert.title && alert.title !== typeLabel && <span title={alert.title} className="block truncate text-small text-warmGray">{alert.title}</span>}
+          </div>
+        );
       },
     },
     {
-      key: 'device',
-      header: t('col.device'),
-      className: 'w-[13%]',
-      render: alert => (
-        <div className="flex min-w-0 flex-wrap items-center gap-1">
-          <span className="block truncate whitespace-nowrap text-sm font-semibold text-charcoal">{locationOf(alert).device ?? NO_VALUE}</span>
-          <SimulatedBadge simulated={locationOf(alert).simulated} />
-        </div>
-      ),
+      key: 'place',
+      header: t('col.place'),
+      className: 'w-[22%]',
+      render: alert => {
+        const { location, device, simulated } = locationOf(alert);
+        return (
+          <div className="min-w-0">
+            <span title={location} className="block truncate whitespace-nowrap text-sm font-semibold text-charcoal">{location}</span>
+            <span className="flex min-w-0 items-center gap-1 text-small text-warmGray">
+              <span className="truncate">{device ?? NO_VALUE}</span>
+              <SimulatedBadge simulated={simulated} />
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'status',
       header: t('col.status'),
-      className: 'w-[11%] whitespace-nowrap',
+      className: 'w-[14%] whitespace-nowrap',
       render: alert => <Badge className={STATUS_BADGE_CLASS[alert.status]}>{t(`status.${alert.status}`)}</Badge>,
     },
     {
       key: 'createdAt',
       header: t('col.createdAt'),
-      className: 'w-[16%] whitespace-nowrap',
-      render: alert => <span className="text-sm text-charcoal">{dateTime(alert.created_at)}</span>,
+      className: 'w-[14%] whitespace-nowrap',
+      // Dòng 1: cách đây bao lâu; dòng 2: ngày giờ chính xác
+      render: alert => (
+        <div>
+          <span className="block text-sm font-semibold text-charcoal">{ago(alert.created_at)}</span>
+          <span className="block text-small text-warmGray">{dateTime(alert.created_at)}</span>
+        </div>
+      ),
     },
     {
       key: 'actions',
-      header: t('col.actions'),
-      align: 'center',
-      className: 'w-24 whitespace-nowrap',
-      render: alert => rowMenu(alert, 'justify-center'),
+      header: '',
+      align: 'right',
+      className: 'w-28 whitespace-nowrap',
+      render: alert => <div className="flex justify-end">{actionButton(alert)}</div>,
     },
-  ], [t, dateTime, locationOf, rowMenu]);
+  ], [t, dateTime, ago, locationOf, actionButton]);
 
   return (
     <FixedRowsTable
@@ -108,19 +124,19 @@ export default function AlertTable({ alerts, serverPagination, locationOf, canAc
       emptyNotice={t('list.emptyTitle')}
       serverPagination={serverPagination}
       mobileCard={alert => (
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <SeverityBadge severity={alert.severity} isMuted={isAlertFinished(alert.status)} />
               <Badge className={STATUS_BADGE_CLASS[alert.status]}>{t(`status.${alert.status}`)}</Badge>
             </div>
             <p className="text-body font-semibold text-charcoal">{t(`type.${alert.type}`)}</p>
             <p className="flex flex-wrap items-center gap-1.5 text-small text-warmGray">
-              {locationOf(alert).location} · {dateTime(alert.created_at)}
+              {locationOf(alert).location} · {ago(alert.created_at)}
               <SimulatedBadge simulated={locationOf(alert).simulated} />
             </p>
           </div>
-          {rowMenu(alert, 'justify-end')}
+          {actionButton(alert, 'w-full')}
         </div>
       )}
     />

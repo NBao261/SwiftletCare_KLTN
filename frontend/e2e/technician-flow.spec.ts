@@ -58,11 +58,11 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await expect(page).toHaveURL(/\/alerts$/);
 
   // Mọi việc của thợ ở nhà được giao (G-33); không có trang quyết định của chuyên gia, cài đặt hệ thống
-  for (const label of ['Cảnh báo', 'Tổng quan', 'Đàn chim', 'Sức khoẻ & báo cáo', 'Phân tích', 'Công việc', 'Thiết bị', 'Trang trại', 'Thu hoạch', 'Tham số điều khiển', 'Đếm chim']) {
+  for (const label of ['Cảnh báo', 'Tổng quan', 'Chim ra vào', 'Sức khoẻ & báo cáo', 'Phân tích', 'Công việc', 'Thiết bị', 'Trang trại', 'Thu hoạch', 'Tham số điều khiển', 'Cài đặt đếm chim']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
   for (const label of ['Hàng đợi việc', 'Kiểm chứng cảnh báo', 'Luật khuyến nghị', 'Cài đặt']) {
-    await expect(sidebar(page).getByRole('link', { name: label })).toHaveCount(0);
+    await expect(sidebar(page).getByRole('link', { name: label, exact: true })).toHaveCount(0);
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
@@ -80,7 +80,7 @@ test('T2 — cảnh báo của nhà được giao mở được ngăn chi tiết
   await expect(page.getByRole('heading', { name: 'Lỗi cảm biến' })).toBeVisible();
 
   // Ngăn chi tiết đọc đúng cảnh báo đang mở: trạng thái của nó khớp dữ liệu máy chủ
-  const statusLabel = alert.status === 'ACTIVE' ? 'Mới' : 'Tiếp nhận';
+  const statusLabel = alert.status === 'ACTIVE' ? 'Chờ xác nhận' : 'Đã xác nhận';
   await expect(page.getByText(statusLabel, { exact: true }).first()).toBeVisible();
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
@@ -156,10 +156,13 @@ test('T6 — trang của vai trò khác bị chặn (Report 3 §2.4)', async ({ 
   const crashes = await openAsTechnician(page, '/overview');
   await expect(page).toHaveURL(/\/403$/);
 
-  for (const path of ['/domain-expert/queue', '/domain-expert/alert-verdicts', '/devices/onboarding']) {
+  for (const path of ['/domain-expert/queue', '/domain-expert/alert-verdicts']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/403$/);
   }
+  // thiết lập thiết bị mở cho thợ ở nhà được giao (G-34)
+  await page.goto('/devices/onboarding');
+  await expect(page).toHaveURL(/\/devices\/onboarding$/);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
@@ -190,7 +193,7 @@ test('T8 — đánh giá ngày và thu hoạch của nhà được giao: không 
 
 test('T9 — theo dõi nhà được giao: tổng quan, điều khiển tay, đàn chim, vòng đếm, phân tích (G-33)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/dashboard');
-  for (const path of ['/dashboard', '/dashboard/scada', '/vision', '/domain-expert/counting-ring', '/analytics']) {
+  for (const path of ['/dashboard', '/relay-control', '/vision', '/domain-expert/counting-ring', '/analytics']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(new RegExp(`${path}$`));
   }
@@ -202,7 +205,9 @@ test('T10 — tham số, lịch đếm, luật thời tiết chỉ đọc (G-33)
   for (const path of ['/domain-expert/tuning', '/domain-expert/counting-schedule', '/domain-expert/weather-rules']) {
     await page.goto(path);
     await expect(page, path).toHaveURL(new RegExp(`${path}$`));
-    await expect(page.getByText('Chỉ xem', { exact: true }), path).toBeVisible();
+    // Huy hiệu quyền ở header: mở nút (i) thấy câu bắt đầu bằng "Chỉ xem."
+    await page.getByRole('banner').getByRole('button', { name: 'Giải thích' }).click();
+    await expect(page.getByText('Chỉ xem.', { exact: true }), path).toBeVisible();
   }
   await expect(page.getByRole('button', { name: 'Thêm luật' })).toHaveCount(0);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
