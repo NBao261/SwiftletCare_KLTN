@@ -40,7 +40,8 @@ interface SettingsTableProps {
   emptyText?: string
 }
 
-// Bảng của trang cài đặt theo ảnh mẫu: dòng tiêu đề nền Paper bo nhỏ, các dòng kẻ mảnh, cột số căn phải
+// Bảng của trang cài đặt theo ảnh mẫu: dòng tiêu đề nền Paper bo nhỏ, các dòng kẻ mảnh, cột số căn phải. Chữ trong ô xuống
+// dòng đủ cả tên dài (tên nhà, khu vực tối đa 50 ký tự), không cắt
 export function SettingsTable({ columns, rows, emptyText }: SettingsTableProps) {
   const palette = usePalette()
   // Dòng bấm được có mũi tên cuối dòng: dòng tiêu đề chừa chỗ để cột thẳng hàng
@@ -63,7 +64,6 @@ export function SettingsTable({ columns, rows, emptyText }: SettingsTableProps) 
           weight={index === 0 ? 'regular' : 'semiBold'}
           color={cell.isMuted ? palette.textSecondary : palette.text}
           style={column.align === 'right' && styles.right}
-          numberOfLines={2}
         >
           {cell.text}
         </Text>
@@ -82,7 +82,7 @@ export function SettingsTable({ columns, rows, emptyText }: SettingsTableProps) 
             weight="semiBold"
             color={palette.textSecondary}
             style={[styles.cell, { flex: column.flex ?? 1 }, column.align === 'right' && styles.right]}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {column.label}
           </Text>

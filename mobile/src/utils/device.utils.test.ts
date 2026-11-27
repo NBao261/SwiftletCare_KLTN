@@ -21,7 +21,7 @@ describe('withSimulatedLabel', () => {
 describe('getDeviceActions', () => {
   it('controller dời, thay, gỡ được; camera chỉ gỡ', () => {
     expect(getDeviceActions('controller')).toEqual(['move', 'replace', 'remove'])
-    expect(getDeviceActions('camera')).toEqual(['remove'])
+    expect(getDeviceActions('camera')).toEqual(['camera-source', 'remove'])
   })
 })
 

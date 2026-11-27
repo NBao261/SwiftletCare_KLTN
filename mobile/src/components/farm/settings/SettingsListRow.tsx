@@ -27,7 +27,7 @@ export function SettingsListRow({ title, trailing, isTrailingMuted, caption, has
     <>
       <View style={styles.texts}>
         <View style={styles.titleRow}>
-          <Text variant="body" weight="semiBold" numberOfLines={1} style={styles.flex}>
+          <Text variant="body" weight="semiBold" style={styles.flex}>
             {title}
           </Text>
           {trailing ? (

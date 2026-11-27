@@ -68,7 +68,8 @@ describe('filterAlerts', () => {
 
   it('lọc tầng, mức, loại', () => {
     expect(filterAlerts(alerts, { ...noFilter, zoneId: 'zone-2' }).map(alert => alert._id)).toEqual(['zone-2'])
-    expect(filterAlerts(alerts, { ...noFilter, severity: 'P3' }).map(alert => alert._id)).toEqual(['house'])
+    expect(filterAlerts(alerts, { ...noFilter, severity: 'P4' }).map(alert => alert._id)).toEqual(['house'])
+    expect(filterAlerts(alerts, { ...noFilter, severity: 'P2' }).map(alert => alert._id)).toEqual(['zone-2'])
     expect(filterAlerts(alerts, { ...noFilter, type: 'NOISE_ANOMALY' })).toHaveLength(1)
   })
 
@@ -94,10 +95,10 @@ describe('resolveVerdictFilter', () => {
 })
 
 describe('countBySeverityLevel và isInferredAlert', () => {
-  it('đếm đủ 3 cấp, CRITICAL và HIGH cùng là Khẩn cấp, cấp không có là 0', () => {
+  it('đếm đủ 4 cấp, mỗi mức backend một cấp, cấp không có là 0', () => {
     expect(
       countBySeverityLevel([buildAlert('a'), buildAlert('b', { severity: 'CRITICAL' }), buildAlert('c', { severity: 'HIGH' })]),
-    ).toEqual({ P1: 2, P2: 1, P3: 0 })
+    ).toEqual({ P1: 1, P2: 1, P3: 1, P4: 0 })
   })
 
   it('4 loại suy luận như backend', () => {
@@ -137,14 +138,14 @@ describe('getRenotifyState', () => {
 })
 
 describe('chuỗi trang phân trang ở server', () => {
-  it('chưa xác nhận trước đã xác nhận; lọc Khẩn cấp thì CRITICAL rồi HIGH trong từng trạng thái', () => {
+  it('chưa xác nhận trước đã xác nhận; lọc một cấp thì gửi đúng mức backend của cấp đó trong từng trạng thái', () => {
     expect(buildAlertChain(ACTIVE_ALERT_STATUSES, null)).toEqual([
       { status: 'ACTIVE', severity: null },
       { status: 'ACKNOWLEDGED', severity: null },
     ])
-    expect(buildAlertChain(['ACTIVE'], 'P1')).toEqual([
-      { status: 'ACTIVE', severity: 'CRITICAL' },
+    expect(buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], 'P2')).toEqual([
       { status: 'ACTIVE', severity: 'HIGH' },
+      { status: 'ACKNOWLEDGED', severity: 'HIGH' },
     ])
   })
 
@@ -200,12 +201,12 @@ describe('chuỗi trang phân trang ở server', () => {
       expect(getNextAlertChainPage(chain.length, [page])).toBeUndefined()
     })
 
-    it('lọc Khẩn cấp chỉ có HIGH: bỏ qua CRITICAL rỗng, lấp tiếp các mắt sau', async () => {
-      const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], 'P1')
-      const { fetchLinkPage, requests } = buildFetcher({ 'ACTIVE/HIGH': 2 })
+    it('lọc Cao chỉ có cảnh báo đã xác nhận: bỏ qua mắt ACTIVE rỗng, lấp tiếp mắt sau', async () => {
+      const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], 'P2')
+      const { fetchLinkPage, requests } = buildFetcher({ 'ACKNOWLEDGED/HIGH': 2 })
       const page = await fetchAlertChainPage(chain, firstPage, PAGE_SIZE, fetchLinkPage)
       expect(page.items).toHaveLength(2)
-      expect(requests).toEqual(['ACTIVE/CRITICAL#1', 'ACTIVE/HIGH#1', 'ACKNOWLEDGED/CRITICAL#1', 'ACKNOWLEDGED/HIGH#1'])
+      expect(requests).toEqual(['ACTIVE/HIGH#1', 'ACKNOWLEDGED/HIGH#1'])
     })
 
     it('ACTIVE chưa đủ một trang: lấy luôn ACKNOWLEDGED, cảnh báo vừa xác nhận không biến khỏi danh sách', async () => {
@@ -234,8 +235,8 @@ describe('chuỗi trang phân trang ở server', () => {
       const chain = buildAlertChain(['ACTIVE', 'ACKNOWLEDGED'], 'P1')
       const { fetchLinkPage, requests } = buildFetcher({})
       const page = await fetchAlertChainPage(chain, firstPage, PAGE_SIZE, fetchLinkPage)
-      expect(page).toEqual({ link: 3, page: 1, items: [], total: 0, hasMoreInLink: false })
-      expect(requests).toHaveLength(4)
+      expect(page).toEqual({ link: 1, page: 1, items: [], total: 0, hasMoreInLink: false })
+      expect(requests).toHaveLength(2)
       expect(getNextAlertChainPage(chain.length, [page])).toBeUndefined()
     })
 
@@ -259,8 +260,8 @@ describe('chuỗi trang phân trang ở server', () => {
     })
   })
 
-  it('cộng số theo cấp: CRITICAL và HIGH cùng Khẩn cấp', () => {
-    expect(sumLevelCounts({ CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 })).toEqual({ P1: 3, P2: 3, P3: 4 })
+  it('cộng số theo cấp: mỗi mức backend một cấp', () => {
+    expect(sumLevelCounts({ CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 })).toEqual({ P1: 1, P2: 2, P3: 3, P4: 4 })
   })
 })
 

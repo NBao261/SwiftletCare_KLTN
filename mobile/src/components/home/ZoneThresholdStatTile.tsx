@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { router } from 'expo-router'
 import { ThermometerIcon } from 'phosphor-react-native'
-import { MAX_DETAIL_ITEMS, StatDetailSheet } from '@/components/home/StatDetailSheet'
+import { StatDetailSheet } from '@/components/home/StatDetailSheet'
 import { StatTile, type StatTone } from '@/components/home/StatTile'
 import { useAllHouses } from '@/hooks/farm/useAllHouses'
 import { useZonesOfHouses } from '@/hooks/farm/useZonesOfHouses'
@@ -77,16 +77,16 @@ export function ZoneThresholdStatTile() {
         visible={isSheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t('Khu vực vượt ngưỡng')}
-        detailLabel={t('Xem chi tiết khu vực vượt ngưỡng')}
+        listTitle={t('Khu vực đang vượt ngưỡng')}
         value={value}
         summary={isReady ? getBreachSummary(zoneCount, breaches) : '_'}
-        items={breaches.slice(0, MAX_DETAIL_ITEMS).map(({ zone, metrics }) => ({
+        items={breaches.map(({ zone, metrics }) => ({
           key: zone._id,
           title: zone.name,
           description: joinMetricLabels(metrics),
           isProblem: true,
         }))}
-        hiddenCount={Math.max(0, breaches.length - MAX_DETAIL_ITEMS)}
+        hiddenCount={0}
         onViewAll={handleViewAll}
       />
     </>

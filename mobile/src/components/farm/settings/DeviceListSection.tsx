@@ -4,6 +4,7 @@ import {
   ArrowCounterClockwiseIcon,
   ArrowsLeftRightIcon,
   CpuIcon,
+  GearSixIcon,
   QrCodeIcon,
   SwapIcon,
   TrashIcon,
@@ -11,6 +12,7 @@ import {
 } from 'phosphor-react-native'
 import { SimulatedBadge } from '@/components/common/SimulatedBadge'
 import { ActionMenuSheet, type MenuAction } from '@/components/farm/ActionMenuSheet'
+import { CameraSourceSheet, type CameraSourceTarget } from '@/components/farm/settings/CameraSourceSheet'
 import { MoveDeviceSheet, type MoveDeviceTarget } from '@/components/farm/settings/MoveDeviceSheet'
 import {
   RemoveDeviceSheet,
@@ -25,7 +27,8 @@ import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
 import { usePalette } from '@/hooks/theme/usePalette'
-import type { ConfigSyncState, DeviceStatus } from '@/types'
+import type { CameraStatus, ConfigSyncState, DeviceStatus } from '@/types'
+import { isCameraStatusProblem } from '@/utils/cameraSource.utils'
 import {
   type DeviceAction,
   getConfigApplyStep,
@@ -33,7 +36,7 @@ import {
   isWithinRestoreWindow,
   withSimulatedLabel,
 } from '@/utils/device.utils'
-import { getConfigApplyLabel, getDeviceStatusLabel } from '@/utils/label.utils'
+import { getCameraStatusLabel, getConfigApplyLabel, getDeviceStatusLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 
 export interface ListedDevice {
@@ -44,6 +47,8 @@ export interface ListedDevice {
   simulated?: boolean
   // ENV-FR-027 — chỉ controller có; camera không có cấu hình khu vực
   config_sync?: ConfigSyncState
+  // FARM-FR-004b — chỉ camera đếm chim có: tình trạng camera IP nó đọc
+  camera_status?: CameraStatus | null
 }
 
 // Quản lý thiết bị đã lắp (Farm Owner, SF-01): khu vực của mục (controller), các khu vực của nhà để dời, thay thiết bị (mở sheet
@@ -70,10 +75,18 @@ interface DeviceListSectionProps {
 function getActionText(action: DeviceAction): { label: string; caption: string } {
   if (action === 'move') return { label: t('Dời sang khu vực khác'), caption: t('Quét mã tầng mới hoặc chọn khu vực') }
   if (action === 'replace') return { label: t('Thay thiết bị'), caption: t('Quét nhãn thiết bị mới, giữ khu vực và lịch sử') }
+  if (action === 'camera-source') {
+    return { label: t('Cài đặt camera'), caption: t('Địa chỉ camera IP ở cửa nhà yến mà camera đếm chim đọc') }
+  }
   return { label: t('Gỡ thiết bị'), caption: t('Ẩn khỏi danh sách, giữ lịch sử, khôi phục được trong 24 giờ') }
 }
 
-const ACTION_ICONS = { move: ArrowsLeftRightIcon, replace: SwapIcon, remove: TrashIcon } as const
+const ACTION_ICONS = {
+  move: ArrowsLeftRightIcon,
+  replace: SwapIcon,
+  'camera-source': GearSixIcon,
+  remove: TrashIcon,
+} as const
 
 // Mục danh sách thiết bị: camera AI của nhà (FARM-FR-004) hoặc controller của một tầng (FARM-FR-003). Không có nút "Sửa": thiết bị
 // thêm bằng nhãn QR / nhập tay; Farm Owner bấm một thiết bị để dời, thay, gỡ (FARM-FR-007b, 008). Danh sách của backend không trả
@@ -86,6 +99,7 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
   const [moveTarget, setMoveTarget] = useState<MoveDeviceTarget | null>(null)
   const [removeTarget, setRemoveTarget] = useState<RemoveDeviceTarget | null>(null)
   const [recentlyRemoved, setRecentlyRemoved] = useState<RemovedDevice | null>(null)
+  const [sourceTarget, setSourceTarget] = useState<CameraSourceTarget | null>(null)
   // Mỗi lần mở sheet một key mới để sheet bắt đầu trống
   const [sheetKey, setSheetKey] = useState(0)
   const canRestore = recentlyRemoved !== null && isWithinRestoreWindow(recentlyRemoved.decommissionedAt)
@@ -102,6 +116,8 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
       })
     } else if (action === 'replace') {
       manage?.onReplace?.(device)
+    } else if (action === 'camera-source') {
+      setSourceTarget({ cameraId: device._id, deviceId: device.device_id })
     } else if (action === 'remove') {
       setRemoveTarget({ mode: 'remove', kind, recordId: device._id, deviceId: device.device_id, status: device.status })
     }
@@ -130,9 +146,15 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
 
   const rows: SettingsTableRow[] = devices.map(device => {
     const statusLabel = getDeviceStatusLabel(device.status)
-    // Controller kèm bước áp cấu hình khu vực dưới trạng thái (ENV-FR-027); cam khi chưa áp cấu hình mới (BR-24)
+    // Controller kèm bước áp cấu hình khu vực dưới trạng thái (ENV-FR-027); cam khi chưa áp cấu hình mới (BR-24). Camera kèm tình
+    // trạng camera IP (FARM-FR-004b); cam khi sai mật khẩu, không kết nối được hoặc không có hình
     const configStep = isCamera ? null : getConfigApplyStep(device.status, device.config_sync)
-    const configLabel = configStep ? getConfigApplyLabel(configStep) : null
+    const detailLabel = isCamera
+      ? getCameraStatusLabel(device.camera_status)
+      : configStep
+        ? getConfigApplyLabel(configStep)
+        : null
+    const isLabelWarning = isCamera ? isCameraStatusProblem(device.camera_status) : configStep === 'mismatch'
     return {
       id: device._id,
       cells: [
@@ -140,20 +162,20 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
         {
           text: statusLabel,
           isMuted: device.status !== 'ONLINE',
-          accessory: configLabel ? (
+          accessory: detailLabel ? (
             <Text
               variant="small"
-              color={configStep === 'mismatch' ? palette.alert : palette.textSecondary}
+              color={isLabelWarning ? palette.alert : palette.textSecondary}
               style={styles.rightText}
             >
-              {configLabel}
+              {detailLabel}
             </Text>
           ) : undefined,
         },
       ],
       onPress: manage ? () => setMenuDevice(device) : undefined,
       accessibilityLabel: `${device.device_id}: ${withSimulatedLabel(
-        configLabel ? `${statusLabel}, ${configLabel}` : statusLabel,
+        detailLabel ? `${statusLabel}, ${detailLabel}` : statusLabel,
         device.simulated,
       )}`,
     }
@@ -213,6 +235,15 @@ export function DeviceListSection({ id, kind, devices, scopeLabel, editor, onAdd
             onClose={() => setMoveTarget(null)}
             onMoved={message => {
               setMoveTarget(null)
+              manage.onDone(message)
+            }}
+          />
+          <CameraSourceSheet
+            key={`source-${sheetKey}`}
+            target={sourceTarget}
+            onClose={() => setSourceTarget(null)}
+            onSaved={message => {
+              setSourceTarget(null)
               manage.onDone(message)
             }}
           />

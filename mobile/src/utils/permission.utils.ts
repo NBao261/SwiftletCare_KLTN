@@ -13,6 +13,8 @@ export type PermissionAction =
   | 'editFarm'
   | 'deleteFarm'
   | 'createZone'
+  | 'editHouse'
+  | 'deleteHouse'
   | 'editThresholds'
   | 'editFuzzyTuning'
   | 'editDetectionTuning'
@@ -55,6 +57,7 @@ export type PermissionAction =
   | 'viewFarmOverview'
   | 'proposeWeatherRules'
   | 'remindExpert'
+  | 'editQuietHours'
 
 // Role được làm từng thao tác (Report 3 §2.4); Admin không vào app. Farm Technician (G-20) chỉ thấy và thao tác trên nhà được
 // giao — backend chỉ trả nhà, tầng, thiết bị, cảnh báo của các nhà đó và trả 403 ở nhà khác (AUTH-FR-013)
@@ -80,6 +83,9 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   deleteFarm: ['FARM_OWNER'],
   // Tạo zone trong nhà (FARM-FR-002): chỉ chủ trại
   createZone: ['FARM_OWNER'],
+  // Sửa tên, số tầng, xoá nhà và zone (FARM-FR-002): chỉ chủ trại; còn thiết bị đang dùng thì backend chặn xoá
+  editHouse: ['FARM_OWNER'],
+  deleteHouse: ['FARM_OWNER'],
   // Ngưỡng và hệ số bộ điều khiển fuzzy thuộc farm: chủ trại và chuyên gia sửa (ENV-FR-006, ENV-FR-021)
   editThresholds: ['FARM_OWNER', 'DOMAIN_EXPERT'],
   editFuzzyTuning: ['FARM_OWNER', 'DOMAIN_EXPERT'],
@@ -154,6 +160,8 @@ const ALLOWED_ROLES: Record<PermissionAction, readonly Role[]> = {
   // Kênh push, Telegram, giờ yên lặng (ALERT-FR-005, 006, 013): chủ trại và kỹ thuật viên (nhận cảnh báo đầu tiên của nhà được
   // giao); chuyên gia không nhận push, Telegram
   editNotificationSettings: ['FARM_OWNER', 'FARM_TECHNICIAN'],
+  // Giờ yên lặng (ALERT-FR-006, Report 3 §2.4): chỉ chủ trại; kỹ thuật viên chỉ chọn kênh, backend trả 403
+  editQuietHours: ['FARM_OWNER'],
   // Trang Tài khoản đầy đủ (hồ sơ, lối tắt, thành viên, bảo mật): làm cho Farm Owner; Domain Expert, kỹ thuật viên giữ trang cơ bản
   viewOwnerProfile: ['FARM_OWNER'],
   // Chuông (hộp thông báo + cảnh báo chờ xác nhận): người nhận và xác nhận cảnh báo — chủ trại, kỹ thuật viên

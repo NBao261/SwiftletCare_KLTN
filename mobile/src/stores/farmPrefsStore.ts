@@ -4,6 +4,7 @@ import { preferenceStateStorage } from '@/services/storage/preferenceStorage'
 import type { AlertType, AnalyticsRange } from '@/types'
 import type { VerdictFilter } from '@/utils/alertList.utils'
 import type { BirdPeriod } from '@/utils/analytics.utils'
+import type { ReturnRateOrder } from '@/utils/returnRate.utils'
 import type { SeverityLevel } from '@/utils/severity.utils'
 import type { SensorMetric } from '@/utils/threshold.utils'
 
@@ -53,6 +54,8 @@ export interface FarmPrefs {
   // Tầng đang xem ở Phân tích theo nhà; null là "Tất cả khu vực"
   analyticsZoneIdByHouse?: Record<string, string | null>
   alerts?: Partial<AlertsPrefs>
+  // Thanh tỷ lệ về tổ ở Trang chủ: thấy nhà thấp nhất hay cao nhất trước; chưa chọn thì thấp nhất trước
+  homeReturnRateOrder?: ReturnRateOrder
 }
 
 // Giá trị mặc định dùng chung, đông cứng để selector trả về cùng một object khi chưa có gì
@@ -77,6 +80,7 @@ interface FarmPrefsState {
   setAnalyticsPrefs: (userId: string, change: Partial<AnalyticsPrefs>) => void
   setAnalyticsZone: (userId: string, houseId: string, zoneId: string | null) => void
   setAlertsPrefs: (userId: string, change: Partial<AlertsPrefs>) => void
+  setHomeReturnRateOrder: (userId: string, order: ReturnRateOrder) => void
   markAutoOpened: (farmId: string) => void
 }
 
@@ -90,17 +94,21 @@ function updatePrefs(
   return { byUserId: { ...state.byUserId, [userId]: { ...current, ...change(current) } } }
 }
 
-// Đọc dữ liệu đã lưu của bản cũ. Trước bản 2 (thứ tự nhà tự sắp) thì bỏ hết. Bản 2 → 3: giữ mọi lựa chọn; bộ lọc tab
-// Cảnh báo chưa có farmId thì nhà/tầng đã nhớ thuộc phạm vi cũ (nhà xem gần nhất của tab Farm) — đưa về mặc định mới
-// "tất cả" thay vì đoán farm
+// Bộ lọc tab Cảnh báo đọc từ bản cũ: chưa có farmId (trước bản 3) thì nhà/tầng đã nhớ thuộc phạm vi cũ (nhà xem gần nhất của
+// tab Farm), đưa về "tất cả" thay vì đoán farm; trước bản 4 thì bỏ cấp đã nhớ vì P1…P3 cũ gộp hai mức, nay mỗi mức một cấp
+function migrateAlertsPrefs(alerts: Partial<AlertsPrefs>, version: number): Partial<AlertsPrefs> {
+  const scope = alerts.farmId === undefined ? { houseId: null, zoneId: null } : {}
+  return { ...alerts, ...scope, ...(version < 4 ? { severity: null } : {}) }
+}
+
+// Đọc dữ liệu đã lưu của bản cũ. Trước bản 2 (thứ tự nhà tự sắp) thì bỏ hết; từ bản 2 giữ mọi lựa chọn, riêng bộ lọc tab Cảnh
+// báo sửa theo migrateAlertsPrefs
 export function migrateFarmPrefs(persistedState: unknown, version: number): Pick<FarmPrefsState, 'byUserId'> {
   const byUserId = (persistedState as { byUserId?: unknown } | null)?.byUserId
   if (version < 2 || typeof byUserId !== 'object' || byUserId === null) return { byUserId: {} }
   const migrated: Record<string, FarmPrefs> = {}
   for (const [userId, prefs] of Object.entries(byUserId as Record<string, FarmPrefs>)) {
-    const alerts = prefs.alerts
-    migrated[userId] =
-      alerts && alerts.farmId === undefined ? { ...prefs, alerts: { ...alerts, houseId: null, zoneId: null } } : prefs
+    migrated[userId] = prefs.alerts ? { ...prefs, alerts: migrateAlertsPrefs(prefs.alerts, version) } : prefs
   }
   return { byUserId: migrated }
 }
@@ -143,6 +151,8 @@ export const useFarmPrefsStore = create<FarmPrefsState>()(
         ),
       setAlertsPrefs: (userId, change) =>
         set(state => updatePrefs(state, userId, prefs => ({ alerts: { ...prefs.alerts, ...change } }))),
+      setHomeReturnRateOrder: (userId, order) =>
+        set(state => updatePrefs(state, userId, () => ({ homeReturnRateOrder: order }))),
       markAutoOpened: farmId =>
         set(state =>
           state.autoOpenedFarmIds.includes(farmId) ? state : { autoOpenedFarmIds: [...state.autoOpenedFarmIds, farmId] },
@@ -150,8 +160,9 @@ export const useFarmPrefsStore = create<FarmPrefsState>()(
     }),
     {
       name: 'farm-prefs',
-      // Bản 2: bỏ thứ tự nhà tự sắp (↑↓), thay bằng nhà ghim như web. Bản 3: tab Cảnh báo có farmId riêng
-      version: 3,
+      // Bản 2: bỏ thứ tự nhà tự sắp (↑↓), thay bằng nhà ghim như web. Bản 3: tab Cảnh báo có farmId riêng. Bản 4: bốn cấp cảnh
+      // báo như web (M-16), bỏ cấp đã nhớ theo cách gộp cũ
+      version: 4,
       migrate: (persistedState, version) => migrateFarmPrefs(persistedState, version),
       storage: createJSONStorage(() => preferenceStateStorage),
       // Chỉ lưu lựa chọn theo tài khoản; danh sách farm đã tự mở là của phiên hiện tại

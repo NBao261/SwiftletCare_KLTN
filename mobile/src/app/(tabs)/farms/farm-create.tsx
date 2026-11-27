@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { router } from 'expo-router'
 import { BarnIcon } from 'phosphor-react-native'
+import { CoordinatesMapField } from '@/components/farm/settings/CoordinatesMapField'
 import { LocateRow } from '@/components/farm/settings/LocateRow'
 import { SettingsEditActions } from '@/components/farm/settings/SettingsEditActions'
 import { SettingsMetaGrid } from '@/components/farm/settings/SettingsMetaGrid'
@@ -19,6 +21,7 @@ import {
   COORDINATE_RULES,
   hasDraftErrors,
   NAME_MAX_LENGTH,
+  parseCoordinatesDraft,
   parseNumberDraft,
   toInputText,
   validateName,
@@ -55,8 +58,8 @@ export default function FarmCreateScreen() {
   return (
     <View key={language} style={[styles.screen, { backgroundColor: palette.background }]}>
       <AppHeader title={t('Tạo trang trại')} onBack={goBack} />
-      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
+        <KeyboardAwareScrollView
+            bottomOffset={Spacing.xl}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[styles.content, { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl }]}
@@ -91,6 +94,7 @@ export default function FarmCreateScreen() {
                     label: t('Địa chỉ'),
                     keyboardType: 'default',
                     autoCapitalize: 'sentences',
+                    multiline: true,
                   },
                   isFullWidth: true,
                 },
@@ -113,6 +117,11 @@ export default function FarmCreateScreen() {
             <LocateRow
               onLocated={located => setCoordinates({ lat: toInputText(located.lat), lng: toInputText(located.lng) })}
             />
+            {/* Không đứng tại trang trại thì ghim trên bản đồ */}
+            <CoordinatesMapField
+              value={parseCoordinatesDraft(coordinates)}
+              onChange={picked => setCoordinates({ lat: toInputText(picked.lat), lng: toInputText(picked.lng) })}
+            />
             {/* Cùng khung với nút "Cập nhật" của trang cài đặt: thanh đen chữ lime căn giữa + Huỷ */}
             <SettingsEditActions
               label={t('Tạo mới')}
@@ -123,8 +132,7 @@ export default function FarmCreateScreen() {
               error={createFarm.error ? getSettingsErrorMessage(createFarm.error) : null}
             />
           </SettingsSection>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
     </View>
   )
 }

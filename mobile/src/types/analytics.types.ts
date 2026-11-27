@@ -57,12 +57,23 @@ export interface EnvSeriesPoint {
   sampleCount: number
 }
 
+// Thời tiết ngoài trời của farm theo giờ (Open-Meteo, ANALYTICS-FR-013), gom cùng bucket với series: điểm phủ
+// max(bucketMs, 1 giờ) kể từ timestamp; số thiếu là null, mưa không có số thì null (không ghi 0)
+export interface OutdoorWeatherPoint {
+  timestamp: string
+  temperature: number | null
+  humidity: number | null
+  precipitation_mm: number | null
+}
+
 export interface EnvSummaryResult {
   range: AnalyticsRange
   from: string
   to: string
   bucketMs: number
   series: EnvSeriesPoint[]
+  // Rỗng khi farm không có toạ độ hoặc chưa lấy được thời tiết
+  outdoor: OutdoorWeatherPoint[]
 }
 
 // Một điểm của GET /analytics/control/performance: độ ẩm, nhiệt và công suất phun sương, quạt (%)

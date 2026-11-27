@@ -16,7 +16,7 @@ import type { SectionEditor } from '@/hooks/farm/useSingleSectionEdit'
 import { useUpdateCountingSchedule } from '@/hooks/farm/useUpdateCountingSchedule'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
-import type { CountingSchedule, CountingScheduleView, House } from '@/types'
+import type { CountingDayWindows, CountingSchedule, CountingScheduleView, House } from '@/types'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import {
   countDays,
@@ -40,13 +40,30 @@ interface CountingScheduleSectionProps {
   onSaved: (message: string) => void
 }
 
-// Danh sách hồ sơ theo mùa và khung tạm; onPress chỉ có khi đang sửa
+// Khung đang áp cho ngày không thuộc hồ sơ hay khung tạm: khung riêng của nhà trong bản nháp, không có thì khung hệ thống
+function getEffectiveDefault(schedule: CountingSchedule, view: CountingScheduleView): CountingDayWindows {
+  if (schedule.default_windows) return schedule.default_windows
+  return view.system_default_windows ?? view.default_windows
+}
+
+// Bản nháp có khác lịch đang lưu không; chưa đặt và đã bỏ khung mặc định riêng (undefined, null) coi là như nhau
+function isScheduleChanged(draft: CountingSchedule, saved: CountingSchedule): boolean {
+  const normalize = (schedule: CountingSchedule) =>
+    JSON.stringify({ ...schedule, default_windows: schedule.default_windows ?? null })
+  return normalize(draft) !== normalize(saved)
+}
+
+// Khung mặc định, danh sách hồ sơ theo mùa và khung tạm; onPress chỉ có khi đang sửa
 function ScheduleTables({
   schedule,
+  view,
+  onPressDefault,
   onPressProfile,
   onPressTemporary,
 }: {
   schedule: CountingSchedule
+  view: CountingScheduleView
+  onPressDefault?: () => void
   onPressProfile?: (index: number) => void
   onPressTemporary?: (index: number) => void
 }) {
@@ -54,6 +71,17 @@ function ScheduleTables({
 
   return (
     <>
+      <Text variant="small" weight="semiBold" color={palette.textSecondary}>
+        {t('Khung mặc định (ngày không thuộc hồ sơ hay khung tạm)')}
+      </Text>
+      <SettingsList isEmpty={false} emptyText="">
+        <SettingsListRow
+          title={schedule.default_windows ? t('Khung riêng của nhà') : t('Khung hệ thống')}
+          caption={formatDayWindowsInline(getEffectiveDefault(schedule, view))}
+          hasDivider={false}
+          onPress={onPressDefault}
+        />
+      </SettingsList>
       <Text variant="small" weight="semiBold" color={palette.textSecondary}>
         {t('Hồ sơ theo mùa (lặp lại mỗi năm)')}
       </Text>
@@ -105,11 +133,11 @@ function CountingScheduleEditor({
   )
   const [error, setError] = useState<string | null>(null)
   const updateCountingSchedule = useUpdateCountingSchedule()
-  const isChanged = JSON.stringify(schedule) !== JSON.stringify(view.schedule)
+  const isChanged = isScheduleChanged(schedule, view.schedule)
 
   const applySchedule = (next: CountingSchedule) => {
     setSchedule(next)
-    editor.setDirty(JSON.stringify(next) !== JSON.stringify(view.schedule))
+    editor.setDirty(isScheduleChanged(next, view.schedule))
     setTarget(null)
     setError(null)
   }
@@ -141,6 +169,8 @@ function CountingScheduleEditor({
     <>
       <ScheduleTables
         schedule={schedule}
+        view={view}
+        onPressDefault={() => setTarget({ value: { kind: 'default', initial: getEffectiveDefault(schedule, view) }, index: null })}
         onPressProfile={index => setTarget({ value: { kind: 'profile', initial: schedule.profiles[index] }, index })}
         onPressTemporary={index => setTarget({ value: { kind: 'temporary', initial: schedule.temporary[index] }, index })}
       />
@@ -172,15 +202,20 @@ function CountingScheduleEditor({
       {target && (
         <CountingWindowSheet
           target={target.value}
-          defaultWindows={view.default_windows}
+          defaultWindows={getEffectiveDefault(schedule, view)}
           onSubmitProfile={profile => applySchedule({ ...schedule, profiles: replaceAt(schedule.profiles, target.index, profile) })}
           onSubmitTemporary={window =>
             applySchedule({ ...schedule, temporary: replaceAt(schedule.temporary, target.index, window) })
           }
+          onSubmitDefault={windows => applySchedule({ ...schedule, default_windows: windows })}
           onDelete={
-            target.index === null
-              ? undefined
-              : () =>
+            target.value.kind === 'default'
+              ? schedule.default_windows
+                ? () => applySchedule({ ...schedule, default_windows: null })
+                : undefined
+              : target.index === null
+                ? undefined
+                : () =>
                   applySchedule(
                     target.value.kind === 'profile'
                       ? { ...schedule, profiles: schedule.profiles.filter((_, position) => position !== target.index) }
@@ -238,7 +273,7 @@ export function CountingScheduleSection({ house, editor, onSaved }: CountingSche
         <CountingScheduleEditor house={house} view={view} editor={editor} onSaved={showSaved} startWith={startWith} />
       ) : (
         <>
-          <ScheduleTables schedule={view.schedule} />
+          <ScheduleTables schedule={view.schedule} view={view} />
           {canEdit ? (
             <View style={styles.addRow}>
               <Button label={t('Thêm hồ sơ')} variant="outline" size="md" onPress={() => startAdding('profile')} style={styles.flex} />

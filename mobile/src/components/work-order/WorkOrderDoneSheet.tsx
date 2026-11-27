@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { StyleSheet, TextInput, View } from 'react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { PhotoCaptureField } from '@/components/common/PhotoCaptureField'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -25,8 +25,6 @@ import { t } from '@/utils/i18n.utils'
 const NOTE_INPUT_HEIGHT = 96
 // Việc đã làm dài tối đa (api-spec work_note)
 const NOTE_MAX_LENGTH = 2000
-// Cao tối đa phần form: còn chỗ cho nút khi bàn phím mở
-const FORM_MAX_HEIGHT = 480
 
 interface WorkOrderDoneSheetProps {
   // null: sheet đóng
@@ -107,12 +105,7 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
           {workOrder?.title ?? ''}
         </Text>
       </View>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.body}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.body}>
         {!isPreventive && (
           <View style={styles.field}>
             <Text variant="small" weight="semiBold" color={palette.textSecondary}>
@@ -163,7 +156,7 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
                 )
               : t('Gửi xong, loại sự cố này chưa có dữ liệu để hệ thống kiểm nên chuyển thẳng chủ trại kiểm tại chỗ rồi duyệt.')}
         </Text>
-      </ScrollView>
+      </View>
       <FormMessage message={errorMessage ?? photoOverflowMessage} />
       <Button label={t('Gửi')} onPress={save} loading={complete.isPending} disabled={!canSave} />
     </BottomSheet>
@@ -172,7 +165,6 @@ export function WorkOrderDoneSheet({ workOrder, onClose, onDone }: WorkOrderDone
 
 const styles = StyleSheet.create({
   header: { gap: Spacing.xs },
-  scroll: { maxHeight: FORM_MAX_HEIGHT, flexGrow: 0 },
   body: { gap: Spacing.md },
   field: { gap: Spacing.sm },
   input: {

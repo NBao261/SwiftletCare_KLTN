@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { HealthDayDetail } from '@/components/health/HealthDayDetail'
@@ -60,13 +61,14 @@ export default function HealthDayScreen() {
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <View key={language} style={styles.screen}>
         <AppHeader title={t('Trạng thái ngày')} onBack={() => router.back()} />
-        <ScrollView
+        <KeyboardAwareScrollView
+          bottomOffset={Spacing.xl}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.xxl }]}
         >
           {renderBody()}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
       {toast.message && <Toast message={toast.message} bottomOffset={insets.bottom + Spacing.xxl} />}
     </View>

@@ -22,6 +22,26 @@ export function isValidTime(text: string): boolean {
   return TIME_PATTERN.test(text)
 }
 
+export type CountingSession = 'morning' | 'evening'
+
+// Khung sáng (chim ra) nằm trong 05:00–07:00, khung chiều (chim về) trong 17:00–19:00 (Report 3 §4.5, A-4); khung hệ thống
+// BR-13 (05:30–07:00, 17:30–19:00) nằm trong đó. Backend và web chưa chặn, nên mobile chỉ kiểm ô người dùng vừa sửa trong sheet
+// (CountingWindowSheet), không chặn khi lưu cả lịch: khung đã lưu từ trước ngoài khoảng vẫn lưu lại được
+export const COUNTING_SESSION_LIMITS: Record<CountingSession, CountingTimeWindow> = {
+  morning: { start: '05:00', end: '07:00' },
+  evening: { start: '17:00', end: '19:00' },
+}
+
+// Một giờ đã gõ xong mà nằm ngoài khoảng của phiên thì báo; chưa gõ xong thì null
+export function getSessionLimitError(time: string, session: CountingSession): string | null {
+  if (!isValidTime(time)) return null
+  const limit = COUNTING_SESSION_LIMITS[session]
+  if (time >= limit.start && time <= limit.end) return null
+  return session === 'morning'
+    ? t('Khung sáng trong khoảng {from}–{to}', { from: limit.start, to: limit.end })
+    : t('Khung chiều trong khoảng {from}–{to}', { from: limit.start, to: limit.end })
+}
+
 // Ngày trong năm 'MM-DD' thành thứ tự 0…365 (theo năm nhuận); sai dạng thì null
 export function dayOfYear(monthDay: string): number | null {
   const match = /^(\d{2})-(\d{2})$/.exec(monthDay)
@@ -48,7 +68,7 @@ function validateWindow(window: CountingTimeWindow): string | null {
   return null
 }
 
-// Lỗi của khung sáng và khung chiều của một ngày: mỗi khung đúng giờ, khung sáng xong trước khi khung chiều bắt đầu
+// Lỗi của khung sáng và khung chiều của một ngày, như backend: mỗi khung đúng giờ, khung sáng xong trước khi khung chiều bắt đầu
 export function validateDayWindows(windows: CountingDayWindows): string | null {
   const morningError = validateWindow(windows.morning)
   if (morningError) return t('Khung sáng: {error}', { error: morningError })
@@ -86,8 +106,13 @@ function profileDays(profile: Pick<SeasonalCountingProfile, 'from' | 'to'>): Set
   return days
 }
 
-// Lỗi của cả lịch trước khi lưu: số hồ sơ, số khung tạm, hồ sơ chồng ngày, khung tạm chồng ngày (backend trả 400 cho các lỗi này)
+// Lỗi của cả lịch trước khi lưu: khung mặc định, số hồ sơ, số khung tạm, hồ sơ chồng ngày, khung tạm chồng ngày (backend trả 400
+// cho các lỗi này)
 export function validateCountingSchedule(schedule: CountingSchedule): string | null {
+  if (schedule.default_windows) {
+    const defaultError = validateDayWindows(schedule.default_windows)
+    if (defaultError) return t('Khung mặc định: {error}', { error: defaultError })
+  }
   if (schedule.profiles.length > MAX_SCHEDULE_PROFILES) return t('Tối đa {max} hồ sơ theo mùa', { max: MAX_SCHEDULE_PROFILES })
   if (schedule.temporary.length > MAX_TEMPORARY_WINDOWS) return t('Tối đa {max} khung tạm', { max: MAX_TEMPORARY_WINDOWS })
   const ownerByDay = new Map<number, string>()

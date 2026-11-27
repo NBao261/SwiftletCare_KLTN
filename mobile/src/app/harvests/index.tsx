@@ -6,6 +6,7 @@ import { ChartLineIcon, PlusIcon } from 'phosphor-react-native'
 import { HeaderPicker } from '@/components/farm/HeaderPicker'
 import { OptionSheet } from '@/components/farm/OptionSheet'
 import { HarvestCycleCard } from '@/components/harvest/HarvestCycleCard'
+import { HarvestRunDetailSheet } from '@/components/harvest/HarvestRunDetailSheet'
 import { HarvestRunRow } from '@/components/harvest/HarvestRunRow'
 import { HarvestRunSheet } from '@/components/harvest/HarvestRunSheet'
 import { AppHeader } from '@/components/layout/AppHeader'
@@ -55,6 +56,8 @@ export default function HarvestsScreen() {
   const [pickedHouseId, setPickedHouseId] = useState<string | null>(null)
   const [isHouseSheetOpen, setHouseSheetOpen] = useState(false)
   const [openSheet, setOpenSheet] = useState<OpenSheet | null>(null)
+  // Lần thu đang xem ở chế độ chỉ xem (người không sửa được lần thu đó)
+  const [viewedRun, setViewedRun] = useState<HarvestRun | null>(null)
   const [isRefreshing, setRefreshing] = useState(false)
   const toast = useToastMessage()
   // Nhà: chọn trên màn → tham số route → nhà đầu tiên
@@ -117,14 +120,19 @@ export default function HarvestsScreen() {
         </Text>
       )
     }
-    return runs.map((run, index) => (
-      <HarvestRunRow
-        key={run.key}
-        run={run}
-        hasDivider={index < runs.length - 1}
-        onPress={canEditHarvestRun(user, run) ? () => openRunSheet(run) : undefined}
-      />
-    ))
+    return runs.map((run, index) => {
+      const canEdit = canEditHarvestRun(user, run)
+      return (
+        <HarvestRunRow
+          key={run.key}
+          run={run}
+          hasDivider={index < runs.length - 1}
+          canEdit={canEdit}
+          // Sửa được thì mở form, không thì mở chi tiết chỉ xem (số và ảnh)
+          onPress={canEdit ? () => openRunSheet(run) : () => setViewedRun(run)}
+        />
+      )
+    })
   }
 
   // Chu kỳ thu của các zone trong nhà (HARVEST-FR-007): mỗi lần thu đã xác nhận đóng một kỳ
@@ -249,6 +257,9 @@ export default function HarvestsScreen() {
           }}
           onClose={() => setOpenSheet(null)}
         />
+      )}
+      {house && (
+        <HarvestRunDetailSheet run={viewedRun} houseName={house.name} onClose={() => setViewedRun(null)} />
       )}
       {toast.message && <Toast message={toast.message} bottomOffset={insets.bottom + Spacing.lg} />}
     </View>

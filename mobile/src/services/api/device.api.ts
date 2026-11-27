@@ -3,11 +3,13 @@ import { ENDPOINTS } from '@/constants/apiEndpoints'
 import type {
   ApiResponse,
   CameraNode,
+  CameraSourceView,
   CountingRing,
   RelayOverrideLog,
   RelayStates,
   SensorNode,
   StreamToken,
+  UpdateCameraSourcePayload,
 } from '@/types'
 
 // Body đăng ký controller vào một Zone (FARM-FR-003): device_id và mã kích hoạt in trên nhãn
@@ -104,9 +106,18 @@ export const deviceApi = {
   getStreamToken: (cameraId: string) =>
     apiClient.get<ApiResponse<StreamToken>>(ENDPOINTS.CAMERA_STREAM_TOKEN(cameraId)),
 
-  // Lưu vòng đếm của một camera (VISION-FR-018); ring_delivered false = nút AI nhận vòng khi kết nối lại broker
-  updateCountingRing: (cameraId: string, ring: CountingRing) =>
-    apiClient.put<ApiResponse<CameraNode & { ring_delivered?: boolean }>>(ENDPOINTS.CAMERA_COUNTING_RING(cameraId), ring),
+  // Địa chỉ camera IP và tình trạng camera của camera đếm chim (FARM-FR-004b): chỉ Farm Owner; mật khẩu không bao giờ trả về
+  getCameraSource: (cameraId: string) => apiClient.get<ApiResponse<CameraSourceView>>(ENDPOINTS.CAMERA_SOURCE(cameraId)),
+  // Lưu địa chỉ camera: backend mã hoá mật khẩu, tăng phiên bản và báo camera đếm chim lấy địa chỉ mới; thiếu khoá mã hoá thì 503
+  updateCameraSource: (cameraId: string, payload: UpdateCameraSourcePayload) =>
+    apiClient.put<ApiResponse<CameraSourceView>>(ENDPOINTS.CAMERA_SOURCE(cameraId), payload),
+
+  // Lưu các vòng đếm của một camera (VISION-FR-018): thay cả danh sách 0–4 vòng, [] là dùng lại vòng mặc định của nút AI;
+  // ring_delivered false = nút AI nhận vòng khi kết nối lại broker
+  updateCountingRings: (cameraId: string, rings: CountingRing[]) =>
+    apiClient.put<ApiResponse<CameraNode & { ring_delivered?: boolean }>>(ENDPOINTS.CAMERA_COUNTING_RING(cameraId), {
+      rings,
+    }),
 
   // Khởi động lại controller từ xa (FARM-FR-013); thiết bị không ONLINE thì 409
   restartController: (sensorNodeId: string) =>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { StyleSheet, TextInput, View } from 'react-native'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { PhotoCaptureField } from '@/components/common/PhotoCaptureField'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -17,8 +17,6 @@ import { t } from '@/utils/i18n.utils'
 const NOTE_INPUT_HEIGHT = 88
 // Ghi chú dài tối đa (api-spec)
 const NOTE_MAX_LENGTH = 1000
-// Cao tối đa phần form: còn chỗ cho nút khi bàn phím mở
-const FORM_MAX_HEIGHT = 480
 
 interface OnsiteCheckSheetProps {
   // null: sheet đóng
@@ -76,12 +74,7 @@ export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetPro
           {alert ? getAlertTypeLabel(alert.type) : ''}
         </Text>
       </View>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.body}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.body}>
         <View style={styles.field}>
           <Text variant="small" weight="semiBold" color={palette.textSecondary}>
             {t('Bạn thấy gì ở nhà yến?')}
@@ -111,7 +104,7 @@ export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetPro
             {t('Gửi xong, hệ thống mở ngay một phiếu công việc sửa cảm biến cho nhà này.')}
           </Text>
         )}
-      </ScrollView>
+      </View>
       <FormMessage message={errorMessage} />
       <Button
         label={t('Gửi quan sát')}
@@ -125,7 +118,6 @@ export function OnsiteCheckSheet({ alert, onClose, onDone }: OnsiteCheckSheetPro
 
 const styles = StyleSheet.create({
   header: { gap: Spacing.xs },
-  scroll: { maxHeight: FORM_MAX_HEIGHT, flexGrow: 0 },
   body: { gap: Spacing.md },
   field: { gap: Spacing.sm },
   input: {

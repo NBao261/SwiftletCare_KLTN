@@ -8,8 +8,8 @@ import { getSeverityLevel, getSeverityLevelColors, type SeverityLevel } from '@/
 
 export const SEVERITY_DOT_SIZE = 8
 
-// Màu theo cấp, đúng web (frontend/src/constants/severity.ts): Khẩn cấp cam đặc chữ trắng, Cao cam nhạt chữ cam đậm,
-// Thường xám ấm. Chấm lấy màu chữ của cấp; luôn kèm chữ, không chỉ màu
+// Màu theo cấp, đúng web (frontend/src/constants/severity.ts): Khẩn cấp đỏ chữ trắng, Cao cam đặc chữ trắng, Trung bình cam
+// nhạt chữ cam đậm, Thấp xám ấm. Chấm lấy màu chữ của cấp; luôn kèm chữ, không chỉ màu
 export function getSeverityStyle(level: SeverityLevel, palette: ReturnType<typeof usePalette>) {
   const colors = getSeverityLevelColors(level, palette)
   return { background: colors.background, text: colors.text, dot: colors.text }
