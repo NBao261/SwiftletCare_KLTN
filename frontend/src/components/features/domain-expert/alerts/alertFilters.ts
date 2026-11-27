@@ -4,7 +4,8 @@ import type { InferredAlertType } from '@/types/expert.types';
 import type { AlertSeverity } from '@/types';
 
 // Thứ tự tab: chờ kiểm chứng đứng ngay sau "Tất cả" vì là việc chuyên gia phải làm
-export const TAB_ORDER: AlertTabFilter[] = ['ALL', 'PENDING', 'CONFIRMED', 'REJECTED'];
+// Việc của chuyên gia là các cảnh báo chờ kiểm chứng nên tab đó đứng đầu và là tab mở sẵn
+export const TAB_ORDER: AlertTabFilter[] = ['PENDING', 'CONFIRMED', 'REJECTED', 'ALL'];
 
 // Nhãn tab (khoá dịch là chính câu tiếng Việt)
 export const TAB_LABEL: Record<AlertTabFilter, string> = {

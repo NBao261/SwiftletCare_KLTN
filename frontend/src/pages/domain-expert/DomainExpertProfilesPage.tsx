@@ -1,5 +1,6 @@
 // Soạn và duyệt hồ sơ cấu hình
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { BookCopy, AlertTriangle } from 'lucide-react'
 import { PlusIcon } from '@phosphor-icons/react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -36,7 +37,10 @@ export default function DomainExpertProfilesPage() {
   const { selectedFarmId } = useZoneStore()
   const farmId = selectedFarmId ?? undefined
 
-  const [statusFilter, setStatusFilter] = useState<ConfigProfileStatus | 'ALL'>('ALL')
+  // Hàng đợi việc mở thẳng tab bản nháp bằng ?status=DRAFT
+  const [searchParams] = useSearchParams()
+  const initialStatus = STATUS_FILTERS.find(f => f.value === searchParams.get('status'))?.value ?? 'ALL'
+  const [statusFilter, setStatusFilter] = useState<ConfigProfileStatus | 'ALL'>(initialStatus)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ConfigProfile | null>(null)
   const [error, setError] = useState<string | null>(null)

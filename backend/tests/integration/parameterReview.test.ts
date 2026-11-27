@@ -99,7 +99,7 @@ describe('mở mục duyệt khi Farm Owner sửa (EXPERT-FR-010)', () => {
     expect(notice?.ref).toMatchObject({ kind: 'parameter_review', id: review._id })
   })
 
-  it('sửa tiếp cùng nhóm (kể cả reset): vẫn 1 mục, giữ giá trị gốc', async () => {
+  it('sửa tiếp cùng nhóm: vẫn 1 mục, giữ giá trị gốc; reset về gốc thì bỏ mục', async () => {
     const { zone, t, send } = await seed()
     await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 78 }).expect(200)
     await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 80 }).expect(200)
@@ -110,8 +110,20 @@ describe('mở mục duyệt khi Farm Owner sửa (EXPERT-FR-010)', () => {
     expect(reviews[0].old_values).toMatchObject({ humidity_min: 75, temp_max: 31 })
     expect(reviews[0].new_values).toMatchObject({ humidity_min: 80, temp_max: 32 })
 
+    // Về đúng giá trị gốc thì không còn gì để duyệt
     await send('put', `/farms/zones/${zone._id}/thresholds/reset`, t.owner).expect(200)
+    expect(await reviewsOf(zone._id)).toHaveLength(0)
+  })
+
+  it('sửa rồi sửa lại như cũ: mục chờ bị bỏ; sửa lại lần nữa thì mở mục mới', async () => {
+    const { zone, t, send } = await seed()
+    await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 78 }).expect(200)
     expect(await reviewsOf(zone._id)).toHaveLength(1)
+    await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 75 }).expect(200)
+    expect(await reviewsOf(zone._id)).toHaveLength(0)
+
+    await send('put', `/farms/zones/${zone._id}/thresholds`, t.owner, { humidity_min: 79 }).expect(200)
+    expect(await reviewsOf(zone._id)).toMatchObject([{ status: 'PENDING_REVIEW', new_values: { humidity_min: 79 } }])
   })
 
   it('hệ số mờ mở mục riêng nhóm fuzzy; farm chưa có chuyên gia thì không mở mục nào', async () => {
@@ -270,6 +282,15 @@ describe('nhóm tham số mới (BR-22, Report 3 4.2.15)', () => {
     await send('put', `/expert-activity/reviews/${opened!._id}/accept`, t.expert).expect(200)
     expect(await review(house._id, 'health_levels')).toMatchObject({ status: 'ACCEPTED' })
     expect((await House.findById(house._id).lean())!.health_levels.noise_clear).toBe(5)
+  })
+
+  it('lịch đếm thêm khung tạm rồi xoá: mục chờ bị bỏ', async () => {
+    const { house, t, send } = await seed()
+    const temporary = [{ from: '2026-12-01', to: '2026-12-01', morning: { start: '05:00', end: '07:00' }, evening: { start: '17:00', end: '19:00' } }]
+    await send('put', `/farms/houses/${house._id}/counting-schedule`, t.owner, { temporary }).expect(200)
+    expect(await review(house._id, 'counting_schedule')).toBeTruthy()
+    await send('put', `/farms/houses/${house._id}/counting-schedule`, t.owner, { temporary: [] }).expect(200)
+    expect(await review(house._id, 'counting_schedule')).toBeNull()
   })
 
   it('lịch đếm: hoàn tác trả về lịch trước đó', async () => {

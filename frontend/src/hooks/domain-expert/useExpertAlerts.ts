@@ -36,7 +36,7 @@ const TAB_VERDICT: Record<AlertTabFilter, InferredAlertQuery['verdict']> = {
 
 // 3. Bộ lọc + phân trang ở backend (không cắt 20 cảnh báo đầu rồi lọc ở client)
 export function useAlertsWithFilters(farmId?: string, zoneId?: string) {
-  const [filters, setFilters] = useState<AlertFilters>({ tab: 'ALL', type: 'ALL', severity: 'ALL', page: 1 })
+  const [filters, setFilters] = useState<AlertFilters>({ tab: 'PENDING', type: 'ALL', severity: 'ALL', page: 1 })
   const list = useQuery({
     queryKey: ['expert', 'inferred-alerts', farmId, zoneId, filters],
     queryFn: () => expertService.getInferredAlerts({

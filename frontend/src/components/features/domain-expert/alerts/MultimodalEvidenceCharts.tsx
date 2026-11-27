@@ -39,7 +39,7 @@ function EvidenceBarCard({ src }: { src: EvidenceSource }) {
       <p className="mb-2 text-xs text-warmGray">{src.badge1} · {src.badge2}</p>
 
       <ResponsiveContainer width="100%" height={120}>
-        <BarChart data={src.data} barCategoryGap="25%" margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+        <BarChart data={src.data} barCategoryGap="25%" margin={{ top: 10, right: 4, left: -16, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" vertical={false} />
           <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#878380' }} axisLine={false} tickLine={false} interval={2} />
           <YAxis domain={src.domain} ticks={src.ticks} interval={0} tick={{ fontSize: 10, fill: '#878380' }} axisLine={false} tickLine={false} unit={src.unit} />
