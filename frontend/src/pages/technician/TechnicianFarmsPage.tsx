@@ -34,6 +34,8 @@ export default function TechnicianFarmsPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [page, setPage] = useState(1)
+  // Nhà đã bấm mở hoặc đóng; chưa bấm thì nhà cần xử lý mở sẵn các Zone
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const { visible, counts } = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -51,8 +53,8 @@ export default function TechnicianFarmsPage() {
   }, [structure.houses, search, filter])
 
   // Mở trang Thiết bị đã lọc sẵn nhà này (phạm vi lưu trong store, không đưa mã vào URL: FE_Design 13.16)
-  function openDevices(node: HouseNode) {
-    setScopePath(node.farm._id, node.farm.name, node.house._id, '')
+  function openDevices(node: HouseNode, zoneId = '') {
+    setScopePath(node.farm._id, node.farm.name, node.house._id, zoneId)
     navigate('/devices')
   }
 
@@ -124,7 +126,13 @@ export default function TechnicianFarmsPage() {
                 <span />
               </div>
               {rows.map(n => (
-                <TechnicianHouseRow key={n.house._id} node={n} onOpen={() => openDevices(n)} />
+                <TechnicianHouseRow
+                  key={n.house._id}
+                  node={n}
+                  isOpen={expanded[n.house._id] ?? n.health === 'ALERT'}
+                  onToggle={() => setExpanded(prev => ({ ...prev, [n.house._id]: !(prev[n.house._id] ?? n.health === 'ALERT') }))}
+                  onOpenDevices={zoneId => openDevices(n, zoneId)}
+                />
               ))}
             </div>
             <Pagination page={safePage} limit={PAGE_SIZE} total={visible.length} onChange={setPage} variant="full" />

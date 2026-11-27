@@ -136,14 +136,18 @@ test('T4 — thiết bị của nhà được giao: hàng ghi nhà và Zone, nú
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
-test('T5 — nhà được giao: ca trực của chính mình, nút Xem thiết bị mở trang thiết bị (AUTH-FR-013, 014)', async ({ page }) => {
+test('T5 — nhà được giao: ca trực của chính mình, xổ các Zone rồi mở trang thiết bị (AUTH-FR-013, 014)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/farms');
   await expect(page.getByRole('heading', { name: 'A · Nhà điều khiển' })).toBeVisible();
 
   // Mỗi nhà ghi ca trực của chính kỹ thuật viên này, hoặc ghi rõ là chưa có ca
   await expect(page.getByText(/Ca trực của bạn|Chưa có ca trực ở nhà này/).first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Xem thiết bị' }).first().click();
+  // Bấm một nhà xổ các Zone (nhà đang có việc cần xử lý mở sẵn); từ đó mở thiết bị của Zone hoặc của cả nhà
+  const toggle = page.getByRole('button', { name: /^Xem các Zone của/ }).first();
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(page.getByRole('button', { name: /đang online/i }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Xem thiết bị của cả nhà' }).first().click();
   await expect(page).toHaveURL(/\/devices/);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
