@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRightIcon, CheckCircleIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, CheckCircleIcon, CpuIcon, VideoCameraIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -27,8 +27,9 @@ export default function AttentionDevicesCard() {
 
   return (
     <SectionCard
+      className="h-full"
       title="Thiết bị cần chú ý"
-      description="Thiết bị chưa online ở mọi trang trại"
+      description={nodes.length > 0 ? t('{{n}} thiết bị chưa online ở mọi trang trại', { n: nodes.length }) : t('Thiết bị chưa online ở mọi trang trại')}
       action={
         <Link to="/devices" className="group inline-flex items-center gap-1 text-small font-semibold text-charcoal hover:underline">
           {t('Xem tất cả')}
@@ -54,10 +55,14 @@ export default function AttentionDevicesCard() {
           {nodes.slice(0, LIST_COUNT).map(node => {
             const lastSeen = node.last_heartbeat ? formatRelativeTime(node.last_heartbeat) : t('Chưa kết nối lần nào')
             const place = [node.farm_name, node.house_name, node.zone_name].join(' · ')
+            const TypeIcon = node.type === 'camera' ? VideoCameraIcon : CpuIcon
             return (
               <li key={node._id}>
-                <Link to="/devices" className="flex items-center justify-between gap-4 rounded-lg py-3 transition-colors hover:bg-warmGray/5">
-                  <span className="min-w-0">
+                <Link to="/devices" className="flex items-center gap-3 rounded-lg py-3 transition-colors hover:bg-warmGray/5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warmGray/10 text-charcoal">
+                    <TypeIcon size={20} aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-charcoal">{node.device_id}</span>
                     <span className="block truncate text-small text-warmGray" title={place}>{place}</span>
                   </span>
@@ -70,9 +75,6 @@ export default function AttentionDevicesCard() {
             )
           })}
         </ul>
-      )}
-      {nodes.length > LIST_COUNT && (
-        <p className="text-small text-warmGray">{t('và {{n}} thiết bị khác', { n: nodes.length - LIST_COUNT })}</p>
       )}
     </SectionCard>
   )

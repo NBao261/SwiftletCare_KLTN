@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRightIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, UserCircleIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -9,7 +9,7 @@ import { AUDIT_ACTION_LABEL, AUDIT_TARGET_TYPE } from '@/constants/auditActions'
 import { ROLE_LABEL } from '@/constants/roles'
 import { useAuditLogList } from '@/hooks/admin/useSystem'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
-import { formatRelativeTime } from '@/lib/helpers'
+import { formatDateOnly, formatRelativeTime, formatTimeOnly } from '@/lib/helpers'
 import { t } from '@/i18n'
 
 const RECENT_COUNT = 5
@@ -21,6 +21,7 @@ export default function RecentActivityCard() {
 
   return (
     <SectionCard
+      className="h-full"
       title="Nhật ký hoạt động gần đây"
       description="Đăng nhập và thay đổi tài khoản mới nhất"
       action={
@@ -49,12 +50,18 @@ export default function RecentActivityCard() {
             const who = log.actor_id?.full_name ?? log.target_name ?? t('Không xác định')
             const detail = [who, log.actor_id ? ROLE_LABEL[log.actor_id.role] : undefined, reasonOf(log)].filter(Boolean).join(' · ')
             return (
-              <li key={log._id} className="flex items-center justify-between gap-4 py-3">
-                <span className="min-w-0">
+              <li key={log._id} className="flex items-center gap-3 py-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warmGray/10 text-charcoal">
+                  <UserCircleIcon size={20} aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-charcoal" title={label}>{label}</span>
                   <span className="block truncate text-small text-warmGray" title={detail}>{detail}</span>
                 </span>
-                <span className="shrink-0 whitespace-nowrap text-small text-warmGray">{formatRelativeTime(log.created_at)}</span>
+                <span className="flex shrink-0 flex-col items-end gap-0.5 whitespace-nowrap">
+                  <span className="text-sm font-semibold text-charcoal">{formatRelativeTime(log.created_at)}</span>
+                  <span className="text-small text-warmGray">{formatTimeOnly(log.created_at)} · {formatDateOnly(log.created_at)}</span>
+                </span>
               </li>
             )
           })}

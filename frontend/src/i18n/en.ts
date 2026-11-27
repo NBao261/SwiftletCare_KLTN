@@ -185,7 +185,7 @@ const en: Record<string, string> = {
   'Thiết bị cần chú ý': 'Devices to check',
   'Thiết bị chưa online ở mọi trang trại': 'Devices that are not online, on every farm',
   'Tất cả thiết bị đang online': 'Every device is online',
-  'và {{n}} thiết bị khác': 'and {{n}} more devices',
+  '{{n}} thiết bị chưa online ở mọi trang trại': '{{n}} devices are not online, on every farm',
   'Không tải được thiết bị': 'Could not load the devices',
   'Không tải được số liệu hệ thống': 'Could not load system metrics',
   // Khoảng thời gian, chỉ số trung bình

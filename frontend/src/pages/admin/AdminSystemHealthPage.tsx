@@ -79,7 +79,7 @@ export default function AdminSystemHealthPage() {
         })}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start [&>*]:min-w-0">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <AttentionDevicesCard />
         <RecentActivityCard />
       </div>
