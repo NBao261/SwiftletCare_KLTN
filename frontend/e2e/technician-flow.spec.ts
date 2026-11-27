@@ -122,11 +122,12 @@ test('T3 — xác nhận cảnh báo kèm nguyên nhân tìm thấy tại chỗ 
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
-test('T4 — thiết bị của nhà được giao: hàng ghi "Nhà · Zone", gửi được lệnh khởi động lại (FARM-FR-013)', async ({ page }) => {
+test('T4 — thiết bị của nhà được giao: hàng ghi nhà và Zone, gửi được lệnh khởi động lại (FARM-FR-013)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/devices', { farmId, houseId: houseA, zoneId: zoneA });
 
-  // Vị trí chỉ ghi "Nhà · Zone", trang trại đã có ở thanh phạm vi
-  await expect(page.getByText('A · Nhà điều khiển · A · Tầng 1').first()).toBeVisible();
+  // Cột Vị trí ghi nhà ở trên, Zone ở dưới; trang trại đã có ở thanh phạm vi
+  await expect(page.getByText('A · Nhà điều khiển', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('A · Tầng 1', { exact: true }).first()).toBeVisible();
 
   // Kỹ thuật viên được khởi động lại bộ điều khiển của nhà được giao; hộp xác nhận ghi rõ mã thiết bị
   const reboot = page.getByRole('button', { name: 'Khởi động lại thiết bị' }).first();

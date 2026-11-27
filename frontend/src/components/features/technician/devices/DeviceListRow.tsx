@@ -9,11 +9,15 @@ import StatusDot from "@/components/common/StatusDot"
 import SimulatedBadge from "@/components/common/SimulatedBadge"
 import DeviceDiagnosticsPanel from "@/components/features/technician/devices/DeviceDiagnosticsPanel"
 
+// Cột của danh sách: thiết bị, vị trí, trạng thái, kết nối, thao tác; dòng tiêu đề dùng chung khuôn này
+export const DEVICE_ROW_GRID = "md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1.5fr)_minmax(0,1.1fr)_7.5rem]"
+
 interface DeviceListRowProps {
   node: SensorNode;
   zoneId?: string;
-  locationLabel?: string;
-  index?: number;
+  // Tên nhà và Zone của thiết bị: trang trại đã có ở thanh phạm vi
+  houseName?: string;
+  zoneName?: string;
   isExpanded: boolean;
   onToggleExpand: () => void;
   // Không truyền → ẩn nút (role không có quyền gửi lệnh RESTART)
@@ -45,7 +49,7 @@ function RssiBars({ rssi }: { rssi?: number }) {
 }
 
 export default function DeviceListRow({
-  node, zoneId, locationLabel, index = 0, isExpanded, onToggleExpand,
+  node, zoneId, houseName, zoneName, isExpanded, onToggleExpand,
   onReboot, rebootUnsupported,
   onOpenAudio, moreActions,
 }: DeviceListRowProps) {
@@ -55,55 +59,35 @@ export default function DeviceListRow({
   const stale = hb ? Date.now() - hb.getTime() > STALE_HEARTBEAT_MS : false
 
   return (
-    <div
-      style={{ animationDelay: `${Math.min(index, 10) * 20}ms` }}
-      className={`relative flex flex-col border-b last:border-b-0 border-warmGray/15 overflow-hidden animate-fade-in motion-reduce:animate-none transition-colors duration-200 ${isExpanded ? 'bg-stone/30' : 'bg-transparent hover:bg-stone/20'}`}
-    >
+    <div className={`border-b last:border-b-0 border-warmGray/15 transition-colors duration-200 ${isExpanded ? 'bg-stone/30' : 'hover:bg-stone/20'}`}>
       <div
-        className="group flex flex-col md:flex-row md:items-center gap-4 p-3 cursor-pointer"
         onClick={onToggleExpand}
+        className={`group grid cursor-pointer gap-x-4 gap-y-3 px-4 py-3.5 md:items-center ${DEVICE_ROW_GRID}`}
       >
-        {/* Cột 1: Mã thiết bị + firmware + vị trí */}
-        <div className="flex items-center gap-3 w-full md:w-3/12 min-w-0">
+        {/* Thiết bị: mã, phiên bản firmware */}
+        <div className="flex min-w-0 items-center gap-3">
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isOnline ? 'bg-success/10 text-charcoal' : 'bg-stone text-warmGray'}`}>
             <IconDevice />
           </div>
-          <div className="min-w-0 flex flex-col">
+          <div className="min-w-0">
             <p className="truncate font-bold text-charcoal">{node.device_id}</p>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-warmGray">
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-warmGray">
               <SimulatedBadge simulated={node.simulated} />
               <span>v{node.firmware_version || "—"}</span>
-              {locationLabel && (
-                <>
-                  <span>·</span>
-                  <span className="truncate max-w-[150px] text-graphite font-sans" title={locationLabel}>{locationLabel}</span>
-                </>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Cột 2: Tín hiệu + heartbeat */}
-        <div className="flex flex-col gap-1.5 w-full md:w-3/12 text-xs">
-          <div className="flex items-center gap-2 text-charcoal font-medium tabular-nums">
-            <RssiBars rssi={node.rssi} />
-            <span>{node.rssi !== undefined && node.rssi !== null ? `${node.rssi} dBm` : "Mất tín hiệu"}</span>
-          </div>
-          <div className={`flex items-center gap-1.5 truncate ${stale ? 'text-climateOrange font-semibold' : 'text-warmGray'}`}>
-            <Clock size={12} className="shrink-0" />
-            <span className="truncate tabular-nums">
-              {hb ? formatDistanceToNow(hb, { addSuffix: true, locale: vi }) : "Chưa kết nối"}
-            </span>
-          </div>
+        {/* Vị trí: nhà ở trên, Zone ở dưới */}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-charcoal" title={houseName}>{houseName ?? "—"}</p>
+          <p className="truncate text-xs text-warmGray" title={zoneName}>{zoneName ?? "—"}</p>
         </div>
 
-        {/* Cột 3: Trạng thái + chip phụ */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-4/12">
+        {/* Trạng thái và các nhãn phụ */}
+        <div className="flex flex-wrap items-center gap-2">
           <StatusDot status={node.status} colored />
-
-          {node.activation_overdue_at && (
-            <Badge tone="warning">Quá hạn kích hoạt</Badge>
-          )}
+          {node.activation_overdue_at && <Badge tone="warning">Quá hạn kích hoạt</Badge>}
           {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển tay</Badge>}
           {node.ota_pending && (
             <span className="inline-flex items-center gap-1 rounded-full bg-limeMist px-2.5 py-1 text-xs font-semibold text-charcoal">
@@ -117,30 +101,40 @@ export default function DeviceListRow({
           )}
         </div>
 
-        {/* Cột 4: Thao tác */}
-        <div className="flex items-center gap-2 w-full md:w-2/12 md:justify-end border-t md:border-t-0 border-warmGray/10 pt-3 md:pt-0">
+        {/* Kết nối: sóng Wi-Fi và lần gửi tín hiệu cuối */}
+        <div className="flex flex-col gap-1 text-xs">
+          <div className="flex items-center gap-2 font-medium tabular-nums text-charcoal">
+            <RssiBars rssi={node.rssi} />
+            <span>{node.rssi !== undefined && node.rssi !== null ? `${node.rssi} dBm` : "Mất tín hiệu"}</span>
+          </div>
+          <div className={`flex items-center gap-1.5 ${stale ? 'font-semibold text-climateOrange' : 'text-warmGray'}`}>
+            <Clock size={12} className="shrink-0" />
+            <span className="truncate tabular-nums">{hb ? formatDistanceToNow(hb, { addSuffix: true, locale: vi }) : "Chưa kết nối"}</span>
+          </div>
+        </div>
+
+        {/* Thao tác: khởi động lại, dời/thay/gỡ, mở chi tiết */}
+        <div className="flex items-center gap-1.5 border-t border-warmGray/10 pt-3 md:justify-end md:border-t-0 md:pt-0">
           {onReboot && (
-            <>
-              <button
-                type="button"
-                disabled={rebootUnsupported}
-                onClick={(e) => { e.stopPropagation(); onReboot(); }}
-                className="relative z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-transparent bg-stone text-charcoal opacity-70 transition-all max-sm:h-11 max-sm:w-11 group-hover:opacity-100 hover:bg-white hover:text-alertRed hover:border-alertRed/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-stone disabled:hover:text-charcoal disabled:hover:border-transparent"
-                title={rebootUnsupported ? "Firmware chưa hỗ trợ lệnh này" : "Khởi động lại thiết bị từ xa"}
-                aria-label="Khởi động lại thiết bị"
-              >
-                <RotateCw size={16} />
-              </button>
-              <span className="mx-1 hidden h-6 w-px bg-warmGray/20 md:block" />
-            </>
+            <button
+              type="button"
+              disabled={rebootUnsupported}
+              onClick={(event) => { event.stopPropagation(); onReboot(); }}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-charcoal transition-colors max-sm:h-11 max-sm:w-11 hover:bg-white hover:text-alertRed disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-charcoal"
+              title={rebootUnsupported ? "Firmware chưa hỗ trợ lệnh này" : "Khởi động lại thiết bị từ xa"}
+              aria-label="Khởi động lại thiết bị"
+            >
+              <RotateCw size={16} />
+            </button>
           )}
-          {moreActions && moreActions.length > 0 && <ActionsMenu items={moreActions} />}
+          {moreActions && moreActions.length > 0 && <div onClick={(event) => event.stopPropagation()}><ActionsMenu items={moreActions} /></div>}
           <button
             type="button"
-            className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-transparent max-sm:h-11 max-sm:w-11 transition-colors ${isExpanded ? 'bg-charcoal text-white' : 'bg-stone text-charcoal hover:bg-warmGray/20'}`}
-            title="Xem chi tiết thiết bị"
+            onClick={(event) => { event.stopPropagation(); onToggleExpand(); }}
             aria-expanded={isExpanded}
             aria-label="Xem chi tiết thiết bị"
+            title="Xem chi tiết thiết bị"
+            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors max-sm:ml-auto max-sm:h-11 max-sm:w-11 ${isExpanded ? 'bg-charcoal text-white' : 'text-charcoal group-hover:bg-white'}`}
           >
             <ChevronDown size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
           </button>

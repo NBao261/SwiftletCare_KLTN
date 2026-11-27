@@ -3,15 +3,14 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
 import { useScopeFilter } from "@/hooks/shared/useScopeFilter";
-import { Button, Card } from "@/components/ui";
+import { Button, SearchInput, SectionCard } from "@/components/ui";
+import StatusTabs from "@/components/common/StatusTabs";
 import ScopeFilter from "@/components/common/ScopeFilter";
 import HeaderActions from "@/components/layouts/HeaderActions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
-import SystemHealthBar, { needsAttention } from "@/components/features/technician/devices/SystemHealthBar";
-import DeviceFilterToolbar, { type DeviceSortKey } from "@/components/features/technician/devices/DeviceFilterToolbar";
-import type { SortDirection } from "@/types";
-import DeviceListRow from "@/components/features/technician/devices/DeviceListRow";
+import DeviceListRow, { DEVICE_ROW_GRID } from "@/components/features/technician/devices/DeviceListRow";
+import { countByTab, matchesSearch, matchesTab, sortDevices, type DeviceTab } from "@/components/features/technician/devices/deviceStatus.utils";
 import LullabyTracksModal from "@/components/features/farm-owner/devices/LullabyTracksModal";
 import MoveControllerModal from "@/components/features/farm-owner/devices/MoveControllerModal";
 import ReplaceControllerModal from "@/components/features/farm-owner/devices/ReplaceControllerModal";
@@ -23,6 +22,8 @@ import { useTranslation } from "@/hooks/common/useTranslation";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
+
+const SEARCH_FROM = 6;
 
 // Thiết bị của Farm Technician: thiết bị các nhà được giao, chẩn đoán, khởi động lại, danh sách bài loa chỉ xem
 export default function TechnicianDevicesPage() {
@@ -47,9 +48,7 @@ export default function TechnicianDevicesPage() {
   }
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [sortBy, setSortBy] = useState<DeviceSortKey>("last_heartbeat");
-  const [sortDir, setSortDir] = useState<SortDirection>("desc");
+  const [tab, setTab] = useState<DeviceTab>("ALL");
   const [rebootUnsupportedIds, setRebootUnsupportedIds] = useState<Set<string>>(new Set());
   const sendCommand = useSendNodeCommand();
   const push = useToastStore((s) => s.push);
@@ -59,37 +58,10 @@ export default function TechnicianDevicesPage() {
   const [replaceDevice, setReplaceDevice] = useState<DeviceItem>();
   const [removeDevice, setRemoveDevice] = useState<DeviceItem>();
 
-  const hasActiveFilters = !!searchQuery || statusFilter !== "ALL" || sortBy !== "last_heartbeat" || sortDir !== "desc";
-  function clearFilters() {
-    setSearchQuery(""); setStatusFilter("ALL"); setSortBy("last_heartbeat"); setSortDir("desc");
-  }
-  function handleSortChange(key: DeviceSortKey) {
-    if (key === sortBy) setSortDir(d => (d === "asc" ? "desc" : "asc"));
-    else { setSortBy(key); setSortDir(key === "device_id" ? "asc" : "desc"); }
-  }
-
-  const filteredNodes = scopedNodes
-    ?.filter(node => {
-      const q = searchQuery.trim().toLowerCase();
-      const matchSearch = !q ||
-        node.device_id.toLowerCase().includes(q) ||
-        (node.firmware_version ?? "").toLowerCase().includes(q);
-
-      let matchStatus = true;
-      if (statusFilter !== "ALL") {
-        matchStatus = statusFilter === "WARNING" ? needsAttention(node) : node.status === statusFilter;
-      }
-      return matchSearch && matchStatus;
-    })
-    .sort((a, b) => {
-      const dir = sortDir === "asc" ? 1 : -1;
-      if (sortBy === "device_id") return a.device_id.localeCompare(b.device_id) * dir;
-      if (sortBy === "rssi") return ((a.rssi ?? -999) - (b.rssi ?? -999)) * dir;
-      const ta = a.last_heartbeat ? new Date(a.last_heartbeat).getTime() : 0;
-      const tb = b.last_heartbeat ? new Date(b.last_heartbeat).getTime() : 0;
-      return (ta - tb) * dir;
-    });
-
+  // Có vài thiết bị thì cuộn mắt là thấy hết; ô tìm chỉ hiện khi nhiều
+  const showSearch = scopedNodes.length > SEARCH_FROM;
+  const tabCounts = countByTab(scopedNodes);
+  const filteredNodes = sortDevices(scopedNodes.filter(node => matchesTab(node, tab) && matchesSearch(node, searchQuery)));
 
   const [audioNodeId, setAudioNodeId] = useState<string | null>(null);
   const audioNode = nodes?.find((n) => n._id === audioNodeId);
@@ -140,16 +112,15 @@ export default function TechnicianDevicesPage() {
         <ScopeFilter scope={scope} />
       </div>
 
-      <Card size="lg" className="pb-10 flex flex-col gap-5">
-        {/* Việc chính của trang: lắp thêm thiết bị cho nhà được giao */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-body text-graphite">{t("list.short")}</p>
+      <SectionCard
+        description={t("list.short")}
+        action={(
           <Button size="sm" onClick={() => navigate("/devices/onboarding")}>
             <PlusIcon size={14} weight="bold" />
             {t("list.setup")}
           </Button>
-        </div>
-
+        )}
+      >
         {loading && <LoadingSkeleton count={2} className="h-40 w-full" />}
 
         {!loading && failed && (
@@ -163,56 +134,66 @@ export default function TechnicianDevicesPage() {
         {!loading && !failed && scopedNodes.length === 0 && <EmptyState title={emptyTitle} description={emptyDescription} />}
 
         {!loading && !failed && scopedNodes.length > 0 && (
-          <div className="flex w-full flex-col gap-5 mb-4 animate-fade-in">
-            <SystemHealthBar nodes={scopedNodes} />
-            <DeviceFilterToolbar
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
-              sortBy={sortBy}
-              sortDir={sortDir}
-              onSortChange={handleSortChange}
-              hasActiveFilters={hasActiveFilters}
-              onClear={clearFilters}
+          <>
+            {/* Số thiết bị mỗi nhóm nằm ngay trên tab; chỉ nhóm cần chú ý mới có số nổi */}
+            <StatusTabs
+              variant="underline"
+              ariaLabel="Lọc thiết bị theo trạng thái"
+              value={tab}
+              onChange={setTab}
+              tabs={[
+                { id: "ALL", label: `Tất cả (${tabCounts.ALL})` },
+                { id: "WARNING", label: "Cần xử lý", badge: tabCounts.WARNING },
+                { id: "OFFLINE", label: "Mất kết nối", badge: tabCounts.OFFLINE },
+                { id: "PENDING", label: `Chờ kết nối (${tabCounts.PENDING})` },
+                { id: "ONLINE", label: `Online (${tabCounts.ONLINE})` },
+              ]}
             />
-          </div>
-        )}
 
-        {!loading && !failed && scopedNodes.length > 0 && <div className="flex flex-col pb-8">
-          <div className="bg-white border border-warmGray/15 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-            {filteredNodes?.map((node, i) => {
-              const zone = zoneById.get(node.zone_id);
-              // Chỉ "Nhà · Zone": trang trại đã có ở thanh phạm vi
-              const locationLabel = zone ? `${zone.houseName} · ${zone.name}` : undefined;
-
-              return (
-                <DeviceListRow
-                  key={node._id}
-                  index={i}
-                  node={node}
-                  zoneId={node.zone_id}
-                  locationLabel={locationLabel}
-                  isExpanded={expandedNodeId === node._id}
-                  onToggleExpand={() => setExpandedNodeId(prev => prev === node._id ? null : node._id)}
-                  onOpenAudio={() => setAudioNodeId(node._id)}
-                  rebootUnsupported={rebootUnsupportedIds.has(node._id)}
-                  onReboot={() => setRebootNodeId(node._id)}
-                  moreActions={zone ? [
-                    { label: t("action.move"), onClick: () => setMoveDevice(sensorItem(node, zone.house_id)) },
-                    { label: t("action.replace"), onClick: () => setReplaceDevice(sensorItem(node, zone.house_id)) },
-                    { label: t("action.remove"), onClick: () => setRemoveDevice(sensorItem(node, zone.house_id)), danger: true },
-                  ] : undefined}
-                />
-              );
-            })}
-            {filteredNodes.length === 0 && (
-              <div className="text-center p-8 text-warmGray">
-                Không tìm thấy thiết bị nào khớp với bộ lọc.
+            {showSearch && (
+              <div className="max-w-sm">
+                <SearchInput placeholder="Tìm mã thiết bị, firmware..." value={searchQuery} onChange={setSearchQuery} />
               </div>
             )}
-          </div>
-        </div>}
+
+            <div className="overflow-hidden rounded-2xl border border-warmGray/15 bg-white">
+              <div className={`hidden gap-x-4 border-b border-warmGray/15 bg-warmGray/5 px-4 py-2.5 text-xs font-semibold text-warmGray md:grid ${DEVICE_ROW_GRID}`}>
+                <span>Thiết bị</span>
+                <span>Vị trí</span>
+                <span>Trạng thái</span>
+                <span>Kết nối</span>
+                <span />
+              </div>
+              {filteredNodes.map(node => {
+                const zone = zoneById.get(node.zone_id);
+                return (
+                  <DeviceListRow
+                    key={node._id}
+                    node={node}
+                    zoneId={node.zone_id}
+                    houseName={zone?.houseName}
+                    zoneName={zone?.name}
+                    isExpanded={expandedNodeId === node._id}
+                    onToggleExpand={() => setExpandedNodeId(prev => prev === node._id ? null : node._id)}
+                    onOpenAudio={() => setAudioNodeId(node._id)}
+                    rebootUnsupported={rebootUnsupportedIds.has(node._id)}
+                    onReboot={() => setRebootNodeId(node._id)}
+                    moreActions={zone ? [
+                      { label: t("action.move"), onClick: () => setMoveDevice(sensorItem(node, zone.house_id)) },
+                      { label: t("action.replace"), onClick: () => setReplaceDevice(sensorItem(node, zone.house_id)) },
+                      { label: t("action.remove"), onClick: () => setRemoveDevice(sensorItem(node, zone.house_id)), danger: true },
+                    ] : undefined}
+                  />
+                );
+              })}
+              {filteredNodes.length === 0 && (
+                <div className="p-8 text-center text-small text-warmGray">
+                  Không có thiết bị nào ở nhóm này{searchQuery.trim() ? " khớp với ô tìm kiếm" : ""}.
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         {audioNode && (
           <LullabyTracksModal
@@ -236,7 +217,7 @@ export default function TechnicianDevicesPage() {
           onCancel={() => setRebootNodeId(null)}
         />
 
-      </Card>
+      </SectionCard>
       {/* thiết bị gỡ nhầm khôi phục được trong 24 giờ */}
       <RemovedDevicesSection />
     </div>
