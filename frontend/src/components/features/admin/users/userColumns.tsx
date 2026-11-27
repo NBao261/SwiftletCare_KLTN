@@ -7,7 +7,6 @@ import { STATUS_LABEL, STATUS_TONE, ROLE_LABEL } from '@/components/features/adm
 import type { User } from '@/types'
 
 const DAY_FORMAT = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
-const TIME_FORMAT = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
 
 export interface UserColumnHandlers {
   onView: (user: User) => void
@@ -20,40 +19,35 @@ export function buildUserColumns(handlers: UserColumnHandlers, currentUserId?: s
   return [
     // Width % cho table-fixed, tổng 100
     {
-      // Sort theo tên/email đặt ở nút "Sắp xếp" cùng hàng filter (không phải click header), như trước khi tách cột
-      key: 'full_name', header: 'Họ tên', className: 'w-[21%]',
-      // Tên dài mờ dần ở đuôi (text-fade) thay vì "…"; rê chuột xem đủ
-      render: (user) => <p className="text-fade font-semibold text-charcoal" title={user.full_name}>{user.full_name}</p>,
+      // Tên đậm, email xám bên dưới; dài thì cắt, rê chuột xem đủ
+      key: 'full_name', header: 'Họ tên và email', sortable: true, className: 'w-[38%]',
+      render: (user) => (
+        <div className="flex min-w-0 flex-col">
+          <p className="truncate font-semibold text-charcoal" title={user.full_name}>{user.full_name}</p>
+          <p className="truncate text-small text-warmGray" title={user.email}>{user.email}</p>
+        </div>
+      ),
     },
     {
-      key: 'email', header: 'Email', className: 'w-[25%]',
-      render: (user) => <p className="truncate text-graphite" title={user.email}>{user.email}</p>,
-    },
-    {
-      key: 'role', header: 'Vai trò', sortable: true, className: 'w-[17%]',
+      key: 'role', header: 'Vai trò', sortable: true, className: 'w-[18%]',
       render: (user) => <Badge tone="info" className="whitespace-nowrap">{ROLE_LABEL[user.role]}</Badge>,
     },
     {
-      key: 'status', header: 'Trạng thái', sortable: true, className: 'w-[15%]',
+      key: 'status', header: 'Trạng thái', sortable: true, className: 'w-[16%]',
       render: (user) => {
         const status = getUserStatus(user)
         return <Badge tone={STATUS_TONE[status]} className="whitespace-nowrap">{STATUS_LABEL[status]}</Badge>
       },
     },
     {
-      // Giờ trên, ngày dưới
-      key: 'created_at', header: 'Ngày tạo', className: 'w-[12%] whitespace-nowrap',
+      // Chỉ ngày; giờ tạo xem ở chi tiết
+      key: 'created_at', header: 'Ngày tạo', sortable: true, className: 'w-[18%] whitespace-nowrap',
       render: (user) => user.created_at
-        ? (
-          <div className="flex flex-col" title={formatDate(user.created_at)}>
-            <span className="font-semibold text-charcoal">{TIME_FORMAT.format(new Date(user.created_at))}</span>
-            <span className="text-small text-warmGray">{DAY_FORMAT.format(new Date(user.created_at))}</span>
-          </div>
-        )
+        ? <span className="text-graphite" title={formatDate(user.created_at)}>{DAY_FORMAT.format(new Date(user.created_at))}</span>
         : <span className="text-warmGray">—</span>,
     },
     {
-      key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[10%]',
+      key: 'actions', header: '', align: 'center', className: 'w-[10%]',
       render: (user) => {
         const status = getUserStatus(user)
         const items: ActionsMenuItem[] = [{ label: 'Xem chi tiết', onClick: () => handlers.onView(user) }]

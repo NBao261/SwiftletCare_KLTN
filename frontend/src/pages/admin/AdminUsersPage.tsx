@@ -1,29 +1,30 @@
 // Quản lý tài khoản; trang chỉ lo state và layout
-import { useState } from 'react'
-import { getUserStatus, useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
-import { Button, ClearFiltersButton, SearchInput, SortChips, SectionCard } from '@/components/ui'
+import { useMemo, useState } from 'react'
+import { getUserStatus, useAllUsers, useUsersList, type UsersSortKey } from '@/hooks/admin/useUsers'
+import { Button, ClearFiltersButton, SearchInput, SectionCard } from '@/components/ui'
+import StatusTabs from '@/components/common/StatusTabs'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import DataTable from '@/components/ui/DataTable'
 import SelectMenu from '@/components/ui/SelectMenu'
 import { useAuthStore } from '@/stores/authStore'
-import { STATUS_LABEL, FILTERABLE_STATUSES, ROLE_LABEL, SORT_FIELDS, type FilterableStatus } from '@/components/features/admin/users/users.constants'
+import { STATUS_LABEL, FILTERABLE_STATUSES, ROLE_LABEL, type FilterableStatus } from '@/components/features/admin/users/users.constants'
 import { buildUserColumns } from '@/components/features/admin/users/userColumns'
 import UserDetailModal from '@/components/features/admin/users/UserDetailModal'
 import LockUserModal from '@/components/features/admin/users/LockUserModal'
 import UnlockUserModal from '@/components/features/admin/users/UnlockUserModal'
-import UserStats from '@/components/features/admin/users/UserStats'
 import CreateFarmOwnerModal from '@/components/features/admin/users/CreateFarmOwnerModal'
+import { t } from '@/i18n'
 import type { Role, User, SortDirection } from '@/types'
 
 const PAGE_SIZE = 10
-// px: vừa ô Ngày tạo 2 dòng (giờ/ngày); mọi dòng kể cả dòng trống bù cao bằng nhau → khung bảng cố định 10 dòng
+// px: vừa ô tên + email 2 dòng; mọi dòng kể cả dòng trống bù cao bằng nhau → khung bảng cố định 10 dòng
 const ROW_HEIGHT = 64
 const DEFAULT_SORT_BY: UsersSortKey = 'created_at'
 const DEFAULT_SORT_DIR: SortDirection = 'desc'
 
-// một danh sách mọi vai trò, lọc vai trò bằng ô chọn thay cho 2 tab
-const ROLE_OPTIONS: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN', 'DOMAIN_EXPERT']
+// một danh sách mọi vai trò, chọn vai trò bằng hàng tab
+const ROLE_OPTIONS: Role[] = ['FARM_OWNER', 'FARM_TECHNICIAN', 'DOMAIN_EXPERT', 'ADMIN']
 
 export default function AdminUsersPage() {
   const currentUserId = useAuthStore(s => s.user?._id)
@@ -42,6 +43,15 @@ export default function AdminUsersPage() {
     status, role: role || undefined, search: search || undefined, sortBy, sortDir, page, limit: PAGE_SIZE,
   })
 
+  // Số trên tab: đếm ở client từ toàn bộ tài khoản vì backend không có endpoint thống kê; chưa tải xong thì tab không ghi số
+  const { data: allUsers } = useAllUsers()
+  const roleCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: allUsers?.length ?? 0 }
+    for (const user of allUsers ?? []) counts[user.role] = (counts[user.role] ?? 0) + 1
+    return counts
+  }, [allUsers])
+  const withCount = (label: string, key: string) => (allUsers ? `${label} (${roleCounts[key] ?? 0})` : label)
+
   // Sắp trên toàn bộ tài khoản → đổi tiêu chí thì về trang 1
   function handleSortChange(key: string) {
     if (key === sortBy) {
@@ -53,15 +63,11 @@ export default function AdminUsersPage() {
     setPage(1)
   }
 
-  const hasActiveFilters = status !== undefined || role !== '' || search !== ''
-    || sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR
+  const hasActiveFilters = status !== undefined || search !== ''
 
   function clearFilters() {
     setStatus(undefined)
-    setRole('')
     setSearch('')
-    setSortBy(DEFAULT_SORT_BY)
-    setSortDir(DEFAULT_SORT_DIR)
     setPage(1)
   }
 
@@ -74,41 +80,38 @@ export default function AdminUsersPage() {
   return (
     // Tiêu đề trang do AppHeader (topbar) tự tra từ menu: không lặp lại trong nội dung
     <div className="flex flex-col gap-5">
-      {/* Hàng 0: 4 ô chỉ số (chỉ xem): số liệu toàn hệ thống */}
-      <UserStats />
-
-      {/* Card một mình trên trang: tên trang đã ở header nên không có tiêu đề */}
+      {/* Card một mình trên trang: tên trang đã ở header nên không có tiêu đề; nút chính duy nhất ở góc phải */}
       <SectionCard
         description="Mọi tài khoản trên hệ thống"
         help="Quản trị viên chỉ tạo tài khoản chủ nhà yến. Kỹ thuật viên và chuyên gia do chủ nhà yến mời vào trang trại."
+        action={<Button type="button" onClick={() => setCreatingOwner(true)}>Tạo chủ nhà yến</Button>}
       >
-        {/* Hàng 1: tìm kiếm + nút chính duy nhất */}
+        <StatusTabs
+          variant="underline"
+          ariaLabel={t('Lọc tài khoản theo vai trò')}
+          value={role || 'ALL'}
+          onChange={id => { setRole(id === 'ALL' ? '' : id); setPage(1) }}
+          tabs={[
+            { id: 'ALL', label: withCount(t('Tất cả'), 'ALL') },
+            ...ROLE_OPTIONS.map(r => ({ id: r, label: withCount(ROLE_LABEL[r], r) })),
+          ]}
+        />
+
+        {/* Tìm kiếm và lọc trạng thái; sắp xếp bấm ở tiêu đề cột */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-[200px] flex-1">
+          <div className="min-w-[14rem] flex-1 sm:max-w-sm">
             <SearchInput
               placeholder="Tìm tên/email..."
               value={search}
               onChange={v => { setSearch(v); setPage(1) }}
             />
           </div>
-          <Button type="button" onClick={() => setCreatingOwner(true)}>Tạo chủ nhà yến</Button>
-        </div>
-
-        {/* Hàng 2: bộ lọc + sắp xếp */}
-        <div className="flex flex-wrap items-center gap-3">
-          <SelectMenu
-            ariaLabel="Lọc theo vai trò"
-            value={role}
-            onChange={v => { setRole(v); setPage(1) }}
-            options={[{ value: '' as const, label: 'Tất cả vai trò' }, ...ROLE_OPTIONS.map(r => ({ value: r, label: ROLE_LABEL[r] }))]}
-          />
           <SelectMenu
             ariaLabel="Lọc theo trạng thái"
             value={status ?? ''}
             onChange={v => { setStatus(v || undefined); setPage(1) }}
             options={[{ value: '' as const, label: 'Tất cả trạng thái' }, ...FILTERABLE_STATUSES.map(s => ({ value: s, label: STATUS_LABEL[s] }))]}
           />
-          <SortChips fields={SORT_FIELDS} sortBy={sortBy} sortDir={sortDir} onChange={handleSortChange} />
           {hasActiveFilters && (
             <ClearFiltersButton onClick={clearFilters} />
           )}
