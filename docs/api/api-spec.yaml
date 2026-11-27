@@ -4026,7 +4026,7 @@ paths:
     put:
       tags: [Recommendations]
       summary: "Sửa luật hoặc bật/tắt (`active`) (EXPERT-FR-016) — DOMAIN_EXPERT, FARM_OWNER"
-      description: "Thay nội dung luật; `active` bỏ trống thì giữ nguyên trạng thái hiện tại. Khuyến nghị đã mở giữ bằng chứng và luật lúc mở (`rule_snapshot`). Audit `RECOMMENDATION_RULE_UPDATED`. BR-22: chuyên gia bật hoặc tắt là đã quyết (`pending_approval: false`); Farm Owner trên farm có chuyên gia sửa đề xuất thì luật vẫn tắt và chờ duyệt, sửa luật đang chạy → 403."
+      description: "Thay nội dung luật; `active` bỏ trống thì giữ nguyên trạng thái hiện tại. Khuyến nghị đã mở giữ bằng chứng và luật lúc mở (`rule_snapshot`). Audit `RECOMMENDATION_RULE_UPDATED`. BR-22: chuyên gia bật luật là đã quyết (`pending_approval: false`); chuyên gia sửa mà không bật (`active: false` hoặc bỏ trống) thì luật vẫn chờ duyệt (`pending_approval: true`); Farm Owner trên farm có chuyên gia sửa đề xuất thì luật vẫn tắt và chờ duyệt, sửa luật đang chạy → 403."
       requestBody:
         required: true
         content:

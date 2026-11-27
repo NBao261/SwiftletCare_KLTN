@@ -16,6 +16,7 @@ import {
   evaluateRecommendationRules, expireRecommendations, measureRecommendationEffects,
 } from '@/services/recommendation.service'
 import { emitRecommendationNew } from '@/socket'
+import { getExpertQueue } from '@/services/expertQueue.service'
 import { DEFAULT_THRESHOLDS } from '@/utils/thresholds.util'
 import { dayOffset } from '@/utils/recommendationRule.util'
 import type { Role } from '@/types'
@@ -105,6 +106,20 @@ describe('EXPERT-FR-016 — rules', () => {
     expect((await call('put', `/rules/${id}`, t.expert, { ...NH3_RULE, value: 5, active: true })).body.data)
       .toMatchObject({ active: true, pending_approval: false })
     expect((await call('put', `/rules/${id}`, t.owner, { ...NH3_RULE, value: 6 })).status).toBe(403)
+  })
+
+  it('an expert edit that does not turn a proposal on keeps it waiting for approval (BR-22)', async () => {
+    const { farm, expert, t, call } = await seed()
+    const id = (await call('post', '/rules', t.owner, { farm_id: farm._id, ...NH3_RULE }).expect(201)).body.data._id
+    expect((await call('put', `/rules/${id}`, t.expert, { ...NH3_RULE, value: 5 })).body.data)
+      .toMatchObject({ value: 5, active: false, pending_approval: true })
+    // Vẫn trong hàng đợi việc của chuyên gia và Farm Owner vẫn sửa được đề xuất của mình
+    const queue = await getExpertQueue({ _id: String(expert._id), email: expert.email, role: 'DOMAIN_EXPERT' }, String(farm._id))
+    expect(JSON.stringify(queue)).toContain(id)
+    expect((await call('put', `/rules/${id}`, t.owner, { ...NH3_RULE, value: 6 })).body.data)
+      .toMatchObject({ value: 6, active: false, pending_approval: true })
+    expect((await call('put', `/rules/${id}`, t.expert, { ...NH3_RULE, value: 6, active: true })).body.data)
+      .toMatchObject({ active: true, pending_approval: false })
   })
 
   it('the Farm Owner cannot rewrite a rule the expert turned off (BR-22)', async () => {
