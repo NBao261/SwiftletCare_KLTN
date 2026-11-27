@@ -61,7 +61,7 @@ export default function TechnicianDevicesPage() {
   // Có vài thiết bị thì cuộn mắt là thấy hết; ô tìm chỉ hiện khi nhiều
   const showSearch = scopedNodes.length > SEARCH_FROM;
   const tabCounts = countByTab(scopedNodes);
-  const filteredNodes = sortDevices(scopedNodes.filter(node => matchesTab(node, tab) && matchesSearch(node, searchQuery)));
+  const filteredNodes = sortDevices(scopedNodes.filter(node => matchesTab(node, tab) && (!showSearch || matchesSearch(node, searchQuery))));
 
   const [audioNodeId, setAudioNodeId] = useState<string | null>(null);
   const audioNode = nodes?.find((n) => n._id === audioNodeId);
@@ -188,7 +188,7 @@ export default function TechnicianDevicesPage() {
               })}
               {filteredNodes.length === 0 && (
                 <div className="p-8 text-center text-small text-warmGray">
-                  Không có thiết bị nào ở nhóm này{searchQuery.trim() ? " khớp với ô tìm kiếm" : ""}.
+                  Không có thiết bị nào ở nhóm này{showSearch && searchQuery.trim() ? " khớp với ô tìm kiếm" : ""}.
                 </div>
               )}
             </div>
