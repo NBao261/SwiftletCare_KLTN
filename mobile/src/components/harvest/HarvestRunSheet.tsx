@@ -126,10 +126,13 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
     if (!isBusy) onClose()
   }
 
-  // Cắt ngay khi gõ: số tổ là số nguyên 6 chữ số, số gram 6 chữ số kèm tối đa 2 chữ số lẻ
+  // Cắt ngay khi gõ: số tổ là số nguyên 6 chữ số, số gram 6 chữ số kèm tối đa 2 chữ số lẻ (số cũ dài hơn thì giữ độ dài đó)
   const setAmount = (nestType: NestType, field: keyof NestAmountText, value: string) => {
-    const limited = limitAmountInput(value, field === 'nests' ? 0 : HARVEST_GRAMS_MAX_DECIMALS)
-    setAmounts(current => ({ ...current, [nestType]: { ...current[nestType], [field]: limited } }))
+    const decimals = field === 'nests' ? 0 : HARVEST_GRAMS_MAX_DECIMALS
+    setAmounts(current => {
+      const limited = limitAmountInput(value, decimals, current[nestType][field])
+      return { ...current, [nestType]: { ...current[nestType], [field]: limited } }
+    })
   }
 
   // Gửi ảnh vừa chụp cho mọi đợt của lần thu sau khi lưu số; không có ảnh thì coi như xong

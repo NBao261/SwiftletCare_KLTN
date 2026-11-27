@@ -171,7 +171,7 @@ describe('checkNestAmount', () => {
     expect(checkNestAmount({ nests: '40', grams: '' }).error).toBe('Điền cả số tổ và trọng lượng')
     expect(checkNestAmount({ nests: '0', grams: '300' }).error).toBe('Điền cả số tổ và trọng lượng')
     expect(checkNestAmount({ nests: '2,5', grams: '300' }).error).toBe('Nhập số nguyên')
-    expect(checkNestAmount({ nests: '-1', grams: '300' }).error).toBe('Từ 0 đến 999.999')
+    expect(checkNestAmount({ nests: '-1', grams: '300' }).error).toBe('Từ 0 trở lên')
     expect(checkNestAmount({ nests: '4', grams: 'abc' }).error).toBe('Nhập một số')
   })
 
@@ -303,8 +303,14 @@ describe('limitAmountInput và giới hạn 6 chữ số', () => {
     expect(limitAmountInput('12,', 2)).toBe('12,')
   })
 
-  it('checkNestAmount chặn số quá 6 chữ số dán vào ô', () => {
-    expect(checkNestAmount({ nests: '1000000', grams: '10' }).error).not.toBeNull()
+  it('ô đang có số cũ dài hơn 6 chữ số thì giữ được độ dài đó, không cho dài thêm', () => {
+    expect(limitAmountInput('12345678', 0, '1234567')).toBe('1234567')
+    expect(limitAmountInput('1234567,5', 2, '1234567')).toBe('1234567,5')
+    expect(limitAmountInput('9999999', 0, '12')).toBe('999999')
+  })
+
+  it('checkNestAmount không chặn lần thu cũ có số từ 1.000.000 trở lên', () => {
+    expect(checkNestAmount({ nests: '1000000', grams: '10' }).isFilled).toBe(true)
     expect(checkNestAmount({ nests: '999999', grams: '999999' }).isFilled).toBe(true)
   })
 })

@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals'
 import {
   buildLocationMapHtml,
   buildSetPinScript,
+  isLocationMapPage,
   isSameCoordinates,
   parseLocationMapMessage,
 } from '@/utils/locationMap.utils'
@@ -41,6 +42,21 @@ describe('buildLocationMapHtml', () => {
 
   it('lệnh đặt ghim từ app', () => {
     expect(buildSetPinScript({ lat: 1.5, lng: 2.5 })).toBe('window.setPin && window.setPin(1.5, 2.5); true;')
+  })
+})
+
+describe('isLocationMapPage', () => {
+  it('chỉ cho mở trang bản đồ của app, không mở trang ngoài trong khung bản đồ', () => {
+    expect(isLocationMapPage('https://localhost/')).toBe(true)
+    expect(isLocationMapPage('about:blank')).toBe(true)
+    expect(isLocationMapPage('https://leafletjs.com/')).toBe(false)
+    expect(isLocationMapPage('https://www.openstreetmap.org/copyright')).toBe(false)
+  })
+
+  it('trang không có chữ "Leaflet" mặc định, ghi công OpenStreetMap', () => {
+    const html = buildLocationMapHtml({ coordinates: null, isInteractive: true, pinColor: '#000', pinShadowColor: '#000' })
+    expect(html).toContain('setPrefix(false)')
+    expect(html).toContain('OpenStreetMap contributors')
   })
 })
 

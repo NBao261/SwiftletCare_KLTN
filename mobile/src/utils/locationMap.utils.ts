@@ -14,6 +14,15 @@ const LEAFLET_CSS_INTEGRITY = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BM
 const LEAFLET_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 const LEAFLET_JS_INTEGRITY = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='
 
+// Địa chỉ gốc của trang HTML trong WebView. Chỉ trang này được mở trong khung: thư viện (unpkg) và ô bản đồ (OpenStreetMap) là
+// tài nguyên của trang, không phải lượt chuyển trang, nên không bị chặn
+export const LOCATION_MAP_BASE_URL = 'https://localhost/'
+
+// Lượt chuyển trang WebView được phép: chỉ trang bản đồ của app; bấm link nào khác (nếu có) thì đứng yên
+export function isLocationMapPage(url: string): boolean {
+  return url === 'about:blank' || url.startsWith(LOCATION_MAP_BASE_URL)
+}
+
 // Tin bản đồ gửi về app: tâm bản đồ sau khi người dùng kéo hoặc phóng (vị trí dưới ghim), hoặc báo không tải được thư viện bản
 // đồ (mất mạng)
 export type LocationMapMessage = { kind: 'pick'; coordinates: Coordinates } | { kind: 'load-error' }
@@ -70,8 +79,10 @@ function loadFailed(){ send({ kind: 'load-error' }); }
     zoomControl: interactive, dragging: interactive, touchZoom: interactive ? 'center' : false,
     doubleClickZoom: interactive ? 'center' : false, scrollWheelZoom: false, boxZoom: false, keyboard: false
   }).setView([${VIETNAM_VIEW.center[0]}, ${VIETNAM_VIEW.center[1]}], ${VIETNAM_VIEW.zoom});
+  // Ghi công OpenStreetMap dạng chữ, không link; bỏ chữ "Leaflet" mặc định (link ra ngoài trong khung bản đồ nhỏ)
+  map.attributionControl.setPrefix(false);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '&copy; OpenStreetMap'
+    maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
   // Lần di chuyển do app yêu cầu (setPin) không gửi về app, chỉ lần người dùng kéo hoặc phóng mới gửi tâm mới
   var isMovedByApp = false;

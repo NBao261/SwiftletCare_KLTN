@@ -9,7 +9,9 @@ import { t } from '@/utils/i18n.utils'
 import {
   buildLocationMapHtml,
   buildSetPinScript,
+  isLocationMapPage,
   isSameCoordinates,
+  LOCATION_MAP_BASE_URL,
   parseLocationMapMessage,
 } from '@/utils/locationMap.utils'
 
@@ -70,8 +72,10 @@ export function LocationMap({ coordinates, onPick, height }: LocationMapProps) {
     <View style={[height ? [styles.card, { height }] : styles.fill, { backgroundColor: palette.surfaceStrong }]}>
       <WebView<object>
         ref={webViewRef}
-        source={{ html, baseUrl: 'https://localhost/' }}
+        source={{ html, baseUrl: LOCATION_MAP_BASE_URL }}
         originWhitelist={['*']}
+        // Khung bản đồ không chuyển sang trang khác
+        onShouldStartLoadWithRequest={request => isLocationMapPage(request.url)}
         onMessage={handleMessage}
         onError={() => setLoadError(true)}
         javaScriptEnabled
