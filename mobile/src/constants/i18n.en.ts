@@ -112,9 +112,10 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Chưa có khu vực': 'No zones yet',
   'Tất cả trong ngưỡng': 'All within thresholds',
   'Mở thêm lựa chọn': 'Open more options',
-  'Xem chi tiết cảnh báo': 'View alert details',
+  'Cảnh báo mới nhất': 'Latest alerts',
+  'Thiết bị chưa online': 'Devices not online',
   'Xem chi tiết thiết bị': 'View device details',
-  'Xem chi tiết khu vực vượt ngưỡng': 'View zones out of range',
+  'Khu vực đang vượt ngưỡng': 'Zones out of range',
   'Còn {count} mục khác': '{count} more items',
 
   // Tỷ lệ về tổ

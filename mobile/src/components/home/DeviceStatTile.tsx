@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { router } from 'expo-router'
 import { WifiHighIcon } from 'phosphor-react-native'
-import { MAX_DETAIL_ITEMS, StatDetailSheet } from '@/components/home/StatDetailSheet'
+import { StatDetailSheet } from '@/components/home/StatDetailSheet'
 import { StatTile, type StatTone } from '@/components/home/StatTile'
 import { useCameraNodes } from '@/hooks/device/useCameraNodes'
 import { useSensorNodes } from '@/hooks/device/useSensorNodes'
@@ -52,16 +52,16 @@ export function DeviceStatTile() {
         visible={isSheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t('Thiết bị online')}
-        detailLabel={t('Xem chi tiết thiết bị')}
+        listTitle={t('Thiết bị chưa online')}
         value={summary ? `${summary.online}/${summary.total}` : '_'}
         summary={summary ? getDeviceSummary(summary) : '_'}
-        items={notOnlineNodes.slice(0, MAX_DETAIL_ITEMS).map(node => ({
+        items={notOnlineNodes.map(node => ({
           key: node._id,
           title: node.device_id,
           description: withSimulatedLabel(getDeviceStatusLabel(node.status), node.simulated),
           isProblem: node.status === 'OFFLINE',
         }))}
-        hiddenCount={Math.max(0, notOnlineNodes.length - MAX_DETAIL_ITEMS)}
+        hiddenCount={0}
         // shortcut: chưa có tab Thiết bị lọc offline — tạm mở tab Trang trại
         onViewAll={() => router.navigate({ pathname: '/(tabs)/farms', params: { returnTo: RETURN_TO_HOME } })}
       />
