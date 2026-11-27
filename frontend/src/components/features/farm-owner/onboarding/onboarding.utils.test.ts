@@ -27,6 +27,12 @@ describe('canValidateDevice — camera cần nhà, bộ điều khiển cần Zo
     expect(canValidateDevice(state({ deviceId: '  ' }))).toBe(false)
     expect(canValidateDevice(state({ deviceType: 'CAMERA_NODE', secretKey: '' }))).toBe(false)
   })
+
+  it('mã sai mẫu hoặc quá dài thì chưa xác thực được', () => {
+    expect(canValidateDevice(state({ deviceId: 'mã có dấu' }))).toBe(false)
+    expect(canValidateDevice(state({ deviceId: 'a'.repeat(41) }))).toBe(false)
+    expect(canValidateDevice(state({ secretKey: 'k'.repeat(129) }))).toBe(false)
+  })
 })
 
 describe('body đăng ký', () => {

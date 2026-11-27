@@ -3,7 +3,7 @@ import { Button, Input, Modal } from '@/components/ui'
 import { useCreateFarmOwner } from '@/hooks/admin/useUsers'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
-import { validateFarmOwnerForm, type FarmOwnerForm } from '@/validations/admin/farmOwner.validation'
+import { EMAIL_MAX_LENGTH, FULL_NAME_MAX_LENGTH, validateFarmOwnerForm, type FarmOwnerForm } from '@/validations/admin/farmOwner.validation'
 import { t } from '@/i18n'
 
 const EMPTY_FORM: FarmOwnerForm = { email: '', fullName: '', phone: '' }
@@ -55,6 +55,7 @@ export default function CreateFarmOwnerModal({ open, onClose }: { open: boolean;
             type="email"
             required
             autoComplete="off"
+            maxLength={EMAIL_MAX_LENGTH}
             value={form.email}
             onChange={event => setField('email', event.target.value)}
             error={submitted ? errors.email : undefined}
@@ -62,6 +63,7 @@ export default function CreateFarmOwnerModal({ open, onClose }: { open: boolean;
           <Input
             label="Họ tên"
             required
+            maxLength={FULL_NAME_MAX_LENGTH}
             value={form.fullName}
             onChange={event => setField('fullName', event.target.value)}
             error={submitted ? errors.fullName : undefined}
@@ -69,8 +71,10 @@ export default function CreateFarmOwnerModal({ open, onClose }: { open: boolean;
           <Input
             label="Số điện thoại (không bắt buộc)"
             type="tel"
+            maxLength={20}
             value={form.phone}
             onChange={event => setField('phone', event.target.value)}
+            error={submitted ? errors.phone : undefined}
           />
           {submitError && (
             <p role="alert" className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">{submitError}</p>

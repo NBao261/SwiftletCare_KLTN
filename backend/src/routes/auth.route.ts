@@ -4,6 +4,7 @@ import * as authController from '@/controllers/auth.controller'
 import { authenticate } from '@/middlewares/auth.middleware'
 import { loginLimiter, passwordResetLimiter, refreshLimiter } from '@/middlewares/rateLimiter.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { RESET_CODE_PATTERN, emailField, loginPasswordField, newPasswordField } from '@/utils/inputRules.util'
 
 const router = Router()
 
@@ -12,7 +13,7 @@ const router = Router()
 router.post(
   '/login',
   loginLimiter,
-  [body('email').isEmail(), body('password').notEmpty()],
+  [emailField(), loginPasswordField('password')],
   validate,
   authController.login,
 )
@@ -24,7 +25,7 @@ router.put(
   '/password',
   authenticate,
   loginLimiter,
-  [body('current_password').isString().notEmpty(), body('new_password').isString().isLength({ min: 8 }).withMessage('Password must be at least 8 characters')],
+  [loginPasswordField('current_password'), newPasswordField('new_password')],
   validate,
   authController.changePassword,
 )
@@ -32,12 +33,12 @@ router.put(
 router.post('/logout', authenticate, authController.logout)
 router.get('/me', authenticate, authController.me)
 
-router.post('/forgot-password', passwordResetLimiter, [body('email').isEmail()], validate, authController.forgotPassword)
+router.post('/forgot-password', passwordResetLimiter, [emailField()], validate, authController.forgotPassword)
 
 router.post(
   '/reset-password',
   loginLimiter,
-  [body('email').isEmail(), body('token').notEmpty(), body('newPassword').isLength({ min: 8 })],
+  [emailField(), body('token').isString().bail().matches(RESET_CODE_PATTERN), newPasswordField('newPassword')],
   validate,
   authController.resetPassword,
 )
@@ -49,6 +50,7 @@ router.put('/notification-preferences', authenticate,
   // Chuỗi rỗng = tắt giờ im lặng
   body(['quiet_hours.start', 'quiet_hours.end']).optional().isString()
     .custom((v: string) => v === '' || HHMM.test(v)).withMessage('Giờ dạng HH:mm, hoặc rỗng để tắt giờ im lặng'),
+  body('quiet_hours').optional().isObject(),
   body('by_severity').optional().isObject(),
   // null = bỏ ghi đè của mức đó
   body(['by_severity.CRITICAL', 'by_severity.HIGH', 'by_severity.MEDIUM', 'by_severity.LOW'])

@@ -134,6 +134,13 @@ describe('checkNestAmount', () => {
     expect(checkNestAmount('10', '').error).toBe('incomplete');
     expect(checkNestAmount('', '300').error).toBe('incomplete');
   });
+
+  it('chặn số vượt giới hạn một đợt, kể cả Infinity', () => {
+    expect(checkNestAmount('100000', '1000000').error).toBeNull();
+    expect(checkNestAmount('100001', '100').error).toBe('tooLarge');
+    expect(checkNestAmount('10', '1000001').error).toBe('tooLarge');
+    expect(checkNestAmount('10', '1e999').error).toBe('tooLarge');
+  });
 });
 
 describe('groupHarvests', () => {

@@ -571,6 +571,7 @@ const en: Record<string, string> = {
   'Ghi chú': 'Note',
   'Chưa nhập mã thiết bị': 'Device ID is required',
   'Mã thiết bị chỉ gồm chữ, số, dấu _ và -': 'Device ID may contain only letters, digits, _ and -',
+  'Mã thiết bị tối đa 40 ký tự': 'Device ID has at most 40 characters',
   'Thêm thiết bị thất bại': 'Could not add the device',
   'Mã thiết bị đã có trong kho': 'This device ID is already in stock',
   'Thêm thiết bị vào kho': 'Add a device to the stock',

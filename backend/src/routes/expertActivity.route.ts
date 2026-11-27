@@ -5,6 +5,7 @@ import { EXPERT_DECISION_ACTIONS } from '@/services/expertActivity.service'
 import { REMINDER_KINDS } from '@/services/expertReminder.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { isoRange } from '@/utils/inputRules.util'
 
 const router = Router()
 router.use(authenticate, requireRole('FARM_OWNER', 'DOMAIN_EXPERT'))
@@ -14,8 +15,7 @@ const farmScope = [query('farmId').isString().isMongoId(), query('zoneId').optio
 
 router.get('/',
   ...farmScope,
-  query('from').optional().isISO8601(),
-  query('to').optional().isISO8601(),
+  ...isoRange(),
   query('type').optional().isString().isIn([...EXPERT_DECISION_ACTIONS]),
   query('houseId').optional().isString().isMongoId(),
   ...pageQuery,

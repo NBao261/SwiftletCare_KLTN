@@ -6,6 +6,7 @@ import { canValidateDevice, cameraRegisterInput, sensorRegisterInput } from '@/c
 import { describeRegistrationFailure, type RegistrationFailure } from '@/components/features/farm-owner/onboarding/registrationFailure'
 import { parseDeviceLabelCode } from '@/lib/qrCode'
 import { Thermometer, Camera, QrCode, CheckCircle2, X, AlertTriangle, XCircle, ArrowLeft, ArrowRight } from 'lucide-react'
+import { ACTIVATION_KEY_MAX_LENGTH, DEVICE_ID_MAX_LENGTH, deviceIdError } from '@/validations/common/deviceId.validation'
 import type { OnboardingState } from './onboardingTypes'
 
 type ValidateStatus = 'idle' | 'loading' | 'success' | 'error'
@@ -31,6 +32,8 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
   const [qrError, setQrError] = useState('')
 
   const canSubmit = canValidateDevice(data)
+  // Báo ngay khi mã đã gõ sai mẫu; ô còn trống thì chưa báo
+  const idProblem = data.deviceId.trim() ? deviceIdError(data.deviceId) : undefined
 
   function handleQrPaste() {
     const parsed = parseDeviceLabelCode(qrRaw)
@@ -94,6 +97,9 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             disabled={status === 'success'}
             onChange={e => { patch({ deviceId: e.target.value }); setStatus('idle') }}
             placeholder="VD: ESP32-A7F3-001"
+            // Dư vài ký tự để mã dán quá dài vẫn hiện lỗi thay vì bị cắt lặng lẽ
+            maxLength={DEVICE_ID_MAX_LENGTH + 10}
+            aria-invalid={idProblem ? true : undefined}
             className={`input flex-1 tabular-nums ${
               failure?.tone === 'warning' ? 'border-2 border-climateOrange focus:border-climateOrange' : ''
             }`}
@@ -109,6 +115,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             {showQrInput ? <X className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
           </button>
         </div>
+        {idProblem && <p className="text-xs text-alertRed">{idProblem}</p>}
       </div>
 
       {/* QR URI paste panel */}
@@ -141,6 +148,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
           placeholder="VD: ABCD-EFGH-JKMN"
           autoComplete="off"
           spellCheck={false}
+          maxLength={ACTIVATION_KEY_MAX_LENGTH + 10}
           className="input w-full tabular-nums"
         />
       </div>

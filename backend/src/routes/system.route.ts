@@ -3,6 +3,7 @@ import { body, query } from 'express-validator'
 import * as systemController from '@/controllers/system.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { isoRange } from '@/utils/inputRules.util'
 import { REF5_ENTRY_PATTERN, SOURCE_MAX_LENGTH, THRESHOLD_KEYS, THRESHOLD_LIMITS } from '@/utils/thresholds.util'
 
 const router = Router()
@@ -11,8 +12,7 @@ router.use(authenticate, requireRole('ADMIN'))
 router.get('/audit-logs',
   query('actorId').optional().isMongoId(),
   query('targetId').optional().isMongoId(),
-  query('from').optional().isISO8601(),
-  query('to').optional().isISO8601(),
+  ...isoRange(),
   validate,
   systemController.listAuditLogs,
 )

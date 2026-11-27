@@ -26,6 +26,7 @@ import {
   bySeverityPayload, levelChannelsOf, urgentHasOutsideChannel, type LevelChannels,
 } from '@/validations/common/notificationChannels.validation'
 import type { SeverityLevel } from '@/types'
+import { PASSWORD_MAX_LENGTH, validatePasswordReset } from '@/validations/common/passwordChange.validation'
 
 // Ba nhóm: Tài khoản (hồ sơ, mật khẩu), Thông báo (kênh nhận), Quyền riêng tư và dữ liệu (chính sách, xoá tài khoản)
 const TABS = ['account', 'notifications', 'privacy'] as const
@@ -305,6 +306,9 @@ function SecurityCard() {
   const [sent, setSent] = useState(false)
   const [token, setToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const resetErrors = validatePasswordReset({ code: token, newPassword, confirmPassword })
 
   function handleSend() {
     if (!user?.email) return
@@ -315,9 +319,10 @@ function SecurityCard() {
 
   function handleReset(e: FormEvent) {
     e.preventDefault()
-    if (!user?.email) return
-    resetPassword.mutate({ email: user.email, token, newPassword }, {
-      onSuccess: () => { push('Đã đổi mật khẩu. Đăng nhập lại trên các thiết bị khác.'); setSent(false); setToken(''); setNewPassword('') },
+    setSubmitted(true)
+    if (!user?.email || Object.keys(resetErrors).length > 0) return
+    resetPassword.mutate({ email: user.email, token: token.trim(), newPassword }, {
+      onSuccess: () => { push('Đã đổi mật khẩu. Đăng nhập lại trên các thiết bị khác.'); setSent(false); setToken(''); setNewPassword(''); setConfirmPassword(''); setSubmitted(false) },
       onError: (err) => push(getApiErrorMessage(err, 'Đặt lại mật khẩu thất bại'), 'error'),
     })
   }
@@ -329,12 +334,13 @@ function SecurityCard() {
           Gửi mã đặt lại mật khẩu
         </Button>
       ) : (
-        <form onSubmit={handleReset} className="flex flex-col gap-3">
+        <form onSubmit={handleReset} noValidate className="flex flex-col gap-3">
           <p className="rounded-xl bg-limeMist/60 px-3.5 py-2.5 text-small text-charcoal">
             {t('Đã gửi mã 6 số tới')} <span className="font-semibold">{user?.email}</span>.
           </p>
-          <Input label="Mã đặt lại (6 số)" required value={token} onChange={e => setToken(e.target.value)} maxLength={6} />
-          <Input label="Mật khẩu mới" type="password" required minLength={8} value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+          <Input label="Mã đặt lại (6 số)" required inputMode="numeric" autoComplete="one-time-code" value={token} onChange={e => setToken(e.target.value)} maxLength={6} error={submitted ? resetErrors.code : undefined} />
+          <Input label="Mật khẩu mới" type="password" required maxLength={PASSWORD_MAX_LENGTH} autoComplete="new-password" value={newPassword} onChange={e => setNewPassword(e.target.value)} error={submitted ? resetErrors.newPassword : undefined} />
+          <Input label="Nhập lại mật khẩu mới" type="password" required maxLength={PASSWORD_MAX_LENGTH} autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} error={submitted ? resetErrors.confirmPassword : undefined} />
           <Button type="submit" loading={resetPassword.isPending} className="w-full">Đổi mật khẩu</Button>
         </form>
       )}
