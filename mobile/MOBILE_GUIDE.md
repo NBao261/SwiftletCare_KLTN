@@ -470,6 +470,7 @@ Màu trạng thái — **chép đúng từ web** (`frontend/tailwind.config.ts`)
 |                          | `videoControlBackdrop`                 | `#0B0B0C8C`                       | Nền nút tròn trên video (Ink 55%) |
 |                          | `videoFlashBackdrop` / `videoInfoBackdrop` | `#0B0B0C99` / `#0B0B0CCC`     | Nền chữ chạm đúp / bảng thông tin trên video (Ink 60% / 80%) |
 |                          | `videoDim`                             | `#0B0B0C59`                       | Lớp tối phủ video khi hiện điều khiển (Ink 35%) |
+| Vòng đếm (thêm theo yêu cầu 2026-11-27) | `ringEntry`             | `#1E90FF`                         | Nét vòng chim về trên video (vòng chim ra dùng `primary`) |
 | Loại yến                 | `nestWhite` / `nestPink` / `nestBlood` | `#B5D32C` / `#89A022` / `#414C10` | Yến trắng / hồng / huyết       |
 
 `Colors.raw`: `lime #C3FD47`, `ink #0B0B0C`, `paper #F3F3EE`, `pureWhite #FFFFFF`, `safetyOrange #FF7426`, `successLime #B5D32C`, `alertRed #D53F35`.

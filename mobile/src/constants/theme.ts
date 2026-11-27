@@ -74,6 +74,7 @@ export const Colors = {
     videoFlashBackdrop: "#0B0B0C99",  // Ink mờ 60% — nền chữ báo khi chạm đúp video
     videoInfoBackdrop: "#0B0B0CCC",   // Ink mờ 80% — nền bảng thông tin camera trên video
     videoDim: "#0B0B0C59",            // Ink mờ 35% — lớp tối phủ video khi hiện điều khiển
+    ringEntry: "#1E90FF",             // Xanh dương tươi — nét vòng chim về trên video (thêm theo yêu cầu 2026-11-27)
   },
   // Các mã màu thuần túy (Raw Hex) để lập trình viên sử dụng bất kỳ đâu
   raw: {

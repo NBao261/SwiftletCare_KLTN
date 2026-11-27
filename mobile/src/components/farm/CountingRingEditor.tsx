@@ -90,7 +90,7 @@ export function CountingRingEditor({ camera, player, videoMessage, reviewNote, o
   // Camera chưa có vòng riêng: khung vuông mở sẵn chỉ là gợi ý, người dùng phải chỉnh nó (hoặc thêm vòng) rồi mới lưu được
   const canSave = isChanged && areRingsComplete(rings) && (savedRings.length > 0 || isTouched)
   const activeRing = rings[activeIndex] ?? null
-  const ringColor = (ring: CountingRing) => (ring.into_ring_is_exit ? palette.primary : palette.statusNew)
+  const ringColor = (ring: CountingRing) => (ring.into_ring_is_exit ? palette.primary : palette.ringEntry)
 
   // Mọi thay đổi bản nháp đi qua đây: bỏ câu "đã lưu" cũ, ghi là đã chỉnh
   const editRings = (next: CountingRing[], nextActiveIndex = activeIndex) => {
@@ -300,7 +300,7 @@ export function CountingRingEditor({ camera, player, videoMessage, reviewNote, o
                 </Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.swatch, { backgroundColor: palette.statusNew }]} />
+                <View style={[styles.swatch, { backgroundColor: palette.ringEntry }]} />
                 <Text variant="small" color={palette.textSecondary} style={styles.flex}>
                   {t('Vòng chim về: chim bay vào vòng là về tổ')}
                 </Text>
