@@ -7,7 +7,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useCreateFarm, useUpdateFarm } from '@/hooks/shared/useFarms'
 import { useToastStore } from '@/stores/toastStore'
-import { STRUCTURE_NAME_MAX_LENGTH } from '@/components/features/farm-owner/farms/farmStructure.constants'
+import { FARM_ADDRESS_MAX_LENGTH, STRUCTURE_NAME_MAX_LENGTH } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { parseFarmLocation, validateFarmLocation } from '@/validations/farm-owner/farm.validation'
 import type { Coordinates, Farm } from '@/types'
 
@@ -78,6 +78,11 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
     event.preventDefault()
     if (!name.trim() || !address.trim()) {
       setError('farmForm.errorRequired')
+      return
+    }
+    // Địa chỉ chọn từ gợi ý không qua maxLength của ô nhập
+    if (address.trim().length > FARM_ADDRESS_MAX_LENGTH) {
+      setError('farmForm.errorAddressTooLong')
       return
     }
     const locationError = validateFarmLocation(latitude, longitude, !isEdit)

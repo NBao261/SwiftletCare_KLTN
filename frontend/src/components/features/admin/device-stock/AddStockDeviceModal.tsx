@@ -13,7 +13,10 @@ const KIND_OPTIONS: { value: ProvisionedDeviceKind; label: string }[] = [
   { value: 'CAMERA', label: 'Camera đếm chim' },
 ]
 
-const validate = deviceIdError
+const validate = (deviceId: string): string | undefined => {
+  const problem = deviceIdError(deviceId)
+  return problem && t(problem)
+}
 
 // thêm thiết bị vào kho; thành công thì trả mã (chỉ 1 lần) cho trang mở popup in nhãn
 export default function AddStockDeviceModal({ open, onClose, onAdded }: {
