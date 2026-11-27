@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRightIcon, CheckCircleIcon, CpuIcon, VideoCameraIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/Button'
@@ -23,7 +24,7 @@ export function devicesToCheck(nodes: SystemNodeStatusItem[]): SystemNodeStatusI
 // Thiết bị chưa online ở mọi trang trại: việc đầu tiên của quản trị viên khi mở Tổng quan hệ thống
 export default function AttentionDevicesCard() {
   const { data, isLoading, isError, refetch } = useSystemNodeStatus()
-  const nodes = devicesToCheck(data?.nodes ?? [])
+  const nodes = useMemo(() => devicesToCheck(data?.nodes ?? []), [data])
 
   return (
     <SectionCard
@@ -54,7 +55,8 @@ export default function AttentionDevicesCard() {
         <ul className="-my-2 divide-y divide-warmGray/10">
           {nodes.slice(0, LIST_COUNT).map(node => {
             const lastSeen = node.last_heartbeat ? formatRelativeTime(node.last_heartbeat) : t('Chưa kết nối lần nào')
-            const place = [node.farm_name, node.house_name, node.zone_name].join(' · ')
+            // Camera gắn cả nhà nên zone_name rỗng: bỏ phần rỗng để không thừa dấu ngăn cách
+            const place = [node.farm_name, node.house_name, node.zone_name].filter(Boolean).join(' · ')
             const TypeIcon = node.type === 'camera' ? VideoCameraIcon : CpuIcon
             return (
               <li key={node._id}>

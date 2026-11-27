@@ -11,7 +11,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
 import DeviceListRow, { DEVICE_ROW_GRID } from "@/components/features/technician/devices/DeviceListRow";
 import { countByTab, matchesSearch, matchesTab, sortDevices, type DeviceTab } from "@/components/features/technician/devices/deviceStatus.utils";
-import { restartBlockReason } from "@/lib/deviceCommand";
+import { restartBlockReason, type RestartBlockSay } from "@/lib/deviceCommand";
 import LullabyTracksModal from "@/components/features/farm-owner/devices/LullabyTracksModal";
 import MoveControllerModal from "@/components/features/farm-owner/devices/MoveControllerModal";
 import ReplaceControllerModal from "@/components/features/farm-owner/devices/ReplaceControllerModal";
@@ -25,6 +25,14 @@ import { useToastStore } from "@/stores/toastStore";
 import { getApiErrorMessage } from "@/lib/helpers";
 
 const SEARCH_FROM = 6;
+
+// Lý do khoá nút khởi động lại bằng tiếng Việt (trang này chưa có bản tiếng Anh)
+const RESTART_BLOCK_VI: RestartBlockSay = (code, { version, min }) => ({
+  offline: "Thiết bị đang mất kết nối, chỉ khởi động lại từ xa được khi đang online.",
+  pending: "Thiết bị đang chờ kết nối, chỉ khởi động lại từ xa được khi đang online.",
+  noVersion: "Thiết bị chưa báo phiên bản firmware nên chưa khởi động lại từ xa được.",
+  oldFirmware: `Firmware v${version} chưa hỗ trợ khởi động lại từ xa, cần từ v${min}.`,
+})[code];
 
 // Thiết bị của Farm Technician: thiết bị các nhà được giao, chẩn đoán, khởi động lại, danh sách bài loa chỉ xem
 export default function TechnicianDevicesPage() {
@@ -177,7 +185,7 @@ export default function TechnicianDevicesPage() {
                     isExpanded={expandedNodeId === node._id}
                     onToggleExpand={() => setExpandedNodeId(prev => prev === node._id ? null : node._id)}
                     onOpenAudio={() => setAudioNodeId(node._id)}
-                    rebootBlockedReason={restartBlockReason(node) ?? (rebootUnsupportedIds.has(node._id) ? "Firmware chưa hỗ trợ lệnh này." : null)}
+                    rebootBlockedReason={restartBlockReason(node, RESTART_BLOCK_VI) ?? (rebootUnsupportedIds.has(node._id) ? "Firmware chưa hỗ trợ lệnh này." : null)}
                     onReboot={() => setRebootNodeId(node._id)}
                     moreActions={zone ? [
                       { label: t("action.move"), onClick: () => setMoveDevice(sensorItem(node, zone.house_id)) },

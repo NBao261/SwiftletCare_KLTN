@@ -12,8 +12,7 @@ function sevenDaysAgoIso() {
   return day.toISOString()
 }
 
-// Tín hiệu bảo mật duy nhất của nhật ký tài khoản: có đăng nhập thất bại trong 7 ngày thì báo, bấm Xem để lọc đúng các dòng đó.
-// Không có ngưỡng có nguồn nên không tự đặt số báo động; lỗi tải thì không hiện gì
+// Báo đăng nhập thất bại trong 7 ngày, bấm Xem để lọc; không đặt ngưỡng báo động vì chưa có nguồn, lỗi tải thì ẩn
 export default function LoginFailedNotice({ onShow }: { onShow: () => void }) {
   const { total } = useAuditLogList({ action: 'LOGIN_FAILED', from: sevenDaysAgoIso(), targetType: AUDIT_TARGET_TYPE, page: 1, limit: 1 })
   if (!total) return null

@@ -10,7 +10,7 @@ import { useAlertsList } from '@/hooks/shared/useAlerts'
 import { useSendNodeCommand } from '@/hooks/shared/useDevices'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
-import { restartBlockReason } from '@/lib/deviceCommand'
+import { restartBlockReason, type RestartBlockCode } from '@/lib/deviceCommand'
 import { t, translated } from '@/i18n'
 import type { DeviceStatus, NodeCommandInput, SystemNodeStatusItem } from '@/types'
 
@@ -20,6 +20,14 @@ const STATUS_TONE: Record<DeviceStatus, BadgeTone> = {
 const STATUS_LABEL: Record<DeviceStatus, string> = translated({
   ONLINE: 'Online', OFFLINE: 'Mất kết nối', PENDING: 'Chờ kết nối', // ERROR/DEGRADED đã bỏ
 })
+
+// Lý do khoá nút khởi động lại: dịch theo từng mã, khoá của hệ dịch là chính câu tiếng Việt
+const RESTART_BLOCK_TEXT: Record<RestartBlockCode, string> = {
+  offline: 'Thiết bị đang mất kết nối, chỉ khởi động lại từ xa được khi đang online.',
+  pending: 'Thiết bị đang chờ kết nối, chỉ khởi động lại từ xa được khi đang online.',
+  noVersion: 'Thiết bị chưa báo phiên bản firmware nên chưa khởi động lại từ xa được.',
+  oldFirmware: 'Firmware v{{version}} chưa hỗ trợ khởi động lại từ xa, cần từ v{{min}}.',
+}
 
 const DAY = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
 
@@ -72,7 +80,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
 
   const isSensor = node.type === 'sensor'
   const isOnline = node.status === 'ONLINE'
-  const restartBlock = restartBlockReason(node)
+  const restartBlock = restartBlockReason(node, (code, params) => t(RESTART_BLOCK_TEXT[code], params))
   const nodeAlerts = alerts.records.filter(a => a.node_id === node._id)
   // "Farm › Nhà yến › Tầng › Zone": cùng các phần vị trí của bảng, ngăn bằng › kiểu đường dẫn
   const place = nodeLocation(node).replace(/ \| /g, ' › ')
