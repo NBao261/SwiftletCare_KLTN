@@ -10,10 +10,12 @@ import { getApiErrorMessage } from '@/lib/helpers'
 import { INVITE_ROLE_LABEL } from '@/constants/roles'
 import { getRoleHomePath } from '@/constants/roles'
 import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, validateNewPassword } from '@/validations/common/passwordChange.validation'
 import { t } from '@/i18n'
 
 // Khớp spec create-account: full_name ≥ 1 ký tự, password ≥ 8
-const PASSWORD_MIN = 8
+// Cùng giới hạn với backend (POST /invitations/{token}/create-account)
+const FULL_NAME_MAX = 100
 
 export default function InvitationPage() {
   useDocumentTitle(t('Lời mời tham gia trang trại'))
@@ -27,6 +29,7 @@ export default function InvitationPage() {
   const createAccount = useCreateAccountFromInvitation()
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
   if (isLoading) {
@@ -59,12 +62,14 @@ export default function InvitationPage() {
   }
 
   const nameError = submitted && !fullName.trim() ? 'Chưa nhập họ tên' : undefined
-  const passwordError = submitted && password.length < PASSWORD_MIN ? `Tối thiểu ${PASSWORD_MIN} ký tự` : undefined
+  const passwordErrors = validateNewPassword(password, confirmPassword)
+  const passwordError = submitted ? passwordErrors.newPassword : undefined
+  const confirmError = submitted ? passwordErrors.confirmPassword : undefined
 
   function handleCreateAccount(event: FormEvent) {
     event.preventDefault()
     setSubmitted(true)
-    if (!token || !fullName.trim() || password.length < PASSWORD_MIN) return
+    if (!token || !fullName.trim() || passwordErrors.newPassword || passwordErrors.confirmPassword) return
     createAccount.mutate({ token, full_name: fullName.trim(), password }, {
       // Tài khoản mới đã vào farm của lời mời; backend không trả token → đăng nhập với email điền sẵn
       onSuccess: () => {
@@ -107,6 +112,7 @@ export default function InvitationPage() {
               label="Họ và tên"
               required
               autoComplete="name"
+              maxLength={FULL_NAME_MAX}
               value={fullName}
               onChange={e => setFullName(e.target.value)}
               error={nameError}
@@ -116,10 +122,21 @@ export default function InvitationPage() {
               type="password"
               required
               autoComplete="new-password"
-              placeholder={`Ít nhất ${PASSWORD_MIN} ký tự`}
+              placeholder={`Ít nhất ${PASSWORD_MIN_LENGTH} ký tự`}
+              maxLength={PASSWORD_MAX_LENGTH}
               value={password}
               onChange={e => setPassword(e.target.value)}
               error={passwordError}
+            />
+            <Input
+              label="Nhập lại mật khẩu"
+              type="password"
+              required
+              autoComplete="new-password"
+              maxLength={PASSWORD_MAX_LENGTH}
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              error={confirmError}
             />
             <div className="flex gap-3">
               <Button type="button" variant="secondary" className="flex-1" loading={decline.isPending} onClick={handleDecline}>Từ chối</Button>

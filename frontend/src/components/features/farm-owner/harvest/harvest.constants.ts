@@ -3,6 +3,10 @@ import type { NestType } from '@/types';
 // Loại tổ theo thứ tự hiển thị; nhãn VI/EN ở harvestDict (nestType.*)
 export const NEST_TYPES: NestType[] = ['RAW', 'CLEANED', 'PREMIUM'];
 
+// Một đợt thu tối đa 100 000 tổ và 1 000 000 g, như backend (Report 3 §4.5)
+export const MAX_NESTS_PER_BATCH = 100_000;
+export const MAX_GRAMS_PER_BATCH = 1_000_000;
+
 // Gram hiện đúng số đã nhập, kg lấy 2 chữ số sau dấu phẩy
 export const GRAM_DIGITS = 1;
 export const KILOGRAM_DIGITS = 2;

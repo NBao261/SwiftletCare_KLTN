@@ -6,6 +6,7 @@ import * as harvestController from '@/controllers/harvests.controller'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
 import type { NestType } from '@/types'
+import { LIMITS } from '@/utils/inputRules.util'
 
 const NEST_TYPES = ['RAW', 'CLEANED', 'PREMIUM'] satisfies NestType[]
 
@@ -21,11 +22,12 @@ const photoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize
 const harvestFields = (optional: boolean) => {
   const field = (name: string) => (optional ? body(name).optional() : body(name).exists({ values: 'null' }))
   return [
-    field('nest_count').isInt({ min: 1 }).toInt(),
-    field('weight_grams').isFloat({ gt: 0 }).toFloat(),
+    field('nest_count').isInt({ min: 1, max: LIMITS.maxHarvestNests }).toInt(),
+    field('weight_grams').isFloat({ gt: 0, max: LIMITS.maxHarvestGrams }).toFloat(),
     field('nest_type').isString().bail().isIn(NEST_TYPES),
-    body('product_images').optional().isArray(),
-    body('product_images.*').isString(),
+    body('product_images').optional().isArray({ max: LIMITS.maxHarvestImages }),
+    // Ảnh chỉ là link: http(s), không nhận javascript: hay data:
+    body('product_images.*').isString().bail().isURL({ protocols: ['http', 'https'], require_protocol: true, require_tld: false }).isLength({ max: LIMITS.url }),
   ]
 }
 
@@ -43,7 +45,7 @@ router.put('/cycles/:id/conclusion', requireRole('DOMAIN_EXPERT'), param('id').i
 router.post  ('/',    canWrite,
   body('zone_id').isString().bail().isMongoId(), body('harvest_date').isString().bail().isISO8601({ strict: true }),
   ...harvestFields(false), validate, harvestController.create)
-router.get   ('/',    canRead,  harvestController.list)
+router.get   ('/',    canRead,  query('farmId').optional().isString().bail().isMongoId(), validate, harvestController.list)
 router.get   ('/:id', canRead,  param('id').isMongoId(), validate, harvestController.getOne)
 router.put   ('/:id', canWrite, param('id').isMongoId(), ...harvestFields(true), validate, harvestController.update)
 router.put   ('/:id/photo', canWrite, photoUpload.single('photo'), param('id').isMongoId(), validate, harvestController.setPhoto)

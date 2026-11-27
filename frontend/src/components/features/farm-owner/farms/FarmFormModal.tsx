@@ -7,6 +7,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useCreateFarm, useUpdateFarm } from '@/hooks/shared/useFarms'
 import { useToastStore } from '@/stores/toastStore'
+import { FARM_ADDRESS_MAX_LENGTH, STRUCTURE_NAME_MAX_LENGTH } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { parseFarmLocation, validateFarmLocation } from '@/validations/farm-owner/farm.validation'
 import type { Coordinates, Farm } from '@/types'
 
@@ -79,6 +80,11 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
       setError('farmForm.errorRequired')
       return
     }
+    // Địa chỉ chọn từ gợi ý không qua maxLength của ô nhập
+    if (address.trim().length > FARM_ADDRESS_MAX_LENGTH) {
+      setError('farmForm.errorAddressTooLong')
+      return
+    }
     const locationError = validateFarmLocation(latitude, longitude, !isEdit)
     if (locationError) {
       setError(locationError)
@@ -113,7 +119,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
   return (
     <Modal open onClose={onClose} title={isEdit ? t('farmForm.editTitle') : t('createFarm.title')}>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-        <Input name="farmName" label={t('createFarm.name')} required value={name} onChange={event => setName(event.target.value)} placeholder={t('createFarm.namePlaceholder')} />
+        <Input name="farmName" label={t('createFarm.name')} required maxLength={STRUCTURE_NAME_MAX_LENGTH} value={name} onChange={event => setName(event.target.value)} placeholder={t('createFarm.namePlaceholder')} />
         <AddressAutocomplete value={address} onChange={setAddress} onPick={setLocationAndFocus} />
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2">

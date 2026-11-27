@@ -18,6 +18,7 @@ import { paginate } from '@/utils/helpers.util'
 import { presignedGetUrl } from '@/config/minio.config'
 import { photoUrls } from '@/services/workOrder.service'
 import type { SiteCause } from '@/models/workOrder.model'
+import { parseDeviceAlertText } from '@/utils/deviceInput.util'
 import logger from '@/utils/logger.util'
 import { ALERT_TYPE_LABEL } from '@/utils/displayLabel.util'
 import type { DwelledBreach } from '@/utils/breachDwell.util'
@@ -199,7 +200,7 @@ export async function createAlert(input: CreateAlertInput): Promise<IAlert | nul
 
 // Firmware chỉ gửi message: tiêu đề dùng tên loại người đọc được, không để lộ mã loại
 function deviceAlertTitle(message: Record<string, unknown>, type: AlertType, place: string): string {
-  const sent = typeof message.title === 'string' ? message.title.trim() : ''
+  const sent = typeof message.title === 'string' ? message.title.trim().slice(0, 200) : ''
   return sent || `${ALERT_TYPE_LABEL[type]} tại ${place}`
 }
 
@@ -215,13 +216,14 @@ export async function ingestDeviceAlert(message: Record<string, unknown>): Promi
   }
 
   // mỗi eventId chỉ tính 1 lần
-  const eventId = typeof message.eventId === 'string' && message.eventId ? message.eventId : undefined
+  const eventId = typeof message.eventId === 'string' && message.eventId && message.eventId.length <= 128 ? message.eventId : undefined
+  const content = parseDeviceAlertText(message)
   const common = {
     eventId,
     type:        type as AlertType,
-    message:     (message.message as string | undefined) ?? `Thiết bị ${deviceId} báo ${type}`,
-    snapshotUrl: message.snapshotUrl as string | undefined,
-    metadata:    { raw: message } as Record<string, unknown>,
+    message:     content.text ?? `Thiết bị ${deviceId} báo ${type}`,
+    snapshotUrl: content.snapshotUrl,
+    metadata:    { raw: content.raw } as Record<string, unknown>,
     details:     undefined as Record<string, unknown> | undefined,
   }
 

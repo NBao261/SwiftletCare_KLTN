@@ -5,7 +5,9 @@ import { devicesDict } from '@/constants/devices.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useReplaceSensorNode } from '@/hooks/shared/useDevices';
+import { t as translate } from '@/i18n';
 import { useToastStore } from '@/stores/toastStore';
+import { ACTIVATION_KEY_MAX_LENGTH, deviceIdError, isActivationKeyTooLong } from '@/validations/common/deviceId.validation';
 
 interface ReplaceControllerModalProps {
   device: DeviceItem;
@@ -24,16 +26,20 @@ export default function ReplaceControllerModal({ device, onClose }: ReplaceContr
   const [submitted, setSubmitted] = useState(false);
 
   const newId = newDeviceId.trim();
+  const idProblem = newId ? deviceIdError(newId) : undefined;
   let idError: string | undefined;
   if (submitted && !newId) idError = t('replace.idEmpty');
+  else if (idProblem) idError = translate(idProblem);
   if (newId && newId === device.deviceId) idError = t('replace.idSame');
-  const keyError = submitted && !secretKey.trim() ? t('replace.keyEmpty') : undefined;
+  let keyError: string | undefined;
+  if (submitted && !secretKey.trim()) keyError = t('replace.keyEmpty');
+  else if (isActivationKeyTooLong(secretKey)) keyError = t('replace.keyTooLong', { max: ACTIVATION_KEY_MAX_LENGTH });
   const reasonError = submitted && !reason.trim() ? t('form.reasonEmpty') : undefined;
 
   function handleSubmit(event: FormEvent): void {
     event.preventDefault();
     setSubmitted(true);
-    if (!newId || newId === device.deviceId || !secretKey.trim() || !reason.trim()) return;
+    if (deviceIdError(newId) || newId === device.deviceId || !secretKey.trim() || isActivationKeyTooLong(secretKey) || !reason.trim()) return;
     replace.mutate(
       { nodeId: device.id, input: { new_device_id: newId, secret_key: secretKey.trim(), reason: reason.trim() } },
       {

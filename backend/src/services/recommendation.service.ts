@@ -84,10 +84,12 @@ export async function updateRule(ruleId: string, user: CurrentUser, input: Recor
   if (needsApproval && !rule.pending_approval) throw ForbiddenError('Chỉ chuyên gia sửa hoặc bật, tắt luật này')
   const parsed = parseRuleInput(input, rule.active)
   const before = rule.toObject()
+  // Chuyên gia chỉ sửa mà chưa bật thì đề xuất vẫn chờ duyệt, không rơi khỏi hàng đợi việc
+  const stillPending = user.role === 'DOMAIN_EXPERT' && rule.pending_approval && !parsed.active
   // Ghi có điều kiện: chuyên gia vừa bật/tắt thì 409, không để nội dung chưa duyệt chạy
   const saved = await RecommendationRule.findOneAndUpdate(
     needsApproval ? { _id: rule._id, pending_approval: true, active: false } : { _id: rule._id },
-    needsApproval ? { ...parsed, active: false, pending_approval: true } : { ...parsed, pending_approval: false },
+    needsApproval ? { ...parsed, active: false, pending_approval: true } : { ...parsed, pending_approval: stillPending },
     { new: true, runValidators: true },
   )
   if (!saved) throw ConflictError('Chuyên gia vừa quyết định luật này, tải lại trang')

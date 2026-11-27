@@ -7,6 +7,7 @@ import { MAX_HOUSE_FLOORS, MAX_NAME_LENGTH } from '@/services/farm.service'
 import { COMPARISON_SORT_KEYS } from '@/services/houseComparison.service'
 import { authenticate, requireRole } from '@/middlewares/auth.middleware'
 import { validate } from '@/middlewares/validate.middleware'
+import { LIMITS, emailField, optionalTextField } from '@/utils/inputRules.util'
 import { isPeriodParam } from '@/utils/period.util'
 import * as weatherCompensationController from '@/controllers/weatherCompensation.controller'
 import { MAX_WEATHER_RULES, WEATHER_METRICS } from '@/utils/weatherCompensation.util'
@@ -24,15 +25,18 @@ const coordinates = (required: boolean) => {
 }
 
 router.get   ('/',             farmController.list)
-const nameRule = () => body('name').trim().notEmpty().withMessage('Cần tên')
+const nameRule = () => body('name').isString().bail().trim().notEmpty().withMessage('Cần tên')
   .isLength({ max: MAX_NAME_LENGTH }).withMessage(`Tên tối đa ${MAX_NAME_LENGTH} ký tự`)
 
-router.post  ('/',             requireRole('FARM_OWNER'), nameRule(), body('address').trim().notEmpty(), ...coordinates(true), validate, farmController.create)
+const addressRule = () => body('address').isString().bail().trim().notEmpty().isLength({ max: LIMITS.address })
+  .withMessage(`Địa chỉ tối đa ${LIMITS.address} ký tự`)
+
+router.post  ('/',             requireRole('FARM_OWNER'), nameRule(), addressRule(), ...coordinates(true), validate, farmController.create)
 router.get   ('/:id',          param('id').isMongoId(), validate, farmController.getOne)
 // Xoá farm và thành viên: service chỉ cho Primary Owner
-router.put   ('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule().optional(), ...coordinates(false), validate, farmController.update)
+router.put   ('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule().optional(), addressRule().optional(), ...coordinates(false), validate, farmController.update)
 router.delete('/:id',          requireRole('FARM_OWNER'), param('id').isMongoId(), validate, farmController.remove)
-router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(), body('email').isEmail(),
+router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(), emailField(),
   body('role').optional().isIn(['FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']), validate, farmController.inviteMember)
 router.delete('/:id/members/:userId', requireRole('FARM_OWNER'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
 router.get   ('/:id/invitations', requireRole('FARM_OWNER'), param('id').isMongoId(),
@@ -41,12 +45,12 @@ router.get   ('/:id/invitations', requireRole('FARM_OWNER'), param('id').isMongo
 
 router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
+  optionalTextField('description', LIMITS.description),
   validate, farmController.createHouse)
 router.get ('/:id/houses',   param('id').isMongoId(), validate, farmController.listHouses)
 router.put   ('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), nameRule().optional(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
-  // không giới hạn mô tả
-  body('description').optional().isString(), validate, farmController.updateHouse)
+  optionalTextField('description', LIMITS.description), validate, farmController.updateHouse)
 router.delete('/houses/:houseId', requireRole('FARM_OWNER'), param('houseId').isMongoId(), validate, farmController.deleteHouse)
 
 // Dạng khác (2026-11, giờ không múi giờ) → 422

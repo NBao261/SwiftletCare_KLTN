@@ -26,6 +26,7 @@ import {
   openOverrideLog, openOverrideStates, DEVICE_CONFIRM_GRACE_MS,
 } from '@/services/relayOverrideLog.service'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError, ServiceUnavailableError, NotImplementedError } from '@/utils/appError.util'
+import { clampRemainingMs, parseHeartbeatBasics } from '@/utils/deviceInput.util'
 import logger from '@/utils/logger.util'
 import type { AlertType, ControlMode, RelayStates, HeartbeatPayload, RelayStatusPayload, CurrentUser, DeviceStatus, WsDeviceStatusChange, CountingRing } from '@/types'
 
@@ -379,10 +380,12 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
   if (!node) return recordCameraHeartbeat(payload)
 
   const wasOffline = node.status !== 'ONLINE'
+  // Giá trị sai kiểu thì bỏ: một trường lạ không được làm mất cả heartbeat
+  const { rssi, firmwareVersion } = parseHeartbeatBasics(payload as unknown as Record<string, unknown>)
   node.status = 'ONLINE'
   node.last_heartbeat = new Date()
-  if (payload.rssi !== undefined) node.rssi = payload.rssi
-  if (payload.firmwareVersion) node.firmware_version = payload.firmwareVersion
+  if (rssi !== undefined) node.rssi = rssi
+  if (firmwareVersion) node.firmware_version = firmwareVersion
   applyDiagnostics(node, payload)
   const zone = await Zone.findById(node.zone_id).select('config_version').lean()
   const sync = syncAfterHeartbeat({ stale: node.config_stale_heartbeats ?? 0 }, payload.appliedConfigVersion, zone?.config_version ?? 0)
@@ -390,7 +393,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
   node.applied_config_version = sync.applied
   node.config_stale_heartbeats = sync.stale
   // Heartbeat chạy đúng bản mới = OTA thành công
-  const otaDone = node.ota_pending && payload.firmwareVersion === node.ota_pending.version ? node.ota_pending : null
+  const otaDone = node.ota_pending && firmwareVersion === node.ota_pending.version ? node.ota_pending : null
   if (otaDone) node.ota_pending = undefined
   node.activation_overdue_at = undefined
   await node.save()
@@ -404,7 +407,7 @@ export async function recordHeartbeat(payload: HeartbeatPayload): Promise<void> 
   if (wasOffline) await announceBackOnline(node)
 
   // Máy đang chờ trong một đợt cập nhật firmware nhận lệnh ngay khi online lại
-  await onControllerHeartbeat(node._id, payload.firmwareVersion)
+  await onControllerHeartbeat(node._id, firmwareVersion)
     .catch((err: Error) => logger.warn('Không xử lý được đợt cập nhật firmware của thiết bị', { deviceId: payload.deviceId, err: err.message }))
 
   // Gửi lại để lấp lần publish lỡ khi backend mất broker
@@ -442,8 +445,9 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
   const wasOnline = camera.status === 'ONLINE'
   camera.status = 'ONLINE'
   camera.last_heartbeat = new Date()
-  if (payload.modelVersion) camera.model_version = payload.modelVersion
-  if (payload.fps !== undefined) camera.fps = payload.fps
+  const { modelVersion, fps } = parseHeartbeatBasics(payload as unknown as Record<string, unknown>)
+  if (modelVersion) camera.model_version = modelVersion
+  if (fps !== undefined) camera.fps = fps
   const defaults = parseDefaultRings(payload.defaultRings)
   if (defaults) camera.default_rings = defaults.length ? defaults : undefined
   // Payload không đáng tin: chỉ nhận giá trị trong danh sách
@@ -465,7 +469,7 @@ async function recordCameraHeartbeat(payload: HeartbeatPayload): Promise<void> {
       logger.error('Đóng cảnh báo EDGE_AI_DEGRADED thất bại', { nodeId: String(camera._id), err }),
     )
   }
-  await checkCameraFps(String(camera._id), payload.fps)
+  await checkCameraFps(String(camera._id), fps)
 }
 
 // fps <= 0 là chưa đo (heartbeat đầu khi khởi động), xét sẽ thành cảnh báo giả. Không throw
@@ -1059,6 +1063,7 @@ function reportedRelayModes(payload: RelayStatusPayload, node: ISensorNode): Rec
 
 export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<void> {
   if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong relay/status payload')
+  if (!payload.relay_states || typeof payload.relay_states !== 'object') throw BadRequestError('relay/status thiếu relay_states')
 
   const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)
@@ -1081,7 +1086,7 @@ export async function confirmRelayStatus(payload: RelayStatusPayload): Promise<v
   // Luôn đặt hạn để job có cái mà làm: thời gian còn lại thiết bị báo, rồi log mở, rồi mặc định
   const now = Date.now()
   for (const name of manualWithoutExpiry) {
-    const remainingMs = payload.relays?.[name]?.remaining_ms
+    const remainingMs = clampRemainingMs(payload.relays?.[name]?.remaining_ms, MAX_OVERRIDE_MS)
     const fromLog = open[name]?.expiry
     node.relays[name].mode = 'MANUAL'
     node.relays[name].override_expiry = remainingMs && remainingMs > 0

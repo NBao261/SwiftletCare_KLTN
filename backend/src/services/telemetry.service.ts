@@ -8,6 +8,7 @@ import { trackBreachDwell } from '@/utils/breachDwell.util'
 import { assertZoneAccess } from '@/utils/farmAccess.util'
 import { NotFoundError } from '@/utils/appError.util'
 import { paginate } from '@/utils/helpers.util'
+import { sanitizeTelemetry } from '@/utils/deviceInput.util'
 import logger from '@/utils/logger.util'
 import type { TelemetryPayload, CurrentUser } from '@/types'
 
@@ -62,8 +63,10 @@ function resolveSampleTime(ts: unknown, now: number): number {
 }
 
 // Test truyền now để chạy qua thời gian chờ
-export async function ingestTelemetry(payload: TelemetryPayload, now = Date.now()): Promise<void> {
-  if (!payload.deviceId) throw NotFoundError('Thiếu deviceId trong payload telemetry')
+export async function ingestTelemetry(rawPayload: TelemetryPayload, now = Date.now()): Promise<void> {
+  if (!rawPayload.deviceId) throw NotFoundError('Thiếu deviceId trong payload telemetry')
+  // Số đo sai kiểu hoặc ngoài khoảng cảm biến thành thiếu, kẻo lưu và phát đi như số thật
+  const payload = sanitizeTelemetry(rawPayload)
 
   const node = await SensorNode.findOne({ device_id: payload.deviceId, ...IN_SERVICE })
   if (!node) throw NotFoundError(`Không tìm thấy SensorNode với device_id="${payload.deviceId}"`)

@@ -12,6 +12,7 @@ import { assertHouseAccessByParams, listActiveHouseIds } from '@/utils/farmAcces
 import { returnRateCheckAt, scheduleOn, vnDateOf, windowInterval, windowsOn, type TimeWindow } from '@/utils/countingSchedule.util'
 import { resolveBirdCountTuning } from '@/utils/detectionTuning.util'
 import { BadRequestError, NotFoundError } from '@/utils/appError.util'
+import { BIRD_COUNT_EPOCH_MS, isBirdCount, plausibleTime, validConfidence } from '@/utils/deviceInput.util'
 import logger from '@/utils/logger.util'
 import type { BirdCountPayload, CurrentUser, SessionType } from '@/types'
 
@@ -26,7 +27,6 @@ export const MIN_BASELINE_DAYS = 3
 const MAX_BUCKET_RANGE_MS = 7 * DAY_MS
 const DEFAULT_BUCKET_RANGE_MS = DAY_MS
 
-const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
 // Phiên sáng 05:30 VN là 22:30 UTC hôm trước
 export const vnDate = vnDateOf
 
@@ -123,7 +123,7 @@ function emptyDay(date: string): HouseDayCounts {
 // Trả nhà và ngày khi cần tính lại sức khỏe ngày vì số về trễ, còn lại null
 export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ houseId: string; sessionDate: string } | null> {
   const { deviceId, entry_count, exit_count } = payload
-  if (typeof deviceId !== 'string' || !deviceId || !isCount(entry_count) || !isCount(exit_count)) {
+  if (typeof deviceId !== 'string' || !deviceId || !isBirdCount(entry_count) || !isBirdCount(exit_count)) {
     throw BadRequestError('Payload bird-count không hợp lệ')
   }
 
@@ -134,9 +134,10 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
   const counts = { $max: { entry_count, exit_count } }
 
   if (payload.kind === 'BUCKET') {
-    if (!Number.isFinite(payload.bucket_start)) throw BadRequestError('Thiếu bucket_start')
+    const start = plausibleTime(payload.bucket_start, Date.now(), BIRD_COUNT_EPOCH_MS)
+    if (start === undefined) throw BadRequestError('bucket_start thiếu hoặc ngoài khoảng cho phép')
     // Mốc lệch vài giây vẫn gộp vào cùng dòng
-    const bucketStart = Math.floor((payload.bucket_start as number) / BUCKET_MS) * BUCKET_MS
+    const bucketStart = Math.floor(start / BUCKET_MS) * BUCKET_MS
     await BirdCountBucket.updateOne(
       { camera_node_id: node._id, bucket_start: new Date(bucketStart) },
       { $set: { house_id: node.house_id }, ...counts },
@@ -159,7 +160,8 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
   const sessionType = payload.session_type
   if (!sessionType || !SESSION_TYPES.includes(sessionType)) throw BadRequestError('session_type không hợp lệ')
 
-  const timestamp = new Date(Number.isFinite(payload.timestamp) ? payload.timestamp as number : Date.now())
+  // Giờ thiết bị chưa đồng bộ thì lấy giờ nhận, như telemetry
+  const timestamp = new Date(plausibleTime(payload.timestamp, Date.now(), BIRD_COUNT_EPOCH_MS) ?? Date.now())
   const sessionDate = vnDate(timestamp)
 
   // Phiên đã tính từ số 5 phút: tin cộng dồn tới muộn không ghi đè
@@ -172,7 +174,7 @@ export async function ingestBirdCount(payload: BirdCountPayload): Promise<{ hous
     {
       $set: {
         house_id: node.house_id,
-        ...(payload.confidence_avg !== undefined && Number.isFinite(payload.confidence_avg) && { confidence_avg: payload.confidence_avg }),
+        ...(validConfidence(payload.confidence_avg) && { confidence_avg: payload.confidence_avg }),
       },
       $max: { timestamp, entry_count, exit_count }, // Vẫn lưu số thô của cả hai chiều
     },
