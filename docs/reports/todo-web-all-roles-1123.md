@@ -28,7 +28,7 @@ Rà trên `develop` tại `0f6dc6d2`: 189 route backend, web gọi 185. Bốn ro
 | T-14 | Xem giai đoạn của nhà (đọc) | `/farms` | có | — | — |
 | T-15 | Xem ca trực của mình | `/farms` | có | — | `GET …/roster` |
 
-Menu của thợ (`TechnicianLayout`): Tổng quan (Tình trạng, Điều khiển tay), Cảnh báo, Công việc (Phiếu, Bảo trì, Khuyến nghị), Sức khoẻ, Đàn chim (Đếm chim, Vòng đếm), Phân tích, Thu hoạch, Thiết bị, Tham số (chỉ đọc), Nhà được giao. `MENU_ACCESS`, `RequireRole` và các nhóm role trong `constants/roles.ts` đổi theo; nút nào backend trả 403 cho thợ thì không hiện (`usePermission`).
+Menu của thợ (`menuCatalog.ts`, `ROLE_PLAN`): Tổng quan (Tình trạng, Điều khiển tay), Cảnh báo, Công việc (Phiếu, Bảo trì), Sức khoẻ, Đàn chim (Đếm chim, Vòng đếm), Thu hoạch, Thiết bị, Nhà được giao. Chỉ đọc thì không đưa vào menu (`hide`: Phân tích, Khuyến nghị, Tham số điều khiển, Luật phun sương theo thời tiết, Lịch đếm); các trang đó vẫn mở được bằng đường dẫn và `MENU_ACCESS` không đổi (quyết định 27/11/2026, #277). `MENU_ACCESS`, `RequireRole` và các nhóm role trong `constants/roles.ts` đổi theo; nút nào backend trả 403 cho thợ thì không hiện (`usePermission`).
 
 ## 2. Thứ tự PR (Bảo)
 

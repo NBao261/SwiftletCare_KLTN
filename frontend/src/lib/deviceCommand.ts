@@ -1,7 +1,8 @@
 import { compareVersions } from '@/lib/firmwareFlasher'
 import type { DeviceStatus } from '@/types'
 
-// Firmware trước bản này bỏ qua lệnh khởi động lại từ xa (backend trả 501)
+// Firmware trước bản này bỏ qua lệnh khởi động lại từ xa (backend trả 501); cùng ngưỡng với
+// COMMAND_SUPPORT_SINCE trong backend/src/utils/firmwareImage.util.ts, đổi bên đó thì đổi cả đây
 export const RESTART_SUPPORT_SINCE = '1.4.0'
 
 // Vì sao chưa khởi động lại từ xa được

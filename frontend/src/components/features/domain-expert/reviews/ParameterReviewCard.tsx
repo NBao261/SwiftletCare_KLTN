@@ -196,9 +196,12 @@ export default function ParameterReviewCard({
       {/* Việc cần làm với mục chờ duyệt */}
       {isPending && !readOnly && (
         <div className="flex items-center justify-end gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={() => setShowConfirmRevert(true)} disabled={isProcessing}>
-            {t('Hoàn tác về giá trị cũ')}
-          </Button>
+          {/* Không còn khác biệt thì hoàn tác không đổi gì: chỉ để Giữ thay đổi đóng mục */}
+          {changedKeys.length > 0 && (
+            <Button type="button" variant="secondary" size="sm" onClick={() => setShowConfirmRevert(true)} disabled={isProcessing}>
+              {t('Hoàn tác về giá trị cũ')}
+            </Button>
+          )}
           <Button type="button" size="sm" loading={isProcessing} onClick={() => onAccept(review._id)}>
             {t('Giữ thay đổi')}
           </Button>
