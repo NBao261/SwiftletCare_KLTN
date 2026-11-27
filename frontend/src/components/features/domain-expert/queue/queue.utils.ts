@@ -25,6 +25,39 @@ export function groupsForTab(groups: ExpertQueueGroup[], tab: QueueTab): ExpertQ
     .map(group => ({ ...group, items: [...group.items].sort((a, b) => Number(b.reminded) - Number(a.reminded)) }))
 }
 
+export interface QueueRow {
+  kind: ExpertQueueKind
+  item: ExpertQueueItem
+}
+
+// Giờ của việc để xếp thứ tự: ISO hoặc 'YYYY-MM-DD'; không đọc được thì xuống cuối
+const timeOf = (item: ExpertQueueItem): number => {
+  const time = Date.parse(item.at)
+  return Number.isNaN(time) ? Number.MAX_SAFE_INTEGER : time
+}
+
+// Hàng đợi chung của một tab: việc Chủ nhà yến đã nhắc trước, rồi việc chờ lâu nhất
+export function queueRows(groups: ExpertQueueGroup[], tab: QueueTab): QueueRow[] {
+  return groupsForTab(groups, tab)
+    .flatMap(group => group.items.map(item => ({ kind: group.kind, item })))
+    .sort((a, b) => Number(b.item.reminded) - Number(a.item.reminded) || timeOf(a.item) - timeOf(b.item))
+}
+
+// Loại việc còn nhiều hơn số đã hiện trong tab: để dẫn tới trang đầy đủ của loại đó
+export function hiddenCounts(groups: ExpertQueueGroup[], tab: QueueTab): Array<{ kind: ExpertQueueKind; hidden: number }> {
+  return groupsForTab(groups, tab)
+    .filter(group => group.total > group.items.length)
+    .map(group => ({ kind: group.kind, hidden: group.total - group.items.length }))
+}
+
+export function remindedCount(groups: ExpertQueueGroup[]): number {
+  return groups.reduce((sum, group) => sum + group.items.filter(item => item.reminded).length, 0)
+}
+
+export function sectionOf(kind: ExpertQueueKind): QueueSection {
+  return (Object.keys(SECTION_KINDS) as QueueSection[]).find(section => SECTION_KINDS[section].includes(kind)) as QueueSection
+}
+
 export function sectionTotal(groups: ExpertQueueGroup[], section: QueueSection): number {
   const kinds = SECTION_KINDS[section]
   return groups.filter(group => kinds.includes(group.kind)).reduce((sum, group) => sum + group.total, 0)

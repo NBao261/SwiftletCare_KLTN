@@ -205,7 +205,11 @@ const enExpert: Record<string, string> = {
   'Viết kết luận': 'Write conclusions',
   'Lọc việc theo loại': 'Filter tasks by type',
   'Chủ nhà yến đã nhắc': 'Reminded by the owner',
-  '{{n}} việc': '{{n}} task(s)',
+  'việc đang chờ bạn': 'tasks waiting for you',
+  '{{n}} việc Chủ nhà yến đã nhắc': '{{n}} task(s) the Farm Owner reminded you about',
+  'Làm việc đầu tiên': 'Start with the first task',
+  'còn {{n}} việc': '{{n}} more',
+  'Cảnh báo cần kết luận, thay đổi và đề xuất của Chủ nhà yến sẽ hiện ở đây.': 'Alerts to rule on and the Farm Owner changes and proposals will show up here.',
   'Chọn trang trại ở thanh trên để xem việc đang chờ': 'Choose a farm in the bar above to see the pending tasks',
 
   // Hồ sơ cấu hình
