@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { KIND_ORDER, groupsForTab, hiddenCounts, queueRows, remindedCount, sectionOf, sectionTotal, targetOf } from '@/components/features/domain-expert/queue/queue.utils'
+import { KIND_ORDER, groupsForTab, hiddenCounts, queueRows, sectionOf, sectionTotal, targetOf } from '@/components/features/domain-expert/queue/queue.utils'
 import type { ExpertQueueGroup } from '@/types/expert/queue.types'
 
 const group = (kind: ExpertQueueGroup['kind'], total: number): ExpertQueueGroup => ({ kind, total, items: [] })
@@ -36,7 +36,6 @@ describe('hàng đợi việc của chuyên gia', () => {
     expect(queueRows(groups, 'all').map(row => row.item.id)).toEqual(['nudged', 'day', 'old', 'new'])
     expect(queueRows(groups, 'conclusions').map(row => row.kind)).toEqual(['disagreeing_day'])
     expect(hiddenCounts(groups, 'all')).toEqual([{ kind: 'alert_verdict', hidden: 3 }])
-    expect(remindedCount(groups)).toBe(1)
     expect(sectionOf('weather_proposal')).toBe('proposals')
   })
 

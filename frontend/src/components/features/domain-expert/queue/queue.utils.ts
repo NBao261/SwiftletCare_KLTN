@@ -50,10 +50,6 @@ export function hiddenCounts(groups: ExpertQueueGroup[], tab: QueueTab): Array<{
     .map(group => ({ kind: group.kind, hidden: group.total - group.items.length }))
 }
 
-export function remindedCount(groups: ExpertQueueGroup[]): number {
-  return groups.reduce((sum, group) => sum + group.items.filter(item => item.reminded).length, 0)
-}
-
 export function sectionOf(kind: ExpertQueueKind): QueueSection {
   return (Object.keys(SECTION_KINDS) as QueueSection[]).find(section => SECTION_KINDS[section].includes(kind)) as QueueSection
 }
