@@ -9,9 +9,10 @@ const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'FARM_TECHNICIAN', 'DOMAIN_EXPERT'
 // Trang mở từ chỗ khác nên không có mục menu: chi tiết, lắp thiết bị (từ trang thiết bị), cài đặt (menu ảnh đại diện)
 const OPENED_ELSEWHERE = ['/devices/detail', '/devices/onboarding', '/settings'];
 
-// Chuyên gia vẫn mở được các trang này bằng đường dẫn nhưng menu chỉ giữ việc của chuyên môn và ba trang số liệu
+// Vai trò vẫn mở được các trang này bằng đường dẫn nhưng menu cố ý không hiện: chuyên gia chỉ giữ việc chuyên môn và ba trang số liệu, kỹ thuật viên chỉ giữ việc tại nhà yến
 const HIDDEN_FROM_MENU: Partial<Record<Role, string[]>> = {
   DOMAIN_EXPERT: ['/dashboard', '/work-orders', '/maintenance', '/recommendations', '/harvests', '/devices', '/farms'],
+  FARM_TECHNICIAN: ['/analytics', '/recommendations', '/domain-expert/tuning', '/domain-expert/weather-rules', '/domain-expert/counting-schedule'],
 };
 
 function menuPaths(role: Role): string[] {
@@ -54,13 +55,28 @@ describe('menu theo vai trò từ danh mục chung', () => {
     }
   });
 
+  it('Quản trị viên: hai nhóm, kho thiết bị và cập nhật firmware là tab của Thiết bị; vai trò khác không có hai tab đó', () => {
+    const { sections } = roleMenu('ADMIN');
+    expect(sections.map(section => section.title)).toEqual(['Vận hành', 'Hệ thống']);
+    expect(sections.flatMap(section => section.items).map(item => item.label))
+      .toEqual(['Tổng quan hệ thống', 'Cảnh báo', 'Thiết bị', 'Người dùng', 'Cấu hình mặc định', 'Nhật ký hệ thống']);
+    const devices = sections.flatMap(section => section.items).find(item => item.label === 'Thiết bị');
+    expect(devices?.tabs?.map(tab => tab.path)).toEqual(['/devices', '/system/device-stock', '/ota']);
+    for (const role of ['FARM_OWNER', 'FARM_TECHNICIAN'] as const) {
+      const own = roleMenu(role).sections.flatMap(section => section.items).find(item => item.label === 'Thiết bị');
+      expect(own).toMatchObject({ path: '/devices', tabs: undefined });
+    }
+  });
+
   it('một tab duy nhất thì mục mở thẳng trang đó, không hiện tab', () => {
     const expert = roleMenu('DOMAIN_EXPERT').sections.flatMap(section => section.items);
     // So sánh nhà nằm trong Phân tích, không còn mục riêng; chuyên gia không vào Điều khiển tay
     expect(expert.map(item => item.path)).not.toContain('/overview');
     expect(expert.map(item => item.path)).not.toContain('/relay-control');
     const technician = roleMenu('FARM_TECHNICIAN').sections.flatMap(section => section.items);
-    expect(technician.find(item => item.label === 'Tham số điều khiển')?.tabs?.map(tab => tab.path))
-      .toEqual(['/domain-expert/tuning', '/domain-expert/weather-rules']);
+    // Thợ chỉ vẽ vòng đếm (lịch đếm ẩn): còn một tab nên mở thẳng trang vòng đếm
+    expect(technician.find(item => item.label === 'Cài đặt đếm chim')).toMatchObject({ path: '/domain-expert/counting-ring', tabs: undefined });
+    expect(technician.find(item => item.label === 'Công việc')?.tabs?.map(tab => tab.path)).toEqual(['/work-orders', '/maintenance']);
+    expect(technician.map(item => item.label)).not.toContain('Tham số điều khiển');
   });
 });

@@ -20,16 +20,14 @@ const ROW_HEIGHT = 64
 const FRAME = 'flex flex-col gap-3'
 
 const DAY = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })
-const TIME = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
 
-// Ô thời gian 2 dòng: giờ:phút:giây đậm trên, ngày xám dưới (cùng kiểu cột Thời gian Nhật ký hệ thống)
+// Ô thời gian 2 dòng: "3 ngày trước" đậm trên, ngày xám dưới
 function TimeCell({ at }: { at?: string }) {
   if (!at) return <span className="text-warmGray">—</span>
-  const d = new Date(at)
   return (
-    <div className="flex flex-col" title={formatRelativeTime(at)}>
-      <span className="font-semibold text-charcoal">{TIME.format(d)}</span>
-      <span className="text-small text-warmGray">{DAY.format(d)}</span>
+    <div className="flex flex-col">
+      <span className="font-semibold text-charcoal">{formatRelativeTime(at)}</span>
+      <span className="text-small text-warmGray">{DAY.format(new Date(at))}</span>
     </div>
   )
 }
@@ -79,13 +77,20 @@ function DeleteRequestsTab() {
 
   if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={5} className="h-14 w-full" /></div>
 
-  // Người dùng · Email · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác: tổng 26+28+16+16+14 = 100
+  // Người dùng (tên và email) · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác: tổng 36+18+18+28 = 100
   const columns: DataTableColumn<User>[] = [
-    { key: 'name', header: 'Người dùng', className: 'w-[26%]', render: u => <p className="text-fade font-semibold text-charcoal" title={u.full_name}>{u.full_name}</p> },
-    { key: 'email', header: 'Email', className: 'w-[28%]', render: u => <p className="truncate text-graphite" title={u.email}>{u.email}</p> },
-    { key: 'requested', header: 'Thời gian yêu cầu', className: 'w-[16%] whitespace-nowrap', render: u => <TimeCell at={u.deletion_requested_at ?? undefined} /> },
     {
-      key: 'deadline', header: 'Hạn xử lý', className: 'w-[16%]',
+      key: 'name', header: 'Người dùng', className: 'w-[36%]',
+      render: u => (
+        <div className="flex min-w-0 flex-col">
+          <p className="truncate font-semibold text-charcoal" title={u.full_name}>{u.full_name}</p>
+          <p className="truncate text-small text-warmGray" title={u.email}>{u.email}</p>
+        </div>
+      ),
+    },
+    { key: 'requested', header: 'Thời gian yêu cầu', className: 'w-[18%] whitespace-nowrap', render: u => <TimeCell at={u.deletion_requested_at ?? undefined} /> },
+    {
+      key: 'deadline', header: 'Hạn xử lý', className: 'w-[18%]',
       render: u => {
         const remaining = u.deletion_requested_at ? daysRemaining(u.deletion_requested_at) : null
         return remaining === null
@@ -94,10 +99,10 @@ function DeleteRequestsTab() {
       },
     },
     {
-      key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[14%]',
+      key: 'actions', header: '', align: 'right', className: 'w-[28%]',
       // Admin hoàn tất hoặc từ chối
       render: u => (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <Button size="sm" onClick={() => setTarget(u)}>Xử lý</Button>
           <Button size="sm" variant="secondary" onClick={() => setRejectTarget(u)}>Từ chối</Button>
         </div>

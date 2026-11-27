@@ -57,11 +57,11 @@ test('T1 — đăng nhập vào trang cảnh báo, menu chỉ có phần việc 
   await signInUi(page, 'technician');
   await expect(page).toHaveURL(/\/alerts$/);
 
-  // Mọi việc của thợ ở nhà được giao (G-33); không có trang quyết định của chuyên gia, cài đặt hệ thống
-  for (const label of ['Cảnh báo', 'Tổng quan', 'Chim ra vào', 'Sức khoẻ & báo cáo', 'Phân tích', 'Công việc', 'Thiết bị', 'Trang trại', 'Thu hoạch', 'Tham số điều khiển', 'Cài đặt đếm chim']) {
+  // Việc của thợ tại nhà được giao (G-33); không có trang quyết định của chuyên gia, phân tích, tham số, cài đặt hệ thống
+  for (const label of ['Cảnh báo', 'Tổng quan', 'Chim ra vào', 'Sức khoẻ & báo cáo', 'Công việc', 'Điều khiển tay', 'Thiết bị', 'Trang trại', 'Thu hoạch', 'Cài đặt đếm chim']) {
     await expect(sidebar(page).getByRole('link', { name: label })).toBeVisible();
   }
-  for (const label of ['Hàng đợi việc', 'Kiểm chứng cảnh báo', 'Luật khuyến nghị', 'Cài đặt']) {
+  for (const label of ['Hàng đợi việc', 'Kiểm chứng cảnh báo', 'Luật khuyến nghị', 'Phân tích', 'Tham số điều khiển', 'Cài đặt']) {
     await expect(sidebar(page).getByRole('link', { name: label, exact: true })).toHaveCount(0);
   }
   expect(crashes, crashes.join('\n')).toHaveLength(0);
@@ -122,32 +122,32 @@ test('T3 — xác nhận cảnh báo kèm nguyên nhân tìm thấy tại chỗ 
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
-test('T4 — thiết bị của nhà được giao: hàng ghi "Nhà · Zone", gửi được lệnh khởi động lại (FARM-FR-013)', async ({ page }) => {
+test('T4 — thiết bị của nhà được giao: hàng ghi nhà và Zone, nút khởi động lại khoá khi thiết bị chưa online (FARM-FR-013)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/devices', { farmId, houseId: houseA, zoneId: zoneA });
 
-  // Vị trí chỉ ghi "Nhà · Zone", trang trại đã có ở thanh phạm vi
-  await expect(page.getByText('A · Nhà điều khiển · A · Tầng 1').first()).toBeVisible();
+  // Cột Vị trí ghi nhà ở trên, Zone ở dưới; trang trại đã có ở thanh phạm vi
+  await expect(page.getByText('A · Nhà điều khiển', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('A · Tầng 1', { exact: true }).first()).toBeVisible();
 
-  // Kỹ thuật viên được khởi động lại bộ điều khiển của nhà được giao; hộp xác nhận ghi rõ mã thiết bị
+  // Bộ điều khiển demo chưa từng kết nối nên nút khởi động lại bị khoá và ghi lý do, không chờ máy chủ từ chối
   const reboot = page.getByRole('button', { name: 'Khởi động lại thiết bị' }).first();
-  await expect(reboot).toBeEnabled();
-  await reboot.click();
-  await expect(page.getByText(/Thiết bị demo-ctl-a1 sẽ mất kết nối/)).toBeVisible();
-  await page.getByRole('button', { name: 'Khởi động lại', exact: true }).click();
-
-  // Bộ điều khiển demo chưa từng kết nối nên máy chủ từ chối lệnh; chỉ kiểm màn hình luôn trả lời sau khi bấm
-  await expect(page.getByText(/Đã gửi lệnh khởi động lại|chỉ gửi được khi thiết bị đang kết nối/)).toBeVisible();
+  await expect(reboot).toBeDisabled();
+  await expect(reboot).toHaveAttribute('title', /chỉ khởi động lại từ xa được khi đang online/);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
-test('T5 — nhà được giao: ca trực của chính mình, nút Xem thiết bị mở trang thiết bị (AUTH-FR-013, 014)', async ({ page }) => {
+test('T5 — nhà được giao: ca trực của chính mình, xổ các Zone rồi mở trang thiết bị (AUTH-FR-013, 014)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/farms');
   await expect(page.getByRole('heading', { name: 'A · Nhà điều khiển' })).toBeVisible();
 
   // Mỗi nhà ghi ca trực của chính kỹ thuật viên này, hoặc ghi rõ là chưa có ca
   await expect(page.getByText(/Ca trực của bạn|Chưa có ca trực ở nhà này/).first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Xem thiết bị' }).first().click();
+  // Bấm một nhà xổ các Zone (nhà đang có việc cần xử lý mở sẵn); từ đó mở thiết bị của Zone hoặc của cả nhà
+  const toggle = page.getByRole('button', { name: /^Xem các Zone của/ }).first();
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(page.getByRole('button', { name: /đang online/i }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Xem thiết bị của cả nhà' }).first().click();
   await expect(page).toHaveURL(/\/devices/);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });

@@ -32,29 +32,30 @@ export function reasonOf(log: AuditLogEntry): string | undefined {
   return undefined
 }
 
-// Width % cho table-fixed, tổng 100
-export function buildAuditLogColumns(startIndex: number): DataTableColumn<AuditLogEntry>[] {
+// Width % cho table-fixed, tổng 100; sắp xếp bấm ở tiêu đề cột Thời gian
+export function buildAuditLogColumns(): DataTableColumn<AuditLogEntry>[] {
   return [
-    {
-      key: 'stt', header: 'STT', align: 'center', className: 'w-[6%]',
-      render: (_log, index) => <span className="text-warmGray">{startIndex + index + 1}</span>,
-    },
     // Nhãn hành động dài thì mờ dần ở đuôi
     {
-      key: 'action', header: 'Hành động', className: 'w-[20%]',
+      key: 'action', header: 'Hành động', className: 'w-[24%]',
       render: log => {
         const label = AUDIT_ACTION_LABEL[log.action] ?? log.action
         // Dài thì mờ dần ở đuôi (text-fade) thay vì "…": chỉ riêng cột này; rê chuột xem đủ
-        return <p className="text-fade font-medium text-charcoal" title={label}>{label}</p>
+        return <p className="text-fade font-semibold text-charcoal" title={label}>{label}</p>
       },
     },
-    { key: 'person', header: 'Người thực hiện', className: 'w-[19%]', render: log => <PersonCell log={log} /> },
+    // Tên đậm, vai trò xám bên dưới
     {
-      key: 'role', header: 'Vai trò', className: 'w-[18%]',
-      render: log => <p className="truncate text-graphite">{log.actor_id ? ROLE_LABEL[log.actor_id.role] : '—'}</p>,
+      key: 'person', header: 'Người thực hiện', className: 'w-[28%]',
+      render: log => (
+        <div className="flex min-w-0 flex-col">
+          <PersonCell log={log} />
+          {log.actor_id && <p className="truncate text-small text-warmGray">{ROLE_LABEL[log.actor_id.role]}</p>}
+        </div>
+      ),
     },
     {
-      key: 'reason', header: 'Lý do', className: 'w-[21%]',
+      key: 'reason', header: 'Lý do', className: 'w-[26%]',
       render: log => {
         const reason = reasonOf(log)
         return reason
@@ -63,8 +64,8 @@ export function buildAuditLogColumns(startIndex: number): DataTableColumn<AuditL
       },
     },
     {
-      key: 'created_at', header: 'Thời gian', className: 'w-[16%] whitespace-nowrap',
-      // Giờ trên, ngày dưới; vẫn vừa hàng 52px
+      key: 'time', header: 'Thời gian', sortable: true, className: 'w-[22%] whitespace-nowrap',
+      // Giờ trên, ngày dưới; vẫn vừa hàng 60px
       render: log => (
         <div className="-my-1 flex flex-col leading-tight" title={formatRelativeTime(log.created_at)}>
           <span className="font-semibold text-charcoal">{formatTimeOnly(log.created_at)}</span>

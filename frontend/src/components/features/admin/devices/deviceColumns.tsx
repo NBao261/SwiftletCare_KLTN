@@ -1,10 +1,11 @@
-import { Button } from '@/components/ui'
+import { CaretRightIcon } from '@phosphor-icons/react'
 import { type DataTableColumn } from '@/components/ui/DataTable'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
 import StatusDot from '@/components/common/StatusDot'
 import { formatRelativeTime, wifiQuality } from '@/lib/helpers'
 import { cn } from '@/lib/cn'
 import { nodeLocation } from '@/lib/deviceLocation'
+import { nodePlace } from '@/components/features/admin/devices/deviceList.utils'
 import { t, translated } from '@/i18n'
 import type { SystemNodeStatusItem } from '@/types'
 
@@ -39,11 +40,22 @@ export function HeartbeatTime({ at, plainDate = false }: { at?: string; plainDat
   )
 }
 
-// Admin chỉ xem thiết bị, thao tác duy nhất là "Chi tiết"
-export function buildDeviceColumns(onView: (n: SystemNodeStatusItem) => void): DataTableColumn<SystemNodeStatusItem>[] {
+// Lần kết nối cuối: "3 ngày trước" đậm, ngày dưới; chưa từng kết nối thì nghiêng xám
+function LastSeen({ at }: { at?: string }) {
+  if (!at) return <span className="font-normal italic text-warmGray">{t('Chưa từng kết nối')}</span>
+  return (
+    <div className="flex flex-col">
+      <span className="font-semibold text-charcoal">{formatRelativeTime(at)}</span>
+      <span className="text-small font-normal text-warmGray">{DAY_FORMAT.format(new Date(at))}</span>
+    </div>
+  )
+}
+
+// Quản trị viên chỉ xem thiết bị: bấm cả dòng mở chi tiết, mũi tên cuối dòng báo dòng bấm được
+export function buildDeviceColumns(): DataTableColumn<SystemNodeStatusItem>[] {
   return [
     {
-      key: 'device_id', header: 'Thiết bị', className: 'w-[19%]',
+      key: 'device_id', header: 'Thiết bị', className: 'w-[20%]',
       // Ô 2 tầng: mã thiết bị đậm, loại thiết bị chữ xám bên dưới (nhãn dài không chèn mất mã)
       render: n => (
         <div className="flex min-w-0 flex-col">
@@ -56,10 +68,13 @@ export function buildDeviceColumns(onView: (n: SystemNodeStatusItem) => void): D
       ),
     },
     {
-      key: 'location', header: 'Vị trí', className: 'w-[20%]',
-      // Chỉ tên farm; vị trí đầy đủ ở tooltip và vẫn tìm kiếm được
+      key: 'location', header: 'Vị trí', className: 'w-[23%]',
+      // Trang trại đậm, nhà và Zone bên dưới; đủ cả Tầng ở tooltip và vẫn tìm kiếm được
       render: n => (
-        <span className="line-clamp-2 break-words font-bold text-charcoal" title={nodeLocation(n)}>{n.farm_name || '—'}</span>
+        <div className="flex min-w-0 flex-col" title={nodeLocation(n)}>
+          <span className="truncate font-semibold text-charcoal">{n.farm_name || '—'}</span>
+          <span className="truncate text-small text-warmGray">{nodePlace(n) || '—'}</span>
+        </div>
       ),
     },
     {
@@ -73,12 +88,10 @@ export function buildDeviceColumns(onView: (n: SystemNodeStatusItem) => void): D
         ? <span className="font-medium text-charcoal">v{n.firmware_version}</span>
         : <span className="text-warmGray">—</span>,
     },
-    { key: 'last_heartbeat', header: 'Kết nối cuối', className: 'w-[14%] whitespace-nowrap', render: n => <HeartbeatTime at={n.last_heartbeat} /> },
+    { key: 'last_heartbeat', header: 'Kết nối cuối', className: 'w-[15%] whitespace-nowrap', render: n => <LastSeen at={n.last_heartbeat} /> },
     {
-      key: 'actions', header: 'Thao tác', align: 'center', className: 'w-[11%] whitespace-nowrap',
-      render: n => (
-        <Button variant="secondary" size="sm" onClick={e => { e.stopPropagation(); onView(n) }}>Chi tiết</Button>
-      ),
+      key: 'open', header: '', align: 'right', className: 'w-[6%]',
+      render: () => <CaretRightIcon size={16} weight="bold" aria-hidden className="ml-auto text-warmGray" />,
     },
   ]
 }
