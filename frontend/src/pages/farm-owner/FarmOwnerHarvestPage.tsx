@@ -6,6 +6,7 @@ import HeaderActions from '@/components/layouts/HeaderActions';
 import { DownloadSimpleIcon, PlusIcon } from '@phosphor-icons/react';
 import StatusTabs from '@/components/common/StatusTabs';
 import { Button, Card, ConfirmModal, EmptyState, LoadingSkeleton, SectionCard } from '@/components/ui';
+import NoHouseAssignedState from '@/components/common/NoHouseAssignedState';
 import HarvestCyclesCard from '@/components/features/farm-owner/harvest/HarvestCyclesCard';
 import HarvestDetailModal from'@/components/features/farm-owner/harvest/HarvestDetailModal';
 import HarvestStatsCards from '@/components/features/farm-owner/harvest/HarvestStatsCards';
@@ -127,6 +128,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
   const pendingRunCount = useMemo(() => groups.filter(group => group.pendingIds.length > 0).length, [groups]);
 
   if (scope.farms.length === 0) {
+    if (isTechnician) return <NoHouseAssignedState />;
     return (
       <EmptyState
         title={t('page.noFarmTitle')}

@@ -221,7 +221,7 @@ const en: Record<DashboardKey, string> = {
   'env.outOfRange': 'Outside safe range',
   'env.alertAbove': 'Alert when {range}',
   'env.overAlert': 'Above the alert limit',
-  'env.sourceDefault': 'System default thresholds — NH3 and CO2 are temporary, alert-only values awaiting the expert',
+  'env.sourceDefault': 'System default thresholds. NH3 and CO2 are temporary, alert-only values awaiting the expert',
   'env.sourceManual': 'Thresholds set by the {setter} on {date}. NH3 and CO2 are alert-only.',
   'env.setter.FARM_OWNER': 'Farm Owner',
   'env.setter.DOMAIN_EXPERT': 'domain expert',
