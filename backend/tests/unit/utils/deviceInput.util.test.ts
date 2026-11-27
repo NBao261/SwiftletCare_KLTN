@@ -25,6 +25,13 @@ describe('sanitizeTelemetry', () => {
     expect(clean.temperature === undefined).toBe(field === 'temperature')
   })
 
+  it('khí và ánh sáng vượt tầm đo được giữ ở mức cực đại để cảnh báo vẫn bắn', () => {
+    const clean = sanitizeTelemetry(sample({ nh3_ppm: 900, co2_ppm: 99999, light_lux: 10 ** 7, humidity: 150 }))
+    expect(clean).toMatchObject({ nh3_ppm: 500, co2_ppm: 5000, light_lux: 200_000 })
+    expect(clean.humidity).toBeUndefined()
+    expect(sanitizeTelemetry(sample({ nh3_ppm: -1 })).nh3_ppm).toBeUndefined()
+  })
+
   it('độ ẩm 101 % (sai số lúc bão hoà) vẫn nhận', () => {
     expect(sanitizeTelemetry(sample({ humidity: 101 })).humidity).toBe(101)
   })

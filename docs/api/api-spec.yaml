@@ -3050,7 +3050,7 @@ paths:
                       start: { type: string, pattern: "^([01][0-9]|2[0-3]):00$", example: "05:00" }
                       end: { type: string, pattern: "^(([01][0-9]|2[0-3]):00|24:00)$", example: "07:00" }
                 volume: { type: integer, minimum: 0, maximum: 30 }
-                track: { type: integer, minimum: 1, description: "Số file trên thẻ SD (1 = 0001.mp3)" }
+                track: { type: integer, minimum: 1, maximum: 255, description: "Số file trên thẻ SD (1 = 0001.mp3)" }
       responses:
         "200":
           {
@@ -5904,8 +5904,8 @@ paths:
               properties:
                 zone_id: { type: string }
                 harvest_date: { type: string, format: date-time, description: "Không sau hôm nay (giờ VN)" }
-                nest_count: { type: integer, minimum: 1, example: 50 }
-                weight_grams: { type: number, exclusiveMinimum: true, minimum: 0, example: 350.5 }
+                nest_count: { type: integer, minimum: 1, maximum: 100000, example: 50 }
+                weight_grams: { type: number, exclusiveMinimum: true, minimum: 0, maximum: 1000000, example: 350.5 }
                 nest_type:
                   {
                     type: string,
@@ -6145,8 +6145,8 @@ paths:
             schema:
               type: object
               properties:
-                nest_count: { type: integer, minimum: 1 }
-                weight_grams: { type: number, exclusiveMinimum: true, minimum: 0 }
+                nest_count: { type: integer, minimum: 1, maximum: 100000 }
+                weight_grams: { type: number, exclusiveMinimum: true, minimum: 0, maximum: 1000000 }
                 nest_type: { type: string, enum: [RAW, CLEANED, PREMIUM] }
                 product_images: { type: array, maxItems: 5, items: { type: string, format: uri, maxLength: 2048, description: "http hoặc https" } }
       responses:

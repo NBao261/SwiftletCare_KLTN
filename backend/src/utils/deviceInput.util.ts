@@ -17,6 +17,9 @@ export const SENSOR_RANGE = {
   sound_db:    { min: 0, max: 140 },
 } as const
 
+// Khí và ánh sáng chỉ có cực đại: vượt tầm đo là cảm biến bão hoà, giữ ở mức cực đại để cảnh báo vẫn bắn
+const CLAMPED_ABOVE: ReadonlySet<string> = new Set(['light_lux', 'nh3_ppm', 'co2_ppm'])
+
 const bool = (v: unknown): boolean | undefined => (typeof v === 'boolean' ? v : undefined)
 
 // Trả bản sao: trường sai kiểu hoặc ngoài khoảng thành undefined (vào stale_fields), không đổi tin gốc
@@ -24,7 +27,8 @@ export function sanitizeTelemetry(raw: TelemetryPayload): TelemetryPayload {
   const clean: Record<string, unknown> = { deviceId: raw.deviceId, timestamp: raw.timestamp, buffered: raw.buffered }
   for (const [field, { min, max }] of Object.entries(SENSOR_RANGE)) {
     const value = (raw as unknown as Record<string, unknown>)[field]
-    clean[field] = inRange(value, min, max) ? value : undefined
+    if (CLAMPED_ABOVE.has(field) && isFiniteNumber(value) && value > max) clean[field] = max
+    else clean[field] = inRange(value, min, max) ? value : undefined
   }
   // Dòng âm là số đo lỗi (shunt một chiều)
   clean.pump_current_a = isFiniteNumber(raw.pump_current_a) && raw.pump_current_a >= 0 ? raw.pump_current_a : undefined

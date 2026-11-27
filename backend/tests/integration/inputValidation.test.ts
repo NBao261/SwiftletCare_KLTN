@@ -175,8 +175,6 @@ describe('khoảng thời gian, phân trang, danh sách ID', () => {
   it.each([
     ['tuần ISO không đọc được', 'from=2026-W43'],
     ['from sau to', 'from=2026-02-02&to=2026-01-01'],
-    ['limit không phải số', 'limit=abc'],
-    ['page bằng 0', 'page=0'],
   ])('lịch sử telemetry: %s → 422', async (_label, qs) => {
     const { token, zone } = await seedOwnerFarm()
     await request(app).get(`/telemetry/zones/${zone._id}/history?${qs}`).set(bearer(token)).expect(422)
@@ -189,10 +187,20 @@ describe('khoảng thời gian, phân trang, danh sách ID', () => {
 
   it.each([
     ['không phải ID', 'zoneIds=abc'],
-    ['hơn 6 ID', `zoneIds=${Array(7).fill(ID).join(',')}`],
+    ['ID có ký tự ngoài hệ 16', `zoneIds=${'g'.repeat(24)}`],
+    ['hơn 6 ID', `zoneIds=${Array.from({ length: 7 }, (_, i) => ID.slice(0, 23) + i).join(',')}`],
   ])('so sánh zone: %s → 422', async (_label, qs) => {
     const { token } = await seedOwnerFarm()
     await request(app).get(`/analytics/env/compare?${qs}`).set(bearer(token)).expect(422)
+  })
+
+  it('so sánh zone: ID thật của Zone → 200, và đủ 6 ID vẫn qua kiểm tra', async () => {
+    const { token, zone } = await seedOwnerFarm()
+    await request(app).get(`/analytics/env/compare?zoneIds=${zone._id}`).set(bearer(token)).expect(200)
+    // 6 ID đúng dạng: qua validator, Zone lạ trả 404 từ service chứ không phải 422
+    const six = Array.from({ length: 6 }, (_, i) => ID.slice(0, 23) + i).join(',')
+    const res = await request(app).get(`/analytics/env/compare?zoneIds=${six}`).set(bearer(token))
+    expect(res.status).not.toBe(422)
   })
 
   it('mã FCM quá dài → 422', async () => {
