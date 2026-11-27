@@ -10,6 +10,7 @@ import { useAlertsList } from '@/hooks/shared/useAlerts'
 import { useSendNodeCommand } from '@/hooks/shared/useDevices'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
+import { restartBlockReason } from '@/lib/deviceCommand'
 import { t, translated } from '@/i18n'
 import type { DeviceStatus, NodeCommandInput, SystemNodeStatusItem } from '@/types'
 
@@ -71,6 +72,7 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
 
   const isSensor = node.type === 'sensor'
   const isOnline = node.status === 'ONLINE'
+  const restartBlock = restartBlockReason(node)
   const nodeAlerts = alerts.records.filter(a => a.node_id === node._id)
   // "Farm › Nhà yến › Tầng › Zone": cùng các phần vị trí của bảng, ngăn bằng › kiểu đường dẫn
   const place = nodeLocation(node).replace(/ \| /g, ' › ')
@@ -133,13 +135,14 @@ export default function DeviceDetailDrawer({ node, onClose }: { node: SystemNode
       <div className="flex flex-col gap-2 pt-4">
         {isSensor && (
           <>
-            {/* Lệnh từ xa chỉ tới được thiết bị ONLINE (backend 409) */}
+            {/* Lệnh từ xa chỉ tới được thiết bị ONLINE (backend 409); khởi động lại cần thêm firmware từ 1.4.0 (backend 501) */}
             {!isOnline && <p className="text-small text-warmGray">{t('Lệnh từ xa chỉ gửi được khi thiết bị đang online.')}</p>}
+            {isOnline && restartBlock && <p className="text-small text-warmGray">{restartBlock}</p>}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="secondary" disabled={!isOnline} loading={sendCommand.isPending} onClick={() => send('PUSH_CONFIG', 'Đã gửi cấu hình tới {{device}}')}>
                 {t('Đẩy cấu hình')}
               </Button>
-              <Button variant="secondary" disabled={!isOnline || sendCommand.isPending} onClick={() => setConfirmRestart(true)}>{t('Khởi động lại')}</Button>
+              <Button variant="secondary" disabled={!!restartBlock || sendCommand.isPending} onClick={() => setConfirmRestart(true)}>{t('Khởi động lại')}</Button>
             </div>
           </>
         )}

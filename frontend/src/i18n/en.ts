@@ -258,6 +258,7 @@ const en: Record<string, string> = {
   'Tất cả trạng thái': 'All statuses',
   'Lọc theo loại thiết bị': 'Filter by device type',
   'Tất cả loại': 'All types',
+  'Lọc thiết bị theo trạng thái': 'Filter devices by status',
   'Cảm biến': 'Sensor',
   'Lọc theo trang trại': 'Filter by farm',
   'Tất cả trang trại': 'All farms',
