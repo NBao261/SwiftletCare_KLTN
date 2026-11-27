@@ -184,6 +184,7 @@ const en: Record<string, string> = {
   'Cảnh báo đang mở': 'Open alerts',
   '{{n}} khẩn cấp': '{{n}} critical',
   'Không có cảnh báo đang mở': 'No open alert',
+  'Không tải được cảnh báo': 'Could not load the alerts',
   'Không có cảnh báo khẩn cấp': 'No critical alert',
   'Thiết bị cần chú ý': 'Devices to check',
   'Thiết bị chưa online ở mọi trang trại': 'Devices not online, across all farms',
@@ -241,12 +242,6 @@ const en: Record<string, string> = {
   'Chi tiết nhà': 'House details',
 
   // Thiết bị
-  'Tổng thiết bị': 'Total devices',
-  '{{sensors}} bộ điều khiển · {{cameras}} camera đếm chim': '{{sensors}} controllers · {{cameras}} bird-count cameras',
-  'Chưa có thiết bị online': 'No devices online',
-  'Đang gửi dữ liệu': 'Sending data',
-  'Mất tín hiệu quá 30 giây': 'No signal for over 30 seconds',
-  'Tất cả đều kết nối': 'All connected',
   'Cần xử lý': 'Needs attention',
   '{{error}} lỗi · {{degraded}} suy giảm': '{{error}} errors · {{degraded}} degraded',
   'Chưa kết nối lần nào': 'Never connected',

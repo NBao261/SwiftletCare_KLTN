@@ -16,8 +16,9 @@ const ICON_NORMAL = 'bg-warmGray/10 text-charcoal'
 export default function AdminSystemHealthPage() {
   const { data, isLoading, error } = useSystemHealth()
   // Quản trị viên chỉ thấy cảnh báo thiết bị; chỉ đếm, không mở từng cảnh báo
-  const openAlerts = useAlertsList({ status: 'ACTIVE', page: 1, limit: 1 })
-  const criticalAlerts = useAlertsList({ status: 'ACTIVE', severity: 'CRITICAL', page: 1, limit: 1 })
+  // open: còn hiệu lực = ACTIVE và ACKNOWLEDGED (đã xác nhận mà thiết bị vẫn hỏng vẫn là cảnh báo đang mở)
+  const openAlerts = useAlertsList({ open: 'true', page: 1, limit: 1 })
+  const criticalAlerts = useAlertsList({ open: 'true', severity: 'CRITICAL', page: 1, limit: 1 })
 
   if (isLoading) return <LoadingSkeleton count={4} className="h-28 w-full" />
   if (error || !data) {
@@ -40,9 +41,15 @@ export default function AdminSystemHealthPage() {
   const deviceSub = !hasDevices
     ? 'Chưa có thiết bị'
     : deviceIssues.length ? deviceIssues.join(' · ') : 'Tất cả đang online'
-  const alertSub = openAlerts.total === 0
-    ? 'Không có cảnh báo đang mở'
-    : criticalAlerts.total > 0 ? i18nT('{{n}} khẩn cấp', { n: criticalAlerts.total }) : 'Không có cảnh báo khẩn cấp'
+  // Chưa tải xong hoặc lỗi thì không hiện số 0: trông như hệ thống ổn
+  const alertsFailed = openAlerts.isError || criticalAlerts.isError
+  const alertsReady = !openAlerts.isLoading && !criticalAlerts.isLoading && !alertsFailed
+  const alertSub = alertsFailed
+    ? 'Không tải được cảnh báo'
+    : !alertsReady ? ''
+    : openAlerts.total === 0
+      ? 'Không có cảnh báo đang mở'
+      : criticalAlerts.total > 0 ? i18nT('{{n}} khẩn cấp', { n: criticalAlerts.total }) : 'Không có cảnh báo khẩn cấp'
 
   // Cả 4 ô chỉ để xem, không ô nào bấm được; muốn xem tiếp thì dùng "Xem tất cả" của hai thẻ bên dưới hoặc menu
   const tiles = [
@@ -51,7 +58,7 @@ export default function AdminSystemHealthPage() {
       // Số thiết bị online / tổng thiết bị đang phục vụ (thay cho %: 0% với 2 thiết bị khó hình dung)
       value: hasDevices ? `${devices.online}/${devices.total}` : '--', sub: deviceSub, warn: devices.offline > 0,
     },
-    { key: 'alerts', icon: WarningIcon, label: 'Cảnh báo đang mở', value: String(openAlerts.total), sub: alertSub, warn: criticalAlerts.total > 0 },
+    { key: 'alerts', icon: WarningIcon, label: 'Cảnh báo đang mở', value: alertsReady ? String(openAlerts.total) : '--', sub: alertSub, warn: alertsReady && criticalAlerts.total > 0 },
     { key: 'farms', icon: HouseIcon, label: 'Trang trại hoạt động', value: farms.total, sub: i18nT('Gồm {{n}} Zone', { n: zones.total }), warn: false },
     // tài khoản đăng nhập được (gồm chờ xoá) và bị khoá; chi tiết theo role ở trang Người dùng
     { key: 'users', icon: UsersIcon, label: 'Tài khoản hoạt động', value: users.active, sub: i18nT('{{n}} bị khoá', { n: users.inactive }), warn: false },

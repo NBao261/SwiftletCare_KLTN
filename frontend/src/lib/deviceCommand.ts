@@ -16,7 +16,9 @@ export function restartBlockCode(node: { status: DeviceStatus; firmware_version?
   if (node.status === 'PENDING') return 'pending'
   if (node.status !== 'ONLINE') return 'offline'
   if (!node.firmware_version) return 'noVersion'
-  return compareVersions(node.firmware_version, RESTART_SUPPORT_SINCE) < 0 ? 'oldFirmware' : null
+  // Không đúng dạng x.y.z (VD 1.4.0-rc1) coi như chưa hỗ trợ, giống versionAtLeast của backend
+  const supported = /^\d+\.\d+\.\d+$/.test(node.firmware_version) && compareVersions(node.firmware_version, RESTART_SUPPORT_SINCE) >= 0
+  return supported ? null : 'oldFirmware'
 }
 
 export function restartBlockReason(node: { status: DeviceStatus; firmware_version?: string }, say: RestartBlockSay): string | null {

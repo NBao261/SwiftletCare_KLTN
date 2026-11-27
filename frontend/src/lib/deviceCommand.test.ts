@@ -11,5 +11,7 @@ describe('khởi động lại thiết bị từ xa', () => {
     expect(restartBlockReason({ status: 'PENDING', firmware_version: '2.4.0' }, say)).toBe('pending')
     expect(restartBlockReason({ status: 'ONLINE', firmware_version: '1.3.9' }, say)).toBe('oldFirmware:1.3.9<1.4.0')
     expect(restartBlockReason({ status: 'ONLINE' }, say)).toBe('noVersion')
+    // Phiên bản không đúng dạng x.y.z coi như chưa hỗ trợ, giống backend
+    expect(restartBlockReason({ status: 'ONLINE', firmware_version: '1.4.0-rc1' }, say)).toBe('oldFirmware:1.4.0-rc1<1.4.0')
   })
 })

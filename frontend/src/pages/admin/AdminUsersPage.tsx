@@ -43,13 +43,18 @@ export default function AdminUsersPage() {
     status, role: role || undefined, search: search || undefined, sortBy, sortDir, page, limit: PAGE_SIZE,
   })
 
-  // Số trên tab: đếm ở client từ toàn bộ tài khoản vì backend không có endpoint thống kê; chưa tải xong thì tab không ghi số
+  // Số trên tab: đếm ở client vì backend không có endpoint thống kê, theo cùng bộ lọc trạng thái với bảng
+  // (không theo ô tìm kiếm); chưa tải xong thì tab không ghi số
   const { data: allUsers } = useAllUsers()
   const roleCounts = useMemo(() => {
-    const counts: Record<string, number> = { ALL: allUsers?.length ?? 0 }
-    for (const user of allUsers ?? []) counts[user.role] = (counts[user.role] ?? 0) + 1
+    const counts: Record<string, number> = { ALL: 0 }
+    for (const user of allUsers ?? []) {
+      if (status && getUserStatus(user) !== status) continue
+      counts.ALL += 1
+      counts[user.role] = (counts[user.role] ?? 0) + 1
+    }
     return counts
-  }, [allUsers])
+  }, [allUsers, status])
   const withCount = (label: string, key: string) => (allUsers ? `${label} (${roleCounts[key] ?? 0})` : label)
 
   // Sắp trên toàn bộ tài khoản → đổi tiêu chí thì về trang 1
