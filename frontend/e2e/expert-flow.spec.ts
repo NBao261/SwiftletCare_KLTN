@@ -95,7 +95,7 @@ test('B3 — sửa ngưỡng khí CO2 của Zone rồi khôi phục, quyền s�
   const before = await readThresholds(expertApi, zoneA);
 
   const crashes = await openAsExpert(page, '/domain-expert/tuning', { farmId, houseId: houseA, zoneId: zoneA });
-  await expect(page.getByRole('heading', { name: 'Ngưỡng vi khí hậu & khí độc' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ngưỡng môi trường' })).toBeVisible();
 
   // Cả 4 khối dùng một thanh lưu dính đáy, chỉ hiện khi có thay đổi
   const saveBar = page.getByRole('button', { name: 'Lưu', exact: true });
@@ -147,7 +147,7 @@ test('B4 — duyệt thay đổi ngưỡng của chủ nhà yến (BR-22, EXPERT
   expect(review, 'mục duyệt ngưỡng vừa mở').toBeTruthy();
 
   const crashes = await openAsExpert(page, '/domain-expert/reviews', { farmId });
-  await expect(page.getByText('Thay đổi ngưỡng vi khí hậu').first()).toBeVisible();
+  await expect(page.getByText('Thay đổi ngưỡng môi trường').first()).toBeVisible();
   await page.getByRole('button', { name: 'Giữ thay đổi' }).first().click();
   await expect(page.getByText('Đã giữ thay đổi tham số.')).toBeVisible();
 
@@ -187,7 +187,7 @@ test('B5 — tạo hồ sơ cấu hình, duyệt rồi lưu trữ (EXPERT-FR-014
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
-test('B6 — thêm luật bù phun sương theo thời tiết rồi xoá (ENV-FR-030, BR-38)', async ({ page, request }) => {
+test('B6 — thêm luật phun sương theo thời tiết theo thời tiết rồi xoá (ENV-FR-030, BR-38)', async ({ page, request }) => {
   const expertApi = await signIn(request, 'expert');
   const crashes = await openAsExpert(page, '/domain-expert/weather-rules', { farmId, houseId: houseA });
   await expect(page.getByRole('heading', { name: 'Phun sương theo thời tiết' })).toBeVisible();
@@ -201,12 +201,12 @@ test('B6 — thêm luật bù phun sương theo thời tiết rồi xoá (ENV-FR
   await page.locator('#wr-duration').fill('60');
   await form.getByRole('button', { name: 'Thêm luật' }).click();
 
-  // Khớp đúng cả tên: lời nhắn "Đã lưu luật bù thời tiết." cũng là một nút, tên nó chứa "Lưu luật"
+  // Khớp đúng cả tên: lời nhắn "Đã lưu luật phun sương theo thời tiết." cũng là một nút, tên nó chứa "Lưu luật"
   const saveRules = page.getByRole('button', { name: 'Lưu luật', exact: true });
 
   // Mốc chờ là lời nhắn: nút "Lưu luật" quay mất tên ngay khi bấm, bản nháp chỉ xoá sau khi máy chủ trả lời
   await saveRules.click();
-  await expect(page.getByText('Đã lưu luật bù thời tiết.')).toBeVisible();
+  await expect(page.getByText('Đã lưu luật phun sương theo thời tiết.')).toBeVisible();
 
   const view = await expertApi.data<WeatherRulesView>(await expertApi.get(`/farms/houses/${houseA}/weather-rules`));
   const added = view.rules.find(rule => rule.metric === 'temperature' && rule.min === 34);

@@ -42,7 +42,7 @@ const REVIEW_STATUS_OPTIONS: SelectMenuOption<ParameterReviewStatus | 'ALL'>[] =
 const PROPOSAL_STATUS_OPTIONS: SelectMenuOption<CoefficientProposalStatus | 'ALL'>[] = [
   { value: 'ALL', label: 'Tất cả trạng thái' },
   { value: 'PROPOSED', label: 'Chờ duyệt' },
-  { value: 'APPROVED', label: 'Đã duyệt áp dụng' },
+  { value: 'APPROVED', label: 'Đã duyệt và áp dụng' },
   { value: 'REJECTED', label: 'Đã từ chối' },
   { value: 'SUPERSEDED', label: 'Đã bị thay thế' },
 ];

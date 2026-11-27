@@ -23,7 +23,7 @@ interface CoefficientProposalCardProps {
 
 const STATUS_TONE: Record<CoefficientProposalStatus, { label: string; tone: BadgeTone }> = {
   PROPOSED: { label: 'Chờ duyệt', tone: 'warning' },
-  APPROVED: { label: 'Đã duyệt áp dụng', tone: 'positive' },
+  APPROVED: { label: 'Đã duyệt và áp dụng', tone: 'positive' },
   REJECTED: { label: 'Đã từ chối', tone: 'critical' },
   SUPERSEDED: { label: 'Đã bị thay thế', tone: 'neutral' },
 };
@@ -88,9 +88,9 @@ export default function CoefficientProposalCard({
   // Dự báo tác động: mỗi chỉ số một đoạn "tên now% → mới%", ghép thành một dòng
   const predicted = proposal.predicted;
   const predictedParts: string[] = [];
-  if (predicted?.inRangeSuggested !== undefined) predictedParts.push(`${t('Thời gian đạt chuẩn')} ${predicted.inRangeNow ?? '—'}% → ${predicted.inRangeSuggested}%`);
+  if (predicted?.inRangeSuggested !== undefined) predictedParts.push(`${t('Thời gian trong ngưỡng')} ${predicted.inRangeNow ?? '—'}% → ${predicted.inRangeSuggested}%`);
   if (predicted?.mistingSuggested !== undefined) predictedParts.push(`${t('Tần suất phun sương')} ${predicted.mistingNow ?? '—'}% → ${predicted.mistingSuggested}%`);
-  if (predicted?.in_range_pct !== undefined) predictedParts.push(`${t('Đạt chuẩn môi trường')} ${predicted.in_range_pct}%`);
+  if (predicted?.in_range_pct !== undefined) predictedParts.push(`${t('Thời gian trong ngưỡng')} ${predicted.in_range_pct}%`);
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-warmGray/15 bg-white p-4">
@@ -120,7 +120,7 @@ export default function CoefficientProposalCard({
 
       {predictedParts.length > 0 && (
         <p className="text-small text-graphite">
-          <span className="font-semibold text-charcoal">{t('Hiệu quả dự báo mô phỏng')}:</span> {predictedParts.join(' · ')}
+          <span className="font-semibold text-charcoal">{t('Hiệu quả dự kiến')}:</span> {predictedParts.join(' · ')}
         </p>
       )}
 
@@ -132,7 +132,7 @@ export default function CoefficientProposalCard({
       )}
       {proposal.status === 'APPROVED' && proposal.decided_at && (
         <p className="rounded-xl bg-accent-50 px-3 py-2 text-small text-graphite">
-          {t('Đã được duyệt áp dụng bởi')} <strong className="text-charcoal">{deciderName}</strong> · {formatDateTime(proposal.decided_at)}
+          {t('Duyệt và áp dụng bởi')} <strong className="text-charcoal">{deciderName}</strong> · {formatDateTime(proposal.decided_at)}
         </p>
       )}
 
@@ -142,7 +142,7 @@ export default function CoefficientProposalCard({
             {t('Từ chối đề xuất')}
           </Button>
           <Button type="button" size="sm" onClick={() => onApprove(proposal._id)} loading={isProcessing}>
-            {t('Duyệt & Áp dụng')}
+            {t('Duyệt và áp dụng')}
           </Button>
         </div>
       )}

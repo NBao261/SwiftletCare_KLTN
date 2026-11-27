@@ -98,7 +98,7 @@ describe('countsText và zoneFacts', () => {
     }, vi);
     const byLabel = new Map(facts.map(fact => [fact.label, fact.value]));
     expect(byLabel.get('Nhiệt độ trong ngưỡng')).toBe('_');
-    expect(byLabel.get('NH3 TB / cao nhất')).toBe('5 / 9 ppm');
+    expect(byLabel.get('NH3 trung bình / cao nhất')).toBe('5 / 9 ppm');
     expect(byLabel.get('Cảnh báo suy luận')).toBe('1 xác nhận\n2 bác bỏ');
     expect(byLabel.get('Cảnh báo')).toBe(NO_VALUE);
     expect(zoneHeader({ zone_name: 'Tầng 1', sample_count: 288 } as Parameters<typeof zoneHeader>[0], vi)).toBe('Tầng 1 (288 mẫu)');

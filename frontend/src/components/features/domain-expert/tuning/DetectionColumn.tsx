@@ -41,7 +41,7 @@ const DEFAULT_DETECTION: ExpertDetectionTuning = {
 const TYPE_LABELS: Record<string, string> = translated({
   NOISE_ANOMALY: 'Tiếng ồn bất thường',
   SENSOR_ANOMALY: 'Cảm biến bất thường',
-  LOW_RETURN_RATE: 'Giảm tỷ lệ chim về',
+  LOW_RETURN_RATE: 'Tỷ lệ chim về thấp',
 })
 
 // Ghi chú một dòng về kết luận của chuyên gia trong kỳ: chưa có, toàn đúng, hay loại báo giả nhiều nhất
@@ -68,15 +68,15 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
   const total = worst.confirmed + worst.rejected
   const rejPct = Math.round((worst.rejected / total) * 100)
   const label = TYPE_LABELS[worst.type] ?? worst.type
-  const hint = worst.type === 'NOISE_ANOMALY' ? t('Tăng biên độ ồn vượt nền.') : t('Điều chỉnh tham số phát hiện tương ứng.')
+  const hint = worst.type === 'NOISE_ANOMALY' ? t('Tăng mức ồn vượt nền.') : t('Điều chỉnh tham số phát hiện tương ứng.')
 
   return (
     <div title={title} className="flex flex-col gap-1 rounded-xl bg-climateOrange/10 px-3 py-2 text-small text-graphite">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-semibold text-charcoal">{t('Khuyến nghị độ nhạy')}</span>
-        <Badge tone="warning">{t('{{pct}}% báo giả ({{n}}/{{total}})', { pct: rejPct, n: worst.rejected, total })}</Badge>
+        <Badge tone="warning">{t('{{pct}} % báo động giả ({{n}}/{{total}})', { pct: rejPct, n: worst.rejected, total })}</Badge>
       </div>
-      <span>{t('Cảnh báo {{type}} có tỷ lệ báo giả cao. Khuyến nghị: {{hint}}', { type: label, hint })}</span>
+      <span>{t('Cảnh báo {{type}} có tỷ lệ báo động giả cao. Khuyến nghị: {{hint}}', { type: label, hint })}</span>
     </div>
   )
 }
@@ -103,8 +103,8 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
 
   return (
     <SectionCard
-      title={t('Tham số phát hiện bất thường')}
-      description={t('Cấu hình tham số nhận diện sự cố')}
+      title={t('Tham số phát hiện')}
+      description={t('Ngưỡng để hệ thống nhận ra sự cố thiết bị và tiếng ồn')}
       help={<TuningRangeList hints={FIELDS.map(field => ({ label: t(field.label), range: field.range, defaultValue: field.defaultHint }))} />}
       action={(
         <Button variant="icon" size="sm" onClick={onReset} disabled={isResetting} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>

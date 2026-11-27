@@ -4,7 +4,7 @@ import { prefixLabels, roleDict } from '@/constants/enumLabels.i18n'
 // Từ điển trang Lịch đếm chim của Domain Expert
 const vi = {
   'page.title': 'Lịch đếm chim',
-  'page.subtitle': 'Khung giờ hai phiên đếm; lịch sửa hôm nay áp từ ngày mai.',
+  'page.subtitle': 'Khung giờ hai phiên đếm sáng và chiều. Lịch sửa hôm nay áp từ ngày mai.',
   'page.pickHouse': 'Chọn nhà yến ở thanh trên để xem lịch đếm chim.',
   'page.loadError': 'Không tải được lịch đếm chim',
   'page.retry': 'Thử lại',
@@ -79,7 +79,7 @@ export type CountingScheduleKey = keyof typeof vi
 
 const en: Record<CountingScheduleKey, string> = {
   'page.title': 'Counting schedule',
-  'page.subtitle': 'The two counting windows; a change made today applies from tomorrow.',
+  'page.subtitle': 'The morning and evening counting windows. A change made today applies from tomorrow.',
   'page.pickHouse': 'Choose a swiftlet house in the top bar to see its counting schedule.',
   'page.loadError': 'Could not load the counting schedule',
   'page.retry': 'Retry',
@@ -97,9 +97,9 @@ const en: Record<CountingScheduleKey, string> = {
   'window.evening.start': 'Evening from',
   'window.evening.end': 'Evening to',
   'defaults.title': 'House default windows',
-  'defaults.system': 'Using the system windows. Change the times below to set own windows for this house.',
+  'defaults.system': 'Using the system windows. Change the times below to set its own windows for this house.',
   'defaults.custom': 'This house uses its own windows instead of the system ones.',
-  'defaults.hint': 'Apply on days without a seasonal profile or temporary window. Seasonal profiles and temporary windows still win over them.',
+  'defaults.hint': 'Applies on days without a seasonal profile or temporary window. Seasonal profiles and temporary windows take precedence.',
   'defaults.reset': 'Use the system windows',
   'profiles.title': 'Seasonal profiles',
   'profiles.hint': 'Each profile covers days of the year, repeated every year (e.g. 1 Sep to 14 Jan crosses the new year), and does not overlap another. At most {max} profiles.',

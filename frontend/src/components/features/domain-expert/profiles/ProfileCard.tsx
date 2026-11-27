@@ -157,9 +157,9 @@ function ThresholdSection({ thresholds }: { thresholds: NonNullable<ConfigProfil
     <GroupBox title={t('Ngưỡng môi trường')}>
       <FieldRow label={t('Nhiệt độ')} value={`${thresholds.temp_min}–${thresholds.temp_max} °C`} />
       <FieldRow label={t('Độ ẩm')} value={`${thresholds.humidity_min}–${thresholds.humidity_max} %`} />
-      <FieldRow label={t('Ánh sáng cao nhất')} value={`${thresholds.light_max} lux`} />
-      <FieldRow label="NH3 cao nhất" value={`${thresholds.nh3_max} ppm`} />
-      <FieldRow label="CO2 cao nhất" value={`${thresholds.co2_max} ppm`} />
+      <FieldRow label={t('Ánh sáng tối đa')} value={`${thresholds.light_max} lux`} />
+      <FieldRow label="NH3 tối đa" value={`${thresholds.nh3_max} ppm`} />
+      <FieldRow label="CO2 tối đa" value={`${thresholds.co2_max} ppm`} />
     </GroupBox>
   )
 }

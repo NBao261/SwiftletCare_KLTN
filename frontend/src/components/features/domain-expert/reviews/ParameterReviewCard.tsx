@@ -45,7 +45,7 @@ const STATUS_TONE: Record<ParameterReviewStatus, { label: string; tone: BadgeTon
 
 // Tên mục theo nhóm tham số (Zone, nhà hoặc camera)
 const GROUP_TITLE: Record<ParameterReviewGroup, string> = translated({
-  thresholds: 'Thay đổi ngưỡng vi khí hậu',
+  thresholds: 'Thay đổi ngưỡng môi trường',
   fuzzy: 'Thay đổi hệ số điều khiển mờ',
   detection: 'Thay đổi tham số phát hiện',
   return_rate_drop: 'Thay đổi mức giảm tỷ lệ chim về',

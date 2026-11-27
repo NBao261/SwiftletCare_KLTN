@@ -66,8 +66,8 @@ const directionText = (ring: CountingRing) =>
 // Vòng cũ và mới cùng số thứ tự: đổi số đỉnh, vị trí đỉnh hoặc hướng
 function ringChange(old: CountingRing, next: CountingRing): string {
   const parts: string[] = []
-  if (old.points.length !== next.points.length) parts.push(t('{{from}} → {{to}} đỉnh', { from: old.points.length, to: next.points.length }))
-  else if (!same(old.points, next.points)) parts.push(t('Đổi vị trí các đỉnh'))
+  if (old.points.length !== next.points.length) parts.push(t('{{from}} → {{to}} điểm', { from: old.points.length, to: next.points.length }))
+  else if (!same(old.points, next.points)) parts.push(t('Đổi vị trí các điểm'))
   if (old.into_ring_is_exit !== next.into_ring_is_exit) parts.push(`${directionText(old)} → ${directionText(next)}`)
   return parts.join('; ')
 }
@@ -96,11 +96,11 @@ export function describeStructuredChange(key: string, before: unknown, after: un
     const next = ringList(after)
     const lines: ChangeLine[] = []
     next.forEach((ring, index) => {
-      if (!old[index]) lines.push({ kind: 'added', text: t('Thêm vòng {{n}}: {{points}} đỉnh, {{direction}}', { n: index + 1, points: ring.points.length, direction: directionText(ring) }) })
+      if (!old[index]) lines.push({ kind: 'added', text: t('Thêm vòng {{n}}: {{points}} điểm, {{direction}}', { n: index + 1, points: ring.points.length, direction: directionText(ring) }) })
       else if (!same(old[index], ring)) lines.push({ kind: 'changed', text: t('Sửa vòng {{n}}: {{change}}', { n: index + 1, change: ringChange(old[index], ring) }) })
     })
     old.forEach((ring, index) => {
-      if (!next[index]) lines.push({ kind: 'removed', text: t('Bỏ vòng {{n}}: {{points}} đỉnh', { n: index + 1, points: ring.points.length }) })
+      if (!next[index]) lines.push({ kind: 'removed', text: t('Bỏ vòng {{n}}: {{points}} điểm', { n: index + 1, points: ring.points.length }) })
     })
     return lines
   }
