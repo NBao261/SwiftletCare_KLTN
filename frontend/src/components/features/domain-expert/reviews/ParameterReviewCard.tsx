@@ -1,13 +1,14 @@
 // ParameterReviewCard.tsx: Thẻ duyệt thay đổi tham số của Farm Owner
 
 import { useState } from 'react';
-import { ArrowRightIcon } from '@phosphor-icons/react';
+import { ArrowRightIcon, MinusCircleIcon, PencilSimpleIcon, PlusCircleIcon } from '@phosphor-icons/react';
 import { Badge, Button, type BadgeTone } from '@/components/ui';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatDateTime } from '@/lib/i18n';
 import type { ParameterReview, ParameterReviewGroup, ParameterReviewStatus } from '@/types/expert/reviews.types';
 import { t, translated } from '@/i18n';
 import { ringList } from '@/components/common/countingRing.utils';
+import { describeStructuredChange, type ChangeLine } from '@/components/features/domain-expert/reviews/reviewChanges.utils';
 
 interface ParameterReviewCardProps {
   review: ParameterReview;
@@ -121,6 +122,12 @@ export function formatParamValue(value: unknown, key?: string): string {
   return String(value);
 }
 
+const LINE_ICON: Record<ChangeLine['kind'], { Icon: typeof PlusCircleIcon; className: string }> = {
+  added: { Icon: PlusCircleIcon, className: 'text-accent-700' },
+  removed: { Icon: MinusCircleIcon, className: 'text-alertRed' },
+  changed: { Icon: PencilSimpleIcon, className: 'text-warmGray' },
+};
+
 // Thẻ hiển thị một mục duyệt thay đổi tham số của Farm Owner: tên mục và trạng thái, nơi · người sửa · giờ, từng tham số cũ → mới
 export default function ParameterReviewCard({
   review,
@@ -154,19 +161,37 @@ export default function ParameterReviewCard({
         <Badge tone={status.tone}>{t(status.label)}</Badge>
       </div>
 
-      {/* Từng tham số đã đổi: giá trị cũ gạch ngang, giá trị mới đậm */}
-      <ul className="divide-y divide-warmGray/10 rounded-xl bg-warmGray/5 px-3">
-        {changedKeys.map(key => (
-          <li key={key} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <span className="min-w-0 truncate text-charcoal">{FIELD_LABELS[key] || key}</span>
-            <span className="flex shrink-0 items-center gap-1.5">
-              <span className="text-warmGray line-through">{formatParamValue(review.old_values?.[key], key)}</span>
-              <ArrowRightIcon size={12} className="text-warmGray" />
-              <span className="font-bold text-charcoal">{formatParamValue(review.new_values?.[key], key)}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      {/* Từng tham số đã đổi: giá trị cũ gạch ngang, giá trị mới đậm; lịch đếm và vòng đếm ghi từng thay đổi cụ thể */}
+      {changedKeys.length === 0 ? (
+        <p className="rounded-xl bg-warmGray/5 px-3 py-2 text-small text-warmGray">{t('Đã quay về giá trị cũ, không còn gì để duyệt')}</p>
+      ) : (
+        <ul className="divide-y divide-warmGray/10 rounded-xl bg-warmGray/5 px-3">
+          {changedKeys.flatMap(key => {
+            const lines = describeStructuredChange(key, review.old_values?.[key], review.new_values?.[key]);
+            if (lines && lines.length > 0) {
+              return lines.map((line, index) => {
+                const { Icon, className } = LINE_ICON[line.kind];
+                return (
+                  <li key={`${key}-${index}`} className="flex items-start gap-2 py-2 text-sm text-charcoal">
+                    <Icon size={16} weight="bold" aria-hidden className={`mt-0.5 shrink-0 ${className}`} />
+                    <span className="min-w-0">{line.text}</span>
+                  </li>
+                );
+              });
+            }
+            return [(
+              <li key={key} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0 truncate text-charcoal">{FIELD_LABELS[key] || key}</span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <span className="text-warmGray line-through">{formatParamValue(review.old_values?.[key], key)}</span>
+                  <ArrowRightIcon size={12} className="text-warmGray" />
+                  <span className="font-bold text-charcoal">{formatParamValue(review.new_values?.[key], key)}</span>
+                </span>
+              </li>
+            )];
+          })}
+        </ul>
+      )}
 
       {/* Việc cần làm với mục chờ duyệt */}
       {isPending && !readOnly && (
