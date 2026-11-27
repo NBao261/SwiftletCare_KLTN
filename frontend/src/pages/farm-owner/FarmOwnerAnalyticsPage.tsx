@@ -13,6 +13,7 @@ import ForecastCard from '@/components/features/farm-owner/analytics/ForecastCar
 import HealthReportCard from '@/components/features/farm-owner/analytics/HealthReportCard';
 import HouseComparisonSection from '@/components/features/farm-owner/analytics/HouseComparisonSection';
 import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import NoHouseAssignedState from '@/components/common/NoHouseAssignedState';
 import { analyticsDict } from '@/constants/analytics.i18n';
 import { FARM_SIDE_ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -34,8 +35,9 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   const { data: zoneDetail } = useZone(zone?._id);
   // Tab nằm trên URL (?tab=ops) để quay lại đúng nhóm, mặc định Môi trường
   const [searchParams, setSearchParams] = useSearchParams();
-  // So sánh nhà là của Chủ nhà yến và Chuyên gia (kỹ thuật viên không đọc tổng quan trang trại)
+  // So sánh nhà là của chủ nhà yến và Chuyên gia (kỹ thuật viên không đọc tổng quan trang trại)
   const canCompare = usePermission(...FARM_SIDE_ROLES);
+  const isTechnician = usePermission('FARM_TECHNICIAN');
   const visibleTabs = TABS.filter(value => value !== 'houses' || canCompare);
   const tab: AnalyticsTab = visibleTabs.find(value => value === searchParams.get('tab')) ?? 'env';
   const setTab = (value: AnalyticsTab) => setSearchParams(previous => {
@@ -59,6 +61,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   }
 
   if (farms.length === 0) {
+    if (isTechnician) return <NoHouseAssignedState />;
     return (
       <EmptyState
         title={t('page.noFarmTitle')}

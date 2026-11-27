@@ -62,7 +62,7 @@ export default function DomainExpertReportsPage() {
 
   function getTabDescription(tab: ReportsPageTab): string {
     if (tab === 'reports') {
-      return i18nT('Viết kết luận gửi Chủ nhà yến');
+      return i18nT('Viết kết luận gửi chủ nhà yến');
     }
     if (tab === 'harvest-cycles') {
       return i18nT('Kết luận chu kỳ thu hoạch đã đóng');
@@ -96,7 +96,7 @@ export default function DomainExpertReportsPage() {
       <div className="w-full max-w-screen-xl mx-auto flex flex-col gap-5">
         {/* Tabs kiểu SectionTabs, mô tả 1 dòng */}
         <div className="flex flex-wrap items-center gap-4">
-          <nav aria-label={i18nT('Báo cáo và ngày đánh giá lệch')} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-warmGray/10 p-1 max-sm:flex-wrap max-sm:rounded-3xl">
+          <nav aria-label={i18nT('Báo cáo và ngày đánh giá khác hệ thống')} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-warmGray/10 p-1 max-sm:flex-wrap max-sm:rounded-3xl">
             <button
               type="button"
               onClick={() => setTab('reports')}
@@ -107,7 +107,7 @@ export default function DomainExpertReportsPage() {
                   : 'text-warmGray hover:text-charcoal'
               }`}
             >
-              {i18nT('Báo cáo & Kết luận')}
+              {i18nT('Báo cáo & kết luận')}
             </button>
 
             {canReviewDisagreements && (

@@ -10,7 +10,7 @@ import type { FirmwareImage } from '@/types'
 
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/
 
-// Tải ảnh cài đặt lên kho firmware: dùng ở thẻ Kho firmware (Kho thiết bị) và trang Cập nhật firmware
+// Tải ảnh cài đặt lên kho firmware: chỉ ở trang Cập nhật firmware; thẻ Kho firmware ở Kho thiết bị chỉ liệt kê và xoá
 export default function FirmwareUploadForm({ onUploaded }: { onUploaded?: (image: FirmwareImage) => void }) {
   const upload = useUploadFirmwareImage()
   const push = useToastStore(s => s.push)

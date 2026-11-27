@@ -1,5 +1,4 @@
 import type { BadgeTone } from '@/components/ui'
-import type { UsersSortKey } from '@/hooks/admin/useUsers'
 import type { UserStatus } from '@/types'
 import { translated } from '@/i18n'
 
@@ -15,10 +14,3 @@ export const FILTERABLE_STATUSES: FilterableStatus[] = ['ACTIVE', 'LOCKED']
 
 // Re-export để thư mục này import 1 chỗ
 export { ROLE_LABEL } from '@/constants/roles'
-
-// Cột gộp tên+email nên không sort bằng header: mỗi field có nút sort riêng
-export const SORT_FIELDS: { key: UsersSortKey; label: string }[] = [
-  { key: 'created_at', label: 'Ngày tạo' },
-  { key: 'full_name', label: 'Tên' },
-  { key: 'email', label: 'Email' },
-]

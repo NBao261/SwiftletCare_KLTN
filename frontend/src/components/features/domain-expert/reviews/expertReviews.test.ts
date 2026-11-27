@@ -167,7 +167,7 @@ describe('nhóm mục duyệt mới (BR-22, Report 3 4.2.15)', () => {
   it('reviewPlace ghi Zone, nhà, hoặc nhà kèm camera; không tra được thì Không xác định', () => {
     expect(reviewPlace({ group: 'detection', zone_id: 'z1' }, places)).toBe('Nhà chính • Tầng 1');
     expect(reviewPlace({ group: 'health_levels', house_id: 'h1' }, places)).toBe('Nhà chính');
-    expect(reviewPlace({ group: 'counting_ring', house_id: 'h1' }, places)).toBe('Nhà chính • Camera đếm chim');
+    expect(reviewPlace({ group: 'counting_ring', house_id: 'h1' }, places)).toBe('Nhà chính · Camera đếm chim');
     expect(reviewPlace({ group: 'counting_schedule', house_id: 'h9' }, places)).toBe('Không xác định');
   });
 });

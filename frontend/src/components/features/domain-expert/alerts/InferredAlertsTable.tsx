@@ -36,7 +36,7 @@ function verdictOf(alert: InferredAlertItem): { label: string; tone: BadgeTone }
 // Tình trạng xử lý ngoài hiện trường, ghi nhỏ dưới kết luận; cảnh báo đã bác bỏ thì không có (kết luận đã nói rõ)
 function operationLabel(alert: InferredAlertItem): string {
   if (alert.status === 'RESOLVED') return 'Đã xử lý'
-  if (alert.status === 'ACKNOWLEDGED') return 'Chủ nhà đã nhận'
+  if (alert.status === 'ACKNOWLEDGED') return 'Chủ nhà yến đã nhận'
   if (alert.status === 'DISMISSED') return ''
   return 'Chưa xử lý'
 }

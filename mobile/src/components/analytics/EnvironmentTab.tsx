@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { StyleSheet, Switch, View } from 'react-native'
-import { ArrowsOutIcon } from 'phosphor-react-native'
 import { Card } from '@/components/ui/card'
 import { ChoiceChips } from '@/components/analytics/ChoiceChips'
 import { CHART_HEIGHT, ChartFrame, type ChartLegendItem } from '@/components/charts/ChartFrame'
-import { ChartFullscreenModal } from '@/components/charts/ChartFullscreenModal'
 import { MetricLineChart, type LineSeries } from '@/components/charts/MetricLineChart'
-import { IconButton } from '@/components/ui/icon-button'
 import { Text } from '@/components/ui/text'
 import { Spacing } from '@/constants/theme'
 import type { AnalyticsScope } from '@/hooks/analytics/useAnalyticsScope'
@@ -14,7 +11,15 @@ import { useEnvSummaries } from '@/hooks/analytics/useEnvSummaries'
 import { useForecast } from '@/hooks/analytics/useForecast'
 import { usePalette } from '@/hooks/theme/usePalette'
 import type { AnalyticsRange } from '@/types'
-import { buildEnvLine, getAxisBounds, getThresholdBounds, summarizeValues } from '@/utils/analytics.utils'
+import {
+  alignOutdoorWeather,
+  buildEnvLine,
+  getAxisBounds,
+  getThresholdBounds,
+  OUTDOOR_MIN_SPAN_MS,
+  summarizeValues,
+  totalRainfall,
+} from '@/utils/analytics.utils'
 import { formatVietnamDayMonthOf, formatVietnamTime } from '@/utils/date.utils'
 import { getMetricLabel, getMetricUnit } from '@/utils/label.utils'
 import { formatDecimal } from '@/utils/number.utils'
@@ -28,6 +33,10 @@ const MAX_COMPARE_ZONES = 6
 // Dự báo chỉ cho nhiệt, ẩm ở khoảng 1 giờ, 6 giờ (ANALYTICS-FR-009)
 const FORECAST_METRICS: readonly SensorMetric[] = ['temperature', 'humidity']
 const FORECAST_RANGES: readonly AnalyticsRange[] = ['1h', '6h']
+// Thời tiết ngoài trời chỉ có nhiệt và ẩm để đặt cạnh số đo trong nhà (ANALYTICS-FR-013)
+const OUTDOOR_METRICS: readonly SensorMetric[] = ['temperature', 'humidity']
+// Số lẻ của tổng mưa (mm)
+const RAIN_DECIMALS = 1
 
 interface EnvironmentTabProps {
   scope: AnalyticsScope
@@ -43,7 +52,6 @@ function getTimeFormatter(range: AnalyticsRange): (isoDate: string) => string {
 export function EnvironmentTab({ scope }: EnvironmentTabProps) {
   const palette = usePalette()
   const [hiddenZoneIds, setHiddenZoneIds] = useState<ReadonlySet<string>>(new Set())
-  const [isFullscreen, setFullscreen] = useState(false)
   const metric = scope.metric
   const range = scope.storedRange
   const canCompare = scope.zones.length > 1
@@ -67,7 +75,7 @@ export function EnvironmentTab({ scope }: EnvironmentTabProps) {
 
   // Trục thời gian chung: mọi mốc của các tầng, rồi các mốc dự báo phía sau
   const lines = zones.map(zone => {
-    const points = buildEnvLine(summaries.seriesByZone.get(zone._id) ?? [], metric, isCompare ? {} : bounds)
+    const points = buildEnvLine(summaries.summaryByZone.get(zone._id)?.series ?? [], metric, isCompare ? {} : bounds)
     return { zone, byTime: new Map(points.map(point => [point.timestamp, point])) }
   })
   const historyTimes = [...new Set(lines.flatMap(line => [...line.byTime.keys()]))].sort()
@@ -103,6 +111,22 @@ export function EnvironmentTab({ scope }: EnvironmentTabProps) {
     })
   }
 
+  // Nhiệt, ẩm ngoài trời của farm (nét đứt xám) khi xem một khu vực; thiếu số thì để trống, không vẽ 0
+  const focusResult = !isCompare && focusZone ? summaries.summaryByZone.get(focusZone._id) : undefined
+  const outdoorPoints = focusResult?.outdoor ?? []
+  const outdoorValues =
+    focusResult && OUTDOOR_METRICS.includes(metric)
+      ? alignOutdoorWeather(times, outdoorPoints, Math.max(focusResult.bucketMs, OUTDOOR_MIN_SPAN_MS)).map(point => {
+          const value = metric === 'temperature' ? point?.temperature : point?.humidity
+          return typeof value === 'number' ? round(value) : null
+        })
+      : []
+  const hasOutdoorLine = outdoorValues.some(value => value !== null)
+  if (hasOutdoorLine) {
+    series.push({ key: 'outdoor', label: t('Ngoài trời'), color: palette.textSecondary, isDashed: true, values: outdoorValues })
+  }
+  const rainfall = totalRainfall(outdoorPoints)
+
   const allValues = series.flatMap(line => line.values)
   const axis = getAxisBounds(allValues, [bounds.min, bounds.max])
   const focusSummary = summarizeValues(series[0]?.values ?? [])
@@ -133,6 +157,7 @@ export function EnvironmentTab({ scope }: EnvironmentTabProps) {
         { label: focusZone?.name ?? metricLabel, color: palette.houseHealthy },
         { label: t('Ngoài ngưỡng'), color: palette.alert },
         ...(forecastPoints.length > 0 ? [{ label: t('Dự báo'), color: palette.houseHealthy, isDashed: true }] : []),
+        ...(hasOutdoorLine ? [{ label: t('Ngoài trời'), color: palette.textSecondary, isDashed: true }] : []),
       ]
 
   const renderChart = (width: number, height: number) => (
@@ -191,17 +216,24 @@ export function EnvironmentTab({ scope }: EnvironmentTabProps) {
             range !== '30d' ? { label: t('Xem 30 ngày'), onPress: () => scope.selectRange('30d') } : undefined
           }
           legend={legend}
-          headerRight={
-            historyTimes.length > 0 ? (
-              <IconButton icon={ArrowsOutIcon} label={t('Xem toàn màn hình')} onPress={() => setFullscreen(true)} />
-            ) : undefined
-          }
         >
           {width => renderChart(width, CHART_HEIGHT)}
         </ChartFrame>
         <Text variant="small" color={palette.textSecondary}>
           {t('Chạm giữ để xem giá trị và giờ. Khoảng trống là lúc không có số đo.')}
         </Text>
+        {focusResult && (
+          <Text variant="small" color={palette.textSecondary}>
+            {t('Mưa ngoài trời trong khoảng xem: {rain}', {
+              rain: rainfall === null ? '_' : `${formatDecimal(rainfall, RAIN_DECIMALS)} mm`,
+            })}
+          </Text>
+        )}
+        {outdoorPoints.length > 0 && (
+          <Text variant="small" color={palette.textSecondary}>
+            {t('Dữ liệu thời tiết: Open-Meteo')}
+          </Text>
+        )}
         {(metric === 'nh3' || metric === 'co2') && (
           <Text variant="small" color={palette.textSecondary}>
             {t('Ngưỡng cảnh báo tạm thời, không điều khiển quạt.')}
@@ -218,14 +250,6 @@ export function EnvironmentTab({ scope }: EnvironmentTabProps) {
           </Text>
         )}
       </Card>
-
-      <ChartFullscreenModal
-        visible={isFullscreen}
-        title={isCompare ? t('{metric} các khu vực', { metric: metricLabel }) : metricLabel}
-        onClose={() => setFullscreen(false)}
-      >
-        {(width, height) => renderChart(width, height)}
-      </ChartFullscreenModal>
     </View>
   )
 }

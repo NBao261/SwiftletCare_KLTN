@@ -133,7 +133,7 @@ export function ChartFrame({
                     : { backgroundColor: item.color },
                 ]}
               />
-              <Text variant="small" color={palette.textSecondary}>
+              <Text variant="small" color={palette.textSecondary} style={styles.legendLabel}>
                 {item.label}
               </Text>
             </Pressable>
@@ -150,7 +150,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   flex: { flex: 1 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.md, rowGap: Spacing.xs },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  // Tên khu vực dài trong chú giải xuống dòng trong bề ngang của biểu đồ
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, maxWidth: '100%' },
+  legendLabel: { flexShrink: 1 },
   legendHidden: { opacity: 0.4 },
   swatch: { width: LEGEND_SWATCH_WIDTH, height: LEGEND_SWATCH_HEIGHT, borderRadius: BorderWidth.strong },
   message: { alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, paddingHorizontal: Spacing.lg },

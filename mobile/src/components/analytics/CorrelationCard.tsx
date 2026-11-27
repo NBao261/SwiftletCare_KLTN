@@ -119,7 +119,7 @@ export function CorrelationCard({ zones, days }: CorrelationCardProps) {
                 humidity: formatCoefficient(humidity),
               })}
             >
-              <Text variant="body" weight="semiBold" style={styles.zone} numberOfLines={1}>
+              <Text variant="body" weight="semiBold" style={styles.zone} numberOfLines={2}>
                 {zone.name}
               </Text>
               <View style={styles.values}>

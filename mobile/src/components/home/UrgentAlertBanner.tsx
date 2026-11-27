@@ -19,7 +19,7 @@ import { getSeverityLevel, getSeverityLevelColors, getSeverityLevelLabel } from 
 import { t } from '@/utils/i18n.utils'
 
 const ICON_CIRCLE_SIZE = 48
-// Ô mức độ rộng cố định, vừa chữ dài nhất "KHẨN CẤP", để 3 cấp cùng một cỡ
+// Ô mức độ rộng cố định, vừa chữ dài nhất ("TRUNG BÌNH", "KHẨN CẤP"), để 4 cấp cùng một cỡ
 const SEVERITY_PILL_WIDTH = 84
 // Tên nhà trong nhãn tối đa 10 ký tự, dài hơn thì cắt và thêm "…"
 const HOUSE_NAME_MAX_LENGTH = 10
@@ -56,7 +56,7 @@ export function UrgentAlertBanner() {
   // Nhãn 2 ngăn: cấp mức độ như web | tên nhà; tên tầng nằm trong câu chính nên không lặp lại
   const severityLevel = getSeverityLevel(alert.severity)
   const severityText = getSeverityLevelLabel(severityLevel).toUpperCase()
-  // Màu ô mức độ theo cấu hình severityP1..P3 (P1 Khẩn cấp: nền cam, chữ trắng)
+  // Màu ô mức độ theo 4 cấp như web (Khẩn cấp: nền đỏ, chữ trắng)
   const severityColors = getSeverityLevelColors(severityLevel, palette)
   const pendingText =
     pendingCount === undefined ? t('_ chưa xử lý') : t('{count} chưa xử lý', { count: String(pendingCount).padStart(2, '0') })

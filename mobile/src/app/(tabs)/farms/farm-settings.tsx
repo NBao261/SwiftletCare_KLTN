@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Alert as NativeAlert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native'
+import { Alert as NativeAlert, StyleSheet, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { refetchVisibleQueries } from '@/config/queryClient'
 import { CreateItemSheet } from '@/components/farm/settings/CreateItemSheet'
 import { FarmHousesSection } from '@/components/farm/settings/FarmHousesSection'
 import { FarmInfoSection } from '@/components/farm/settings/FarmInfoSection'
-import { FarmLocationSection } from '@/components/farm/settings/FarmLocationSection'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TAB_BAR_OVERLAP } from '@/components/layout/BottomTabBar'
 import { Button } from '@/components/ui/button'
@@ -111,7 +111,6 @@ export default function FarmSettingsScreen() {
     return (
       <>
         <FarmInfoSection farm={farm} canEdit={canEditFarm} editor={editor} onSaved={toast.show} />
-        <FarmLocationSection farm={farm} canEdit={canEditFarm} editor={editor} onSaved={toast.show} />
         {housesQuery.isError ? (
           <EmptyState message={t('Không tải được danh sách nhà')} actionLabel={t('Thử lại')} onAction={retry} />
         ) : housesQuery.isLoading ? (
@@ -142,15 +141,14 @@ export default function FarmSettingsScreen() {
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <View key={language} style={styles.screen}>
         <AppHeader title={t('Cài đặt trang trại')} onBack={() => router.back()} />
-        <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView
+          <KeyboardAwareScrollView
+            bottomOffset={Spacing.xl}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={[styles.content, { paddingBottom: TAB_BAR_OVERLAP + Spacing.xxl }]}
           >
             {renderBody()}
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
         {farm && (
           <CreateItemSheet
             key={sheetKey}

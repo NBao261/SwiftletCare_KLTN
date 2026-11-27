@@ -1,5 +1,5 @@
 import type { Alert, AlertSeverity, AlertType } from '@/types'
-import { getSeverityLevel, type SeverityLevel } from '@/utils/severity.utils'
+import { getLevelSeverity, getSeverityLevel, type SeverityLevel } from '@/utils/severity.utils'
 
 // Bốn loại cảnh báo suy luận cần chuyên gia phán quyết — khớp INFERRED_ALERT_TYPES của backend (alert.service.ts)
 export const INFERRED_ALERT_TYPES: readonly AlertType[] = [
@@ -39,7 +39,7 @@ export interface AlertFilter {
   // Các tầng của nhà đang xem: cảnh báo tầng không mang house_id nên lọc nhà theo tầng
   houseZoneIds: readonly string[]
   zoneId: string | null
-  // Cấp hiển thị (Khẩn cấp · Cao · Thường), không phải 4 mức của backend
+  // Cấp hiển thị (Khẩn cấp · Cao · Trung bình · Thấp), mỗi cấp một mức backend
   severity: SeverityLevel | null
   type: AlertType | null
   verdict: VerdictFilter | null
@@ -107,9 +107,14 @@ export function uniqueById(alerts: Alert[]): Alert[] {
   })
 }
 
-// Số cảnh báo theo từng cấp hiển thị (dải tóm tắt, đặc tả §2.2); CRITICAL và HIGH cùng tính vào Khẩn cấp
+// Bộ đếm rỗng của 4 cấp
+function emptyLevelCounts(): Record<SeverityLevel, number> {
+  return { P1: 0, P2: 0, P3: 0, P4: 0 }
+}
+
+// Số cảnh báo theo từng cấp hiển thị (dải tóm tắt, đặc tả §2.2); mỗi mức backend một cấp
 export function countBySeverityLevel(alerts: Alert[]): Record<SeverityLevel, number> {
-  const counts: Record<SeverityLevel, number> = { P1: 0, P2: 0, P3: 0 }
+  const counts = emptyLevelCounts()
   for (const alert of alerts) counts[getSeverityLevel(alert.severity)] += 1
   return counts
 }
@@ -137,12 +142,6 @@ export function getRenotifyState(alert: Alert, now: number): RenotifyState | nul
 export const ACTIVE_ALERT_STATUSES: readonly Alert['status'][] = ['ACTIVE', 'ACKNOWLEDGED']
 export const CLOSED_ALERT_STATUSES: readonly Alert['status'][] = ['RESOLVED', 'DISMISSED']
 
-// Mức backend của từng cấp hiển thị, nặng trước
-const LEVEL_SEVERITIES: Record<SeverityLevel, readonly AlertSeverity[]> = {
-  P1: ['CRITICAL', 'HIGH'],
-  P2: ['MEDIUM'],
-  P3: ['LOW'],
-}
 export const ALERT_SEVERITIES: readonly AlertSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
 
 // Bộ lọc backend GET /alerts nhận được (farmId, zoneId, type, verdict); lọc nhà gồm cả tầng thì chưa (Known debt)
@@ -160,10 +159,10 @@ export interface AlertChainLink {
   severity: AlertSeverity | null
 }
 
-// Chuỗi trang theo thứ tự hiện: từng trạng thái, trong đó từng mức của cấp đang lọc (không lọc thì mọi mức một lượt)
+// Chuỗi trang theo thứ tự hiện: từng trạng thái, lọc theo mức backend của cấp đang chọn (không lọc thì mọi mức một lượt)
 export function buildAlertChain(statuses: readonly Alert['status'][], level: SeverityLevel | null): AlertChainLink[] {
-  const severities = level ? LEVEL_SEVERITIES[level] : [null]
-  return statuses.flatMap(status => severities.map(severity => ({ status, severity })))
+  const severity = level ? getLevelSeverity(level) : null
+  return statuses.map(status => ({ status, severity }))
 }
 
 // Tham số GET /alerts của một mắt
@@ -244,7 +243,7 @@ export function getNextAlertChainPage(
 
 // Số cảnh báo theo cấp từ meta.total của từng mức backend
 export function sumLevelCounts(totals: Readonly<Record<AlertSeverity, number>>): Record<SeverityLevel, number> {
-  const counts: Record<SeverityLevel, number> = { P1: 0, P2: 0, P3: 0 }
+  const counts = emptyLevelCounts()
   for (const severity of ALERT_SEVERITIES) counts[getSeverityLevel(severity)] += totals[severity]
   return counts
 }

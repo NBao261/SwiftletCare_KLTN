@@ -33,6 +33,8 @@ interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   ref?: Ref<TextInputInstance>
 }
 
+const MULTILINE_MAX_HEIGHT = 144
+
 // Ô nhập nền xám bo tròn hết cỡ (hoặc Radius.lg khi multiline), icon bên trái; không viền, chỉ viền khi đang nhập hoặc lỗi
 export function TextField({
   label,
@@ -119,8 +121,9 @@ export function TextField({
 
 const styles = StyleSheet.create({
   field: { gap: Spacing.xs },
+  // Cao tối thiểu 52 thay vì cố định: chữ dài xuống dòng thì ô cao theo, không tràn ra ngoài khung
   box: {
-    height: 52,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
@@ -129,16 +132,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   boxMultiline: {
-    height: undefined,
     minHeight: 88,
     borderRadius: Radius.lg,
     alignItems: 'flex-start',
     paddingVertical: Spacing.sm,
   },
-  input: { ...Typography.body, flex: 1, height: '100%', paddingVertical: 0 },
+  input: { ...Typography.body, flex: 1, paddingVertical: Spacing.sm },
+  // Ô nhiều dòng cao tối đa khoảng 6 dòng rồi cuộn trong ô, không đẩy form dài ra khi gõ ghi chú dài
   inputMultiline: {
-    height: undefined,
     minHeight: 72,
+    maxHeight: MULTILINE_MAX_HEIGHT,
+    paddingVertical: 0,
     textAlignVertical: 'top',
   },
   // Thụt vào thẳng mép chữ trong ô bo tròn

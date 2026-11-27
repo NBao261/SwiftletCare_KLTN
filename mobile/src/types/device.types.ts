@@ -79,14 +79,51 @@ export interface CountingRing {
   into_ring_is_exit: boolean
 }
 
+// Tình trạng camera IP của camera đếm chim (CameraSourceView trong api-spec): OK đang nhận hình, NO_SOURCE chưa nhập địa chỉ,
+// AUTH_FAILED sai tài khoản, UNREACHABLE không kết nối được, NO_FRAMES kết nối được nhưng không có hình
+export type CameraStatus = 'OK' | 'NO_SOURCE' | 'AUTH_FAILED' | 'UNREACHABLE' | 'NO_FRAMES'
+
+// Địa chỉ camera IP đã lưu của camera đếm chim (CameraSourceView.source): không bao giờ có mật khẩu, chỉ has_password
+export interface CameraSource {
+  host: string
+  port: number
+  username: string
+  path: string
+  has_password: boolean
+  version: number
+  updated_at: string
+}
+
+// GET/PUT /devices/camera-nodes/{id}/source (FARM-FR-004b): source null khi chưa nhập
+export interface CameraSourceView {
+  camera_status: CameraStatus | null
+  camera_status_at: string | null
+  source: CameraSource | null
+}
+
+// Thân PUT …/source: không gửi password = giữ mật khẩu cũ, chuỗi rỗng = bỏ mật khẩu
+export interface UpdateCameraSourcePayload {
+  host: string
+  port: number
+  username: string
+  path: string
+  password?: string
+}
+
 // Camera đếm chim ở cửa ra vào của cả nhà yến — gắn House, không gắn Zone (SRS v2.1.8)
 export interface CameraNode {
   _id: string
   device_id: string
   house_id: string
-  // VISION-FR-018 — vòng đếm đã vẽ cho camera này; null thì nút AI dùng vòng mặc định trong config.yaml của nó
+  // VISION-FR-018 — các vòng đã vẽ (tối đa 4); [] hoặc không có thì nút AI dùng vòng mặc định trong config.yaml của nó
+  counting_rings?: CountingRing[]
+  // Vòng mặc định nút AI báo qua heartbeat; không có khi nút AI chưa báo
+  default_rings?: CountingRing[]
+  // Vòng đầu kèm người sửa và lúc sửa (bản ghi cũ chỉ có trường này)
   counting_ring?: (CountingRing & { updated_at?: string; updated_by?: string }) | null
-  rtsp_url?: string
+  // FARM-FR-004b — tình trạng camera IP do nút AI báo trong heartbeat; null khi chưa báo
+  camera_status?: CameraStatus | null
+  camera_status_at?: string | null
   status: DeviceStatus
   last_heartbeat?: string
   model_version?: string

@@ -64,11 +64,11 @@ export function SettingsSection({
           <SectionIcon size={24} color={palette.onPrimary} />
         </View>
         <View style={styles.titles}>
-          <Text variant="body" weight="semiBold" numberOfLines={1}>
+          <Text variant="body" weight="semiBold" numberOfLines={2}>
             {title}
           </Text>
           {subtitle && (
-            <Text variant="small" color={palette.textSecondary} numberOfLines={2}>
+            <Text variant="small" color={palette.textSecondary} numberOfLines={3}>
               {subtitle}
             </Text>
           )}
@@ -79,7 +79,7 @@ export function SettingsSection({
             weight="semiBold"
             color={palette.textSecondary}
             style={styles.overline}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {scopeLabel}
           </Text>

@@ -129,6 +129,12 @@ export interface CreateZonePayload {
   floor?: number
 }
 
+// Body sửa nhà (PUT /farms/houses/{houseId}, FARM-FR-002): gửi trường nào đổi trường đó
+export type UpdateHousePayload = Partial<CreateHousePayload>
+
+// Body sửa zone (PUT /farms/zones/{zoneId}, FARM-FR-002)
+export type UpdateZonePayload = Partial<CreateZonePayload>
+
 // Luật bù phun sương theo thời tiết của nhà (ENV-FR-030, BR-38): dự báo 2 giờ tới vượt ngưỡng thì cộng offset vào mức phun
 export type WeatherMetric = 'temperature' | 'humidity' | 'rain'
 
@@ -191,6 +197,8 @@ export interface TemporaryCountingWindow extends CountingDayWindows {
 }
 
 export interface CountingSchedule {
+  // Khung mặc định riêng của nhà, thay khung hệ thống cho ngày không thuộc hồ sơ hay khung tạm; null = dùng khung hệ thống
+  default_windows?: CountingDayWindows | null
   profiles: SeasonalCountingProfile[]
   temporary: TemporaryCountingWindow[]
 }
@@ -203,7 +211,10 @@ export interface CountingScheduleView {
   schedule: CountingSchedule
   // Lần sửa gần nhất áp từ ngày này; null khi chưa đặt lịch
   effective_from: string | null
+  // Khung áp cho ngày không thuộc hồ sơ hay khung tạm: khung riêng của nhà nếu đã đặt, không thì khung hệ thống
   default_windows: CountingDayWindows
+  // Khung hệ thống (BR-13), để quay về khi bỏ khung riêng của nhà
+  system_default_windows?: CountingDayWindows
   // Khung đang áp hôm nay (giờ VN)
   today: CountingDayWindows & { date: string; source: CountingWindowSource }
 }

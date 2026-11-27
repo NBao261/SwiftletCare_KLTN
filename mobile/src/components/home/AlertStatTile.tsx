@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { router } from 'expo-router'
 import { WarningIcon } from 'phosphor-react-native'
-import { MAX_DETAIL_ITEMS, StatDetailSheet } from '@/components/home/StatDetailSheet'
+import { StatDetailSheet } from '@/components/home/StatDetailSheet'
 import { StatTile, type StatTone } from '@/components/home/StatTile'
 import { useActiveAlertSummary } from '@/hooks/alert/useActiveAlertSummary'
 import { useAlerts } from '@/hooks/alert/useAlerts'
@@ -9,8 +9,10 @@ import { getSeverityLabel } from '@/utils/label.utils'
 import { t } from '@/utils/i18n.utils'
 import { RETURN_TO_HOME } from '@/utils/navigation.utils'
 
-// Vài cảnh báo đang mở mới nhất cho phần chi tiết
-const LATEST_ALERT_PARAMS = { status: 'ACTIVE', limit: String(MAX_DETAIL_ITEMS) }
+// Cảnh báo đang mở mới nhất cho danh sách chi tiết (cuộn trong khung 5 dòng); còn nhiều hơn thì ghi "Còn N mục khác" và xem ở
+// tab Cảnh báo
+const LATEST_ALERT_LIMIT = 50
+const LATEST_ALERT_PARAMS = { status: 'ACTIVE', limit: String(LATEST_ALERT_LIMIT) }
 
 // Câu tóm tắt: báo số cảnh báo mức Nghiêm trọng/Cao, không có thì nhắc chờ xác nhận
 function getAlertSummary(total: number, urgent: number): string {
@@ -47,7 +49,7 @@ export function AlertStatTile() {
         visible={isSheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t('Cảnh báo đang mở')}
-        detailLabel={t('Xem chi tiết cảnh báo')}
+        listTitle={t('Cảnh báo mới nhất')}
         value={value}
         summary={alertSummary ? getAlertSummary(alertSummary.total, alertSummary.urgent) : '_'}
         items={latestAlerts.map(alert => ({

@@ -9,7 +9,7 @@ interface ComingSoonActionProps {
   label: string
 }
 
-// Thao tác chưa có API ở backend (sửa tên, xoá nhà và tầng — FARM-FR-002): hiện dạng khoá kèm nhãn "Sắp có", không bấm được
+// Thao tác có trong Report 3 nhưng backend chưa có API: hiện dạng khoá kèm nhãn "Sắp có", không bấm được (mobile/CLAUDE.md)
 export function ComingSoonAction({ label }: ComingSoonActionProps) {
   const palette = usePalette()
 

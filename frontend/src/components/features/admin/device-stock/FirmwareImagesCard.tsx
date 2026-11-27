@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { CpuIcon, TrashIcon } from '@phosphor-icons/react'
+import { Link } from 'react-router-dom'
+import { ArrowRightIcon, CpuIcon, TrashIcon } from '@phosphor-icons/react'
 import { Button, ConfirmModal, LoadingSkeleton, SectionCard } from '@/components/ui'
-import FirmwareUploadForm from '@/components/features/admin/device-stock/FirmwareUploadForm'
 import { useDeleteFirmwareImage, useFirmwareImages } from '@/hooks/admin/useFirmwareImages'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { formatStandardDate } from '@/lib/i18n'
@@ -11,7 +11,7 @@ import type { FirmwareImage } from '@/types'
 
 const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`
 
-// Kho firmware: ảnh cài đặt dựng sẵn, trạm nạp USB và đợt cập nhật từ xa cùng lấy từ đây
+// Kho firmware: ảnh cài đặt dựng sẵn, trạm nạp USB và đợt cập nhật từ xa cùng lấy từ đây; tải bản mới lên ở trang Cập nhật firmware
 export default function FirmwareImagesCard() {
   const { data: images, isLoading, isError, refetch } = useFirmwareImages()
   const remove = useDeleteFirmwareImage()
@@ -32,9 +32,14 @@ export default function FirmwareImagesCard() {
       icon={<CpuIcon size={20} aria-hidden />}
       title="Kho firmware"
       description="Dùng cho trạm nạp USB và cập nhật từ xa. Bản mới nhất được dùng trước"
-      help="Dựng ảnh cài đặt factory.bin theo hướng dẫn trong firmware/README.md rồi tải lên đây, phiên bản được đọc sẵn từ file. Nạp qua USB giữ nguyên mã và Wi-Fi đã có trên bo. Cập nhật từ xa làm ở trang Cập nhật firmware."
+      help="Dựng ảnh cài đặt factory.bin theo hướng dẫn trong firmware/README.md rồi tải lên ở trang Cập nhật firmware, phiên bản được đọc sẵn từ file. Nạp qua USB giữ nguyên mã và Wi-Fi đã có trên bo."
+      action={
+        <Link to="/ota" className="group inline-flex items-center gap-1 text-small font-semibold text-charcoal hover:underline">
+          {t('Tải bản mới lên')}
+          <ArrowRightIcon size={14} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      }
     >
-      <FirmwareUploadForm />
 
       {isLoading && <LoadingSkeleton count={2} className="h-14 w-full" />}
       {isError && (
@@ -63,7 +68,7 @@ export default function FirmwareImagesCard() {
         </ul>
       )}
       {images && images.length === 0 && (
-        <p className="text-sm text-warmGray">{t('Chưa có firmware nào. Trạm nạp chỉ ghi mã vào bo đã có firmware từ 2.4.0, và chưa cập nhật từ xa được.')}</p>
+        <p className="text-sm text-warmGray">{t('Chưa có firmware nào. Tải bản đầu tiên lên ở trang Cập nhật firmware. Khi chưa có, trạm nạp chỉ ghi mã vào bo đã có firmware từ 2.4.0.')}</p>
       )}
 
       <ConfirmModal

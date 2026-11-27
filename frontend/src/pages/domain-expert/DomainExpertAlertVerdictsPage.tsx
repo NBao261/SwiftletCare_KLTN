@@ -170,7 +170,7 @@ export default function DomainExpertAlertVerdictsPage() {
           )}
           {/* Tỷ lệ chuyên gia xác nhận là sự cố thật theo loại, chỉ hiện khi đã có kết luận */}
           {statsSummary && (
-            <p className="ml-auto min-w-0 truncate text-small text-warmGray" title={statsSummary}>
+            <p className="min-w-0 text-small text-warmGray sm:ml-auto sm:truncate" title={statsSummary}>
               <span className="font-semibold text-charcoal">{t('Tỷ lệ xác nhận sự cố thật:')}</span> {statsSummary}
             </p>
           )}

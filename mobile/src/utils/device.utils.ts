@@ -41,10 +41,11 @@ export function getConfigApplyStep(
 
 // Thao tác Farm Owner làm trên một thiết bị đã lắp (SF-01): dời khu vực và thay chỉ có ở controller (FARM-FR-007b, 008),
 // camera gắn nhà nên chỉ gỡ được
-export type DeviceAction = 'move' | 'replace' | 'remove'
+export type DeviceAction = 'move' | 'replace' | 'camera-source' | 'remove'
 
+// Thao tác trên một thiết bị đã lắp: controller dời, thay, gỡ; camera đếm chim nhập địa chỉ camera IP (FARM-FR-004b) và gỡ
 export function getDeviceActions(kind: 'controller' | 'camera'): DeviceAction[] {
-  return kind === 'controller' ? ['move', 'replace', 'remove'] : ['remove']
+  return kind === 'controller' ? ['move', 'replace', 'remove'] : ['camera-source', 'remove']
 }
 
 // Dời được cả controller không trực tuyến (FARM-FR-007b): backend chỉ đổi khu vực, controller nhận cấu hình mới khi kết nối lại

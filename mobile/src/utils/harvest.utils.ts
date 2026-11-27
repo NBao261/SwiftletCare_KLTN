@@ -206,9 +206,32 @@ export interface NestAmountCheck {
   error: string | null
 }
 
+// Số tổ và số gram của một loại yến gõ tối đa 6 chữ số phần nguyên (Report 3 §4.5, A-4: chặn gõ nhầm; backend chưa đặt mức
+// trên); số gram có tối đa 2 chữ số lẻ. Chỉ chặn lúc gõ, không chặn khi lưu: lần thu cũ có số lớn hơn vẫn lưu lại được
+export const HARVEST_AMOUNT_MAX_DIGITS = 6
+export const HARVEST_GRAMS_MAX_DECIMALS = 2
+
 // Số tổ, khối lượng không âm; kiểm "> 0" ở bước dưới vì dòng trống cả hai là hợp lệ
 const NEST_COUNT_RULE: NumberRule = { min: 0, max: Number.MAX_SAFE_INTEGER, integer: true }
 const WEIGHT_GRAMS_RULE: NumberRule = { min: 0, max: Number.MAX_SAFE_INTEGER }
+
+// Số chữ số phần nguyên của chữ trong ô
+function countIntegerDigits(text: string): number {
+  const separatorIndex = text.search(/[.,]/)
+  return (separatorIndex === -1 ? text : text.slice(0, separatorIndex)).replace(/\D/g, '').length
+}
+
+// Chữ gõ vào ô số tổ / số gram, cắt ngay khi gõ: chỉ chữ số và một dấu thập phân (phẩy hoặc chấm), phần nguyên tối đa 6 chữ số
+// (hoặc bằng số chữ số của số cũ đang có trong ô, `previous`, nếu số cũ dài hơn), phần lẻ tối đa `decimals` chữ số (số tổ: 0)
+export function limitAmountInput(text: string, decimals: number, previous = ''): string {
+  const maxDigits = Math.max(HARVEST_AMOUNT_MAX_DIGITS, countIntegerDigits(previous))
+  const cleaned = text.replace(/[^\d.,]/g, '')
+  const separatorIndex = cleaned.search(/[.,]/)
+  const integerPart = (separatorIndex === -1 ? cleaned : cleaned.slice(0, separatorIndex)).slice(0, maxDigits)
+  if (separatorIndex === -1 || decimals === 0) return integerPart
+  const decimalPart = cleaned.slice(separatorIndex + 1).replace(/[.,]/g, '').slice(0, decimals)
+  return `${integerPart}${cleaned[separatorIndex]}${decimalPart}`
+}
 
 // Kiểm một dòng loại yến như form web (checkNestAmount) và backend (nest_count nguyên ≥ 1, weight_grams > 0 — HARVEST-FR-001)
 export function checkNestAmount(amount: NestAmountText): NestAmountCheck {
@@ -280,6 +303,17 @@ export function planHarvestRunOperations(draft: HarvestRunDraft): HarvestOperati
     }
     if (batch) return [{ kind: 'remove', nestType, harvestId: batch._id }]
     return []
+  })
+}
+
+// Đợt của lần thu sau khi lưu: đợt vừa tạo hoặc sửa thay đợt cũ cùng loại, loại vừa xoá (null) thì bỏ — ảnh gửi cho mọi đợt còn lại
+export function getRunBatchIdsAfterSave(
+  existing: Partial<Record<NestType, HarvestBatch>>,
+  saved: Partial<Record<NestType, HarvestBatch | null>>,
+): string[] {
+  return NEST_TYPES.flatMap(nestType => {
+    const batch = nestType in saved ? saved[nestType] : existing[nestType]
+    return batch ? [batch._id] : []
   })
 }
 

@@ -258,7 +258,7 @@ function AlertChannelsCard() {
   )
 }
 
-// Giờ im lặng (chỉ Chủ nhà yến): đồng hồ 24 giờ
+// Giờ im lặng (chỉ chủ nhà yến): đồng hồ 24 giờ
 function QuietHoursCard() {
   const user = useAuthStore(s => s.user)
   const { updateNotificationPreferences } = useAuth()

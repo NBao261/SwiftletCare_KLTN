@@ -17,12 +17,14 @@ const KILOGRAM_DIGITS = 2
 interface HarvestRunRowProps {
   run: HarvestRun
   hasDivider: boolean
-  // Chỉ truyền khi người dùng sửa được lần thu này (canEditHarvestRun)
+  // Mở form sửa (canEditHarvestRun) hoặc chi tiết chỉ xem
   onPress?: () => void
+  // Người dùng sửa được lần thu này: gợi ý cho trình đọc màn hình là "Sửa", không thì "Xem"
+  canEdit: boolean
 }
 
 // Một lần thu trong danh sách: ngày thu, các loại yến, số tổ, tổng kg; còn lô chờ xác nhận thì có nhãn như web ("Chờ xác nhận")
-export function HarvestRunRow({ run, hasDivider, onPress }: HarvestRunRowProps) {
+export function HarvestRunRow({ run, hasDivider, onPress, canEdit }: HarvestRunRowProps) {
   const palette = usePalette()
   const dateText = formatVietnamDateOf(run.harvest_date)
   const typesText = run.nestTypes.map(getNestTypeLabel).join(' · ')
@@ -40,7 +42,7 @@ export function HarvestRunRow({ run, hasDivider, onPress }: HarvestRunRowProps) 
       style={[styles.row, hasDivider && { borderBottomWidth: BorderWidth.hairline, borderBottomColor: palette.divider }]}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={accessibilityLabel}
-      accessibilityHint={onPress ? t('Sửa lần thu') : undefined}
+      accessibilityHint={onPress ? (canEdit ? t('Sửa lần thu') : t('Xem lần thu')) : undefined}
     >
       <View style={styles.texts}>
         <Text variant="body" weight="semiBold" numberOfLines={1}>

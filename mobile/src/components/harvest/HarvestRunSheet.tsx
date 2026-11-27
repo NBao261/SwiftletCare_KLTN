@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Alert as NativeAlert, ScrollView, StyleSheet, View } from 'react-native'
+import { Alert as NativeAlert, StyleSheet, View } from 'react-native'
 import { CaretLeftIcon, CaretRightIcon } from 'phosphor-react-native'
+import { PhotoCaptureField } from '@/components/common/PhotoCaptureField'
 import { SettingsEditActions } from '@/components/farm/settings/SettingsEditActions'
 import { SettingsTable } from '@/components/farm/settings/SettingsTable'
+import { HarvestRunPhoto } from '@/components/harvest/HarvestRunPhoto'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
@@ -10,15 +12,19 @@ import { Text } from '@/components/ui/text'
 import { Radius, Spacing } from '@/constants/theme'
 import { useConfirmHarvestRun } from '@/hooks/harvest/useConfirmHarvestRun'
 import { useDeleteHarvestRun } from '@/hooks/harvest/useDeleteHarvestRun'
-import { useSaveHarvestRun } from '@/hooks/harvest/useSaveHarvestRun'
+import { type HarvestOperationResult, useSaveHarvestRun } from '@/hooks/harvest/useSaveHarvestRun'
+import { useUploadHarvestPhoto } from '@/hooks/harvest/useUploadHarvestPhoto'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { useAuthStore } from '@/stores/authStore'
-import type { HarvestBatch, NestType } from '@/types'
+import type { HarvestBatch, LocalPhoto, NestType } from '@/types'
 import { getSettingsErrorMessage } from '@/utils/apiError.utils'
 import { formatVietnamDateOf, getVietnamDate } from '@/utils/date.utils'
 import {
   checkNestAmount,
+  getRunBatchIdsAfterSave,
   HARVEST_DATE_MIN,
+  HARVEST_GRAMS_MAX_DECIMALS,
+  limitAmountInput,
   NEST_TYPES,
   planHarvestRunOperations,
   toHarvestDateIso,
@@ -32,8 +38,6 @@ import { canPerform } from '@/utils/permission.utils'
 import { toInputText } from '@/utils/settingsValidation.utils'
 import { t } from '@/utils/i18n.utils'
 
-// Cao tối đa phần form: còn chỗ cho thanh Cập nhật khi bàn phím mở
-const FORM_MAX_HEIGHT = 480
 const GRAMS_PER_KILOGRAM = 1000
 const KILOGRAM_DIGITS = 2
 
@@ -74,13 +78,16 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
   const saveRun = useSaveHarvestRun(farmId)
   const deleteRun = useDeleteHarvestRun(farmId)
   const confirmRun = useConfirmHarvestRun(farmId)
+  const uploadPhoto = useUploadHarvestPhoto()
   const today = getVietnamDate()
   const [harvestDate, setHarvestDate] = useState(today)
   const [amounts, setAmounts] = useState(() => initialAmounts(run))
   const [partialSave, setPartialSave] = useState<PartialSave | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Ảnh vừa chụp, gửi sau khi lưu số (HARVEST-FR-001); một lần thu một ảnh, ảnh mới thay ảnh cũ
+  const [photos, setPhotos] = useState<LocalPhoto[]>([])
   const isEdit = run !== null
-  const isBusy = saveRun.isPending || deleteRun.isPending || confirmRun.isPending
+  const isBusy = saveRun.isPending || deleteRun.isPending || confirmRun.isPending || uploadPhoto.isPending
   // Sửa hoặc đã lưu một phần thì ngày thu cố định (PUT không đổi được ngày)
   const isDateLocked = isEdit || partialSave !== null
   const canGoEarlier = harvestDate > HARVEST_DATE_MIN
@@ -110,27 +117,49 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
   })
   const totalNests = filledTypes.reduce((total, nestType) => total + checks[nestType].nests, 0)
   const totalGrams = filledTypes.reduce((total, nestType) => total + checks[nestType].grams, 0)
-  // Lần thu phải còn ít nhất một loại có số; muốn bỏ hết thì dùng "Xoá lần thu"
-  const canSave = !hasRowError && filledTypes.length > 0 && operations.length > 0 && Boolean(zoneId || run)
+  const existingIds = NEST_TYPES.flatMap(nestType => existing[nestType]?._id ?? [])
+  // Lần thu phải còn ít nhất một loại có số; muốn bỏ hết thì dùng "Xoá lần thu". Chỉ chụp ảnh mới cũng lưu được
+  const hasChanges = operations.length > 0 || photos.length > 0
+  const canSave = !hasRowError && filledTypes.length > 0 && hasChanges && Boolean(zoneId || run)
 
   const closeUnlessBusy = () => {
     if (!isBusy) onClose()
   }
 
-  const setAmount = (nestType: NestType, field: keyof NestAmountText, value: string) =>
-    setAmounts(current => ({ ...current, [nestType]: { ...current[nestType], [field]: value } }))
+  // Cắt ngay khi gõ: số tổ là số nguyên 6 chữ số, số gram 6 chữ số kèm tối đa 2 chữ số lẻ (số cũ dài hơn thì giữ độ dài đó)
+  const setAmount = (nestType: NestType, field: keyof NestAmountText, value: string) => {
+    const decimals = field === 'nests' ? 0 : HARVEST_GRAMS_MAX_DECIMALS
+    setAmounts(current => {
+      const limited = limitAmountInput(value, decimals, current[nestType][field])
+      return { ...current, [nestType]: { ...current[nestType], [field]: limited } }
+    })
+  }
+
+  // Gửi ảnh vừa chụp cho mọi đợt của lần thu sau khi lưu số; không có ảnh thì coi như xong
+  const sendPhoto = async (results: HarvestOperationResult[]): Promise<boolean> => {
+    const photo = photos[0]
+    if (!photo) return true
+    const saved: Partial<Record<NestType, HarvestBatch | null>> = {}
+    for (const result of results) if (result.isSaved) saved[result.operation.nestType] = result.batch
+    const harvestIds = getRunBatchIdsAfterSave(existing, saved)
+    const failedCount = await uploadPhoto.mutateAsync({ harvestIds, photo }).catch(() => harvestIds.length)
+    return failedCount === 0
+  }
 
   const handleSave = async () => {
     if (!canSave) return
     setError(null)
-    const results = await saveRun.mutateAsync(operations)
+    const results = operations.length > 0 ? await saveRun.mutateAsync(operations) : []
     const failures = results.flatMap(result => (result.isSaved ? [] : [result]))
     if (failures.length === 0) {
       // Lô vừa tạo là DRAFT: người ghi là kỹ thuật viên, lần thu chờ chủ trại xác nhận
       const isPending = results.some(
         result => result.isSaved && result.operation.kind === 'create' && result.batch?.status === 'DRAFT',
       )
-      onDone(isPending ? t('Đã lưu, chờ chủ trại xác nhận') : isEdit ? t('Đã cập nhật lần thu') : t('Đã ghi lần thu'))
+      const message = isPending ? t('Đã lưu, chờ chủ trại xác nhận') : isEdit ? t('Đã cập nhật lần thu') : t('Đã ghi lần thu')
+      const isPhotoSent = await sendPhoto(results)
+      // Số đã lưu dù ảnh lỗi: báo để người dùng mở lại lần thu gửi ảnh lần nữa
+      onDone(isPhotoSent ? message : t('{message}. Chưa gửi được ảnh, mở lại lần thu để gửi lại', { message }))
       return
     }
     // Ghi lại loại đã lưu được để lần bấm sau chỉ gửi lại loại lỗi, không tạo trùng đợt thu; chưa lưu được gì thì giữ nguyên
@@ -182,8 +211,8 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
     return batch?.status === 'DRAFT' ? [batch._id] : []
   })
   const canConfirm = isEdit && draftIds.length > 0 && canPerform(user, 'confirmHarvest')
-  // Đang sửa số mà chưa lưu thì phải lưu trước, để xác nhận đúng số đang thấy
-  const hasUnsavedChanges = operations.length > 0
+  // Đang sửa số hoặc vừa chụp ảnh mà chưa lưu thì phải lưu trước, để xác nhận đúng lần thu đang thấy
+  const hasUnsavedChanges = hasChanges
 
   const confirmPending = () => {
     if (!run) return
@@ -229,12 +258,7 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
           {houseName}
         </Text>
       </View>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.body}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.body}>
         <View style={styles.field}>
           <Text variant="small" weight="semiBold" color={palette.textSecondary} style={styles.overline}>
             {t('Ngày thu')}
@@ -319,6 +343,18 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
             })}
           </Text>
         </View>
+        <View style={styles.field}>
+          <Text variant="small" weight="semiBold" color={palette.textSecondary} style={styles.overline}>
+            {t('Ảnh lần thu')}
+          </Text>
+          {isEdit && photos.length === 0 && <HarvestRunPhoto harvestIds={existingIds} />}
+          <PhotoCaptureField photos={photos} onChange={setPhotos} maxPhotos={1} disabled={isBusy} />
+          {isEdit && (
+            <Text variant="small" color={palette.textSecondary}>
+              {t('Ảnh mới chụp sẽ thay ảnh đang có khi bấm Cập nhật.')}
+            </Text>
+          )}
+        </View>
         <Text variant="small" color={palette.textSecondary}>
           {hint}
         </Text>
@@ -328,7 +364,7 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
             {t('Lần thu bạn ghi chờ chủ trại xác nhận rồi mới tính vào sản lượng.')}
           </Text>
         )}
-      </ScrollView>
+      </View>
       {canConfirm && (
         <View style={styles.field}>
           <Button
@@ -336,7 +372,7 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
             size="md"
             onPress={confirmPending}
             loading={confirmRun.isPending}
-            disabled={hasUnsavedChanges || saveRun.isPending || deleteRun.isPending}
+            disabled={hasUnsavedChanges || isBusy}
           />
           <Text variant="small" color={palette.textSecondary}>
             {hasUnsavedChanges
@@ -349,7 +385,7 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
         label={isEdit ? t('Cập nhật') : t('Tạo mới')}
         onSave={handleSave}
         onCancel={closeUnlessBusy}
-        isSaving={saveRun.isPending}
+        isSaving={saveRun.isPending || uploadPhoto.isPending}
         isSaveDisabled={!canSave || deleteRun.isPending || confirmRun.isPending}
         error={error}
       />
@@ -360,7 +396,7 @@ export function HarvestRunSheet({ visible, farmId, houseName, zoneId, run, onDon
           color={palette.alert}
           onPress={confirmDelete}
           loading={deleteRun.isPending}
-          disabled={saveRun.isPending || confirmRun.isPending}
+          disabled={saveRun.isPending || confirmRun.isPending || uploadPhoto.isPending}
           style={styles.center}
         />
       )}
@@ -373,7 +409,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   overline: { textTransform: 'uppercase', letterSpacing: 1 },
   scopeLabel: { maxWidth: '45%' },
-  scroll: { maxHeight: FORM_MAX_HEIGHT, flexGrow: 0 },
   body: { gap: Spacing.lg },
   field: { gap: Spacing.sm },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderRadius: Radius.md, padding: Spacing.xs },

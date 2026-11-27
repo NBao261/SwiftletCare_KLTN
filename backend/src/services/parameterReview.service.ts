@@ -1,4 +1,5 @@
-import { ParameterReview, type ParameterGroup } from '@/models/parameterReview.model'
+import { isDeepStrictEqual } from 'node:util'
+import { ParameterReview, type IParameterReview, type ParameterGroup } from '@/models/parameterReview.model'
 import { User } from '@/models/user.model'
 import { createInAppNotification, findFarmExperts } from '@/services/notification.service'
 import { farmHasActiveExpert } from '@/utils/farmAccess.util'
@@ -33,6 +34,13 @@ function targetOf(target: ReviewTarget, group: ParameterGroup) {
   return { id: target.camera._id, place: `Camera ${target.camera.device_id}` }
 }
 
+// Sửa rồi sửa lại như cũ thì mục đang chờ không còn gì để duyệt: bỏ mục đó
+async function dropIfUnchanged(review: IParameterReview | null): Promise<void> {
+  if (!review) return
+  const plain = (value: unknown) => JSON.parse(JSON.stringify(value ?? {}))
+  if (isDeepStrictEqual(plain(review.old_values), plain(review.new_values))) await ParameterReview.deleteOne({ _id: review._id })
+}
+
 // Gọi sau khi áp. Không import nơi áp giá trị để tránh import vòng (hoàn lại ở expertReview.service). Không throw
 export async function trackParameterChange(
   target: ReviewTarget,
@@ -53,15 +61,22 @@ export async function trackParameterChange(
     }
     // Chuyên gia duyệt đúng vòng đang chạy
     if (user.role === 'FARM_TECHNICIAN') {
-      await ParameterReview.updateOne({ target_id: targetId, group, status: 'PENDING_REVIEW' }, { new_values: after })
+      await dropIfUnchanged(await ParameterReview.findOneAndUpdate(
+        { target_id: targetId, group, status: 'PENDING_REVIEW' }, { new_values: after }, { new: true },
+      ))
       return
     }
     if (user.role !== 'FARM_OWNER' || !(await farmHasActiveExpert(farm))) return
 
-    const updateOpen = () => ParameterReview.findOneAndUpdate(
-      { target_id: targetId, group, status: 'PENDING_REVIEW' },
-      { new_values: after, changed_by: user._id },
-    )
+    const updateOpen = async () => {
+      const open = await ParameterReview.findOneAndUpdate(
+        { target_id: targetId, group, status: 'PENDING_REVIEW' },
+        { new_values: after, changed_by: user._id },
+        { new: true },
+      )
+      await dropIfUnchanged(open)
+      return open
+    }
     if (await updateOpen()) return
     // Không đổi gì thì không có gì để duyệt
     if (JSON.stringify(before) === JSON.stringify(after)) return

@@ -42,6 +42,13 @@ describe('farmPrefsStore', () => {
     expect(useFarmPrefsStore.getState().byUserId['user-a'].pinnedHouseIds).toEqual([])
   })
 
+  it('nhớ cách sắp thanh tỷ lệ về tổ của từng tài khoản', () => {
+    useFarmPrefsStore.getState().setHomeReturnRateOrder('user-a', 'highest-first')
+    const { byUserId } = useFarmPrefsStore.getState()
+    expect(byUserId['user-a'].homeReturnRateOrder).toBe('highest-first')
+    expect(byUserId['user-b']).toBeUndefined()
+  })
+
   it('mỗi farm chỉ đánh dấu đã tự mở một lần', () => {
     const { markAutoOpened } = useFarmPrefsStore.getState()
     markAutoOpened('farm-1')
@@ -51,7 +58,7 @@ describe('farmPrefsStore', () => {
 })
 
 describe('migrateFarmPrefs', () => {
-  it('bản 2 → 3: giữ mọi lựa chọn, bộ lọc Cảnh báo chưa có farmId thì nhà/tầng về "tất cả"', () => {
+  it('bản 2: giữ mọi lựa chọn, bộ lọc Cảnh báo chưa có farmId thì nhà/tầng về "tất cả", bỏ cấp đã nhớ', () => {
     const migrated = migrateFarmPrefs(
       {
         byUserId: {
@@ -66,14 +73,15 @@ describe('migrateFarmPrefs', () => {
     )
     const prefs = migrated.byUserId['user-1']
     expect(prefs?.pinnedHouseIds).toEqual(['house-1'])
-    expect(prefs?.alerts).toEqual({ houseId: null, zoneId: null, severity: 'P1' })
+    expect(prefs?.alerts).toEqual({ houseId: null, zoneId: null, severity: null })
   })
 
-  it('đã có farmId thì giữ nguyên; bản cũ hơn 2 thì bỏ hết', () => {
-    const alerts = { farmId: 'farm-1', houseId: 'house-1', zoneId: null }
-    expect(migrateFarmPrefs({ byUserId: { 'user-1': { ...EMPTY_FARM_PREFS, alerts } } }, 2).byUserId['user-1']?.alerts).toEqual(
-      alerts,
-    )
+  it('đã có farmId thì giữ phạm vi; bản 3 bỏ cấp P1…P3 cũ, bản 4 giữ cấp; bản cũ hơn 2 thì bỏ hết', () => {
+    const alerts = { farmId: 'farm-1', houseId: 'house-1', zoneId: null, severity: 'P2' as const }
+    const migrate = (version: number) =>
+      migrateFarmPrefs({ byUserId: { 'user-1': { ...EMPTY_FARM_PREFS, alerts } } }, version).byUserId['user-1']?.alerts
+    expect(migrate(3)).toEqual({ ...alerts, severity: null })
+    expect(migrate(4)).toEqual(alerts)
     expect(migrateFarmPrefs({ byUserId: { 'user-1': EMPTY_FARM_PREFS } }, 1)).toEqual({ byUserId: {} })
   })
 })

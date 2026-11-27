@@ -1,17 +1,19 @@
-import { useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
-import { CaretDownIcon, CaretUpIcon, WarningIcon } from 'phosphor-react-native'
+import { ScrollView, StyleSheet, View } from 'react-native'
+import { WarningIcon } from 'phosphor-react-native'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { Text } from '@/components/ui/text'
-import { BorderWidth, Radius, Spacing } from '@/constants/theme'
+import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme'
 import { usePalette } from '@/hooks/theme/usePalette'
 import { t } from '@/utils/i18n.utils'
 
-// Số dòng tối đa trong phần chi tiết — xem hết thì bấm "Xem tất cả"
-export const MAX_DETAIL_ITEMS = 5
+// Khung danh sách cao vừa 5 dòng; nhiều hơn thì cuộn trong khung
+const VISIBLE_DETAIL_ROWS = 5
+// Một dòng: chữ nhỏ một dòng + lề trên dưới + đường kẻ
+const DETAIL_ROW_HEIGHT = Typography.small.lineHeight + Spacing.sm * 2 + BorderWidth.hairline
+const DETAIL_LIST_MAX_HEIGHT = VISIBLE_DETAIL_ROWS * DETAIL_ROW_HEIGHT
 
-// Ô icon đầu dòng của mục xem chi tiết
+// Ô icon đầu khối chi tiết
 const ICON_BOX_SIZE = 40
 
 // Một dòng trong phần chi tiết: tên (thiết bị, cảnh báo, tầng) và mô tả tình trạng
@@ -27,45 +29,37 @@ interface StatDetailSheetProps {
   onClose: () => void
   title: string
   value: string
-  // Tên mục mở/thu phần chi tiết, theo nội dung của ô: "Xem chi tiết thiết bị", "Xem chi tiết cảnh báo"…
-  detailLabel: string
-  // Câu tóm tắt hiện dưới tiêu đề phần chi tiết khi còn thu gọn
+  // Tên danh sách theo nội dung của ô: "Thiết bị chưa online", "Cảnh báo mới nhất"…
+  listTitle: string
+  // Câu tóm tắt dưới tên danh sách
   summary: string
   items: StatDetailItem[]
-  // Số mục không hiện trong danh sách (đã cắt bớt)
+  // Số mục server còn mà danh sách không tải về (vd. cảnh báo chỉ tải một trang)
   hiddenCount: number
   onViewAll: () => void
 }
 
-// Bảng lựa chọn của một ô số liệu: phần xem chi tiết mở/thu được và nút xem toàn bộ
+// Bảng của một ô số liệu: mở ra là thấy luôn danh sách chi tiết (khung 5 dòng, cuộn khi nhiều hơn) và nút xem toàn bộ
 export function StatDetailSheet({
   visible,
   onClose,
   title,
   value,
-  detailLabel,
+  listTitle,
   summary,
   items,
   hiddenCount,
   onViewAll,
 }: StatDetailSheetProps) {
   const palette = usePalette()
-  const [isExpanded, setExpanded] = useState(false)
-  const CaretIcon = isExpanded ? CaretUpIcon : CaretDownIcon
-
-  // Đóng bảng thì thu gọn lại phần chi tiết cho lần mở sau
-  const handleClose = () => {
-    setExpanded(false)
-    onClose()
-  }
 
   const handleViewAll = () => {
-    handleClose()
+    onClose()
     onViewAll()
   }
 
   return (
-    <BottomSheet visible={visible} onClose={handleClose}>
+    <BottomSheet visible={visible} onClose={onClose}>
       <View style={styles.header}>
         <Text variant="heading">{title}</Text>
         <Text variant="heading" weight="semiBold">
@@ -74,39 +68,42 @@ export function StatDetailSheet({
       </View>
 
       <View style={[styles.detailBox, { backgroundColor: palette.surfaceStrong }]}>
-        <Pressable
-          style={styles.detailToggle}
-          onPress={() => setExpanded(current => !current)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: isExpanded }}
-          accessibilityLabel={`${detailLabel}, ${summary}`}
-        >
+        <View style={styles.detailHeader} accessible accessibilityLabel={`${listTitle}, ${summary}`}>
           <View style={[styles.iconBox, { backgroundColor: palette.surface }]}>
             <WarningIcon size={20} color={palette.text} />
           </View>
           <View style={styles.detailTexts}>
             <Text variant="body" weight="semiBold">
-              {detailLabel}
+              {listTitle}
             </Text>
             <Text variant="small" color={palette.textSecondary}>
               {summary}
             </Text>
           </View>
-          <CaretIcon size={16} color={palette.text} />
-        </Pressable>
+        </View>
 
-        {isExpanded &&
-          items.map(item => (
-            <View key={item.key} style={[styles.detailRow, { borderTopColor: palette.divider }]}>
-              <Text variant="small" weight="semiBold" numberOfLines={1} style={styles.detailTitle}>
-                {item.title}
-              </Text>
-              <Text variant="small" color={item.isProblem ? palette.alert : palette.textSecondary}>
-                {item.description}
-              </Text>
-            </View>
-          ))}
-        {isExpanded && hiddenCount > 0 && (
+        {items.length > 0 && (
+          // Cuộn lồng trong bảng: Android cần nestedScrollEnabled. Khung cuộn tràn hết bề ngang khối (lề đặt vào nội dung) để
+          // thanh cuộn nằm sát mép phải khối, không đè lên chữ
+          <ScrollView
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+          >
+            {items.map(item => (
+              <View key={item.key} style={[styles.detailRow, { borderTopColor: palette.divider }]}>
+                <Text variant="small" weight="semiBold" numberOfLines={1} style={styles.detailTitle}>
+                  {item.title}
+                </Text>
+                <Text variant="small" color={item.isProblem ? palette.alert : palette.textSecondary}>
+                  {item.description}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+        {hiddenCount > 0 && (
           <Text variant="small" color={palette.textSecondary} style={styles.moreText}>
             {t('Còn {count} mục khác', { count: hiddenCount })}
           </Text>
@@ -120,9 +117,11 @@ export function StatDetailSheet({
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  detailBox: { borderRadius: Radius.md, paddingHorizontal: Spacing.lg },
-  detailToggle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md },
+  detailBox: { borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
+  detailHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md },
   detailTexts: { flex: 1, gap: Spacing.xs },
+  list: { maxHeight: DETAIL_LIST_MAX_HEIGHT, marginHorizontal: -Spacing.lg },
+  listContent: { paddingHorizontal: Spacing.lg },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -131,7 +130,7 @@ const styles = StyleSheet.create({
     borderTopWidth: BorderWidth.hairline,
   },
   detailTitle: { flex: 1 },
-  moreText: { paddingBottom: Spacing.md },
+  moreText: { paddingTop: Spacing.sm },
   iconBox: {
     width: ICON_BOX_SIZE,
     height: ICON_BOX_SIZE,

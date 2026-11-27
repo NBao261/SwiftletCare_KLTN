@@ -2,7 +2,7 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { USER_AUDIT_ACTIONS } from '@/constants/auditActions'
-import { Button, SearchInput, SectionCard } from '@/components/ui'
+import { Button, SectionCard } from '@/components/ui'
 import DataTable from '@/components/ui/DataTable'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
@@ -11,13 +11,13 @@ import { WarningCircleIcon } from '@phosphor-icons/react'
 import { IconSearch } from '@/components/ui/icons'
 import { getApiErrorMessage } from '@/lib/helpers'
 import { AuditLogCard, buildAuditLogColumns } from '@/components/features/admin/audit-log/auditLogColumns'
-import AuditLogStats from '@/components/features/admin/audit-log/AuditLogStats'
+import LoginFailedNotice from '@/components/features/admin/audit-log/LoginFailedNotice'
 import AuditLogFilters from '@/components/features/admin/audit-log/AuditLogFilters'
 import { useAuditLogTable } from '@/components/features/admin/audit-log/useAuditLogTable'
 
 const PAGE_SIZE = 10
-// px: mọi dòng (kể cả dòng trống bù) cao bằng nhau
-const ROW_HEIGHT = 52
+// px: vừa ô tên + vai trò và ô giờ + ngày 2 dòng; mọi dòng (kể cả dòng trống bù) cao bằng nhau
+const ROW_HEIGHT = 60
 
 export default function AdminAuditLogPage() {
   // ?action= và ?q= chỉ đọc làm giá trị khởi tạo; riêng q được ghi ngược lên URL để giữ khi reload/chia sẻ link.
@@ -40,22 +40,12 @@ export default function AdminAuditLogPage() {
   return (
     // Tiêu đề trang do AppHeader (topbar) tự tra từ menu: không lặp lại trong nội dung
     <div className="flex min-w-0 flex-col gap-5">
-      {/* Hàng 0: 4 ô chỉ số (chỉ xem): số liệu toàn hệ thống, cùng khuôn trang Người dùng */}
-      <AuditLogStats />
-
       {/* Card danh sách duy nhất: tên trang đã ở header nên không có tiêu đề */}
       <SectionCard description="Đăng nhập, thay đổi tài khoản" className="min-w-0">
+        {/* Có đăng nhập thất bại trong 7 ngày thì báo; bấm Xem để lọc đúng các dòng đó */}
+        <LoginFailedNotice onShow={() => { table.setAction('LOGIN_FAILED'); table.setDatePreset('7d') }} />
 
-        {/* Hàng 1: ô tìm kiếm cỡ mặc định, rộng hết hàng: cùng bố cục trang Người dùng */}
-        <SearchInput
-          placeholder="Tìm theo hành động, tên tài khoản..."
-          aria-label="Tìm nhật ký"
-          value={table.search}
-          // Tìm trên toàn bộ nhật ký → gõ từ khoá thì về trang 1
-          onChange={table.setSearch}
-        />
-
-        {/* Hàng 2: bộ lọc + sắp xếp */}
+        {/* Tìm kiếm và bộ lọc một hàng */}
         <AuditLogFilters table={table} />
 
         {table.isLoading && <div className="flex flex-col gap-2"><LoadingSkeleton count={PAGE_SIZE} className="h-[52px] w-full" /></div>}
@@ -84,9 +74,13 @@ export default function AdminAuditLogPage() {
         {!table.isLoading && !table.isError && table.visible.length > 0 && (
           // Trang ít hơn 10 dòng (trang cuối, kết quả lọc/tìm ít) vẫn giữ khung đủ 10 dòng: bảng không co lại
           <DataTable
-            columns={buildAuditLogColumns((table.page - 1) * PAGE_SIZE)}
+            columns={buildAuditLogColumns()}
             rows={table.visible}
             getRowKey={log => log._id}
+            // 1 trường duy nhất: bấm tiêu đề cột Thời gian chỉ đảo chiều mới nhất / cũ nhất
+            sortKey="time"
+            sortDirection={table.sortDir}
+            onSortChange={table.toggleSort}
             rowHeight={ROW_HEIGHT}
             minRows={table.total > PAGE_SIZE ? PAGE_SIZE : 0}
             mobileCard={log => <AuditLogCard log={log} />}

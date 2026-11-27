@@ -19,9 +19,9 @@ interface SeveritySummaryProps {
   isLoading: boolean
 }
 
-// Dải tóm tắt theo 3 cấp như web (Khẩn cấp · Cao · Thường), cũng là bộ lọc nhanh (đặc tả §2.2): chạm một ô để chỉ xem
-// cấp đó, chạm lại để bỏ lọc. Màu mỗi ô là màu badge của cấp, giữ nguyên cả khi số 0; đang lọc một cấp thì hai ô kia
-// mờ đi (không viền) để ô đang chọn nổi lên
+// Dải tóm tắt theo 4 cấp như web (Khẩn cấp · Cao · Trung bình · Thấp), cũng là bộ lọc nhanh (đặc tả §2.2): chạm một ô để
+// chỉ xem cấp đó, chạm lại để bỏ lọc. Màu mỗi ô là màu badge của cấp, giữ nguyên cả khi số 0; đang lọc một cấp thì các ô
+// khác mờ đi (không viền) để ô đang chọn nổi lên
 export function SeveritySummary({ counts, selected, onToggle, isLoading }: SeveritySummaryProps) {
   const palette = usePalette()
   if (isLoading) return <Skeleton width="100%" height={TILE_HEIGHT} radius={Radius.md} />

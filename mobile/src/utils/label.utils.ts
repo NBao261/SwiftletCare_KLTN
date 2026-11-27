@@ -3,6 +3,7 @@ import type {
   AlertStatus,
   AlertType,
   BirdCountTuning,
+  CameraStatus,
   ControlMode,
   DetectionTuning,
   DeviceStatus,
@@ -53,6 +54,20 @@ export function getConfigApplyLabel(step: ConfigApplyStep): string {
   return t(CONFIG_APPLY_LABELS[step])
 }
 
+// Tình trạng camera IP do camera đếm chim báo (FARM-FR-004b), cùng chữ của web
+const CAMERA_STATUS_LABELS: Record<CameraStatus, string> = {
+  OK: 'Đang nhận hình',
+  NO_SOURCE: 'Chưa nhập địa chỉ camera',
+  AUTH_FAILED: 'Sai tài khoản hoặc mật khẩu camera',
+  UNREACHABLE: 'Không kết nối được camera',
+  NO_FRAMES: 'Kết nối được nhưng không có hình',
+}
+
+// Nhãn tiếng Việt của tình trạng camera IP; chưa báo thì một câu riêng
+export function getCameraStatusLabel(status: CameraStatus | null | undefined): string {
+  return status ? t(CAMERA_STATUS_LABELS[status]) : t('Camera đếm chim chưa báo tình trạng camera IP')
+}
+
 // Giai đoạn nhà (FARM-FR-014)
 const HOUSE_STAGE_LABELS: Record<HouseStage, string> = {
   ATTRACTING: 'Đang dẫn dụ',
@@ -73,7 +88,7 @@ const METRIC_LABELS: Record<SensorMetric, string> = {
   sound: 'Tiếng ồn',
 }
 
-// Nhãn tiếng Việt của mức độ cảnh báo: 3 cấp Khẩn cấp · Cao · Thường như web (CRITICAL và HIGH cùng là Khẩn cấp)
+// Nhãn tiếng Việt của mức độ cảnh báo: 4 cấp Khẩn cấp · Cao · Trung bình · Thấp như web, mỗi mức backend một cấp
 export function getSeverityLabel(severity: AlertSeverity): string {
   return getSeverityLevelLabel(getSeverityLevel(severity))
 }

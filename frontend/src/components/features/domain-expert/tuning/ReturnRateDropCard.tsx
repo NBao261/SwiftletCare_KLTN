@@ -41,7 +41,7 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
       title={t('Mức giảm tỷ lệ chim về của nhà')}
       description={houseName ? t('Áp cho cả nhà "{{house}}": cảnh báo khi tỷ lệ chim về giảm', { house: houseName }) : t('Chọn một Zone để biết nhà cần chỉnh')}
       help={houseName
-        ? <TuningRangeList hints={[{ label: t('Ngưỡng sụt giảm tỷ lệ chim về'), range: 'Phạm vi: 5–50%', defaultValue: `Mặc định: ${DEFAULT_RETURN_RATE_DROP_PCT}%` }]} />
+        ? <TuningRangeList hints={[{ label: t('Mức giảm tỷ lệ chim về'), range: 'Phạm vi: 5–50%', defaultValue: `Mặc định: ${DEFAULT_RETURN_RATE_DROP_PCT}%` }]} />
         : undefined}
       action={houseName && (
         <Button variant="icon" size="sm" onClick={onReset} disabled={isResetting} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>
@@ -52,7 +52,7 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
       {/* Nút Lưu chung ở thanh dính đáy của trang */}
       {houseName && (
         <fieldset disabled={isSaving} className="contents">
-          <TuningStepperInput label={t('Ngưỡng sụt giảm tỷ lệ chim về')} value={draft}
+          <TuningStepperInput label={t('Mức giảm tỷ lệ chim về')} value={draft}
             onChange={setDraft} min={5} max={50} step={5} unit="%" />
         </fieldset>
       )}

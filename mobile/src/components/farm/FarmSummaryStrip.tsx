@@ -29,8 +29,8 @@ export function FarmSummaryStrip({ summary, severityCounts, hasExpert, isDetailL
   const palette = usePalette()
   const zoneText = isDetailLoading ? '_' : String(summary.zoneCount)
   const deviceText = isDetailLoading ? '_' : `${summary.deviceOnlineCount}/${summary.deviceCount}`
-  // Gộp 4 mức backend thành 3 cấp như web (CRITICAL và HIGH cùng là Khẩn cấp)
-  const levelCounts = { P1: 0, P2: 0, P3: 0 }
+  // 4 mức backend là 4 cấp như web, mỗi mức một cấp
+  const levelCounts = { P1: 0, P2: 0, P3: 0, P4: 0 }
   if (severityCounts) {
     for (const severity of Object.keys(severityCounts) as AlertSeverity[]) {
       levelCounts[getSeverityLevel(severity)] += severityCounts[severity]

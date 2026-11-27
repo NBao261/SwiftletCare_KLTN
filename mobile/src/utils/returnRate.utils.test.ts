@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
 import type { BirdCountDay } from '@/types'
-import { summarizeReturnRate } from '@/utils/returnRate.utils'
+import { pickReturnRateHouse, sortHousesByReturnRate, type HouseReturnRate } from '@/utils/returnRate.utils'
 
 // Ngày đếm có đủ hai phiên; return_rate tính như backend
 function buildDay(netExit: number, netEntry: number): BirdCountDay {
@@ -20,32 +20,43 @@ function buildDay(netExit: number, netEntry: number): BirdCountDay {
 
 const missingEvening: BirdCountDay = { ...buildDay(100, 0), return_rate: null, has_evening: false }
 
-describe('summarizeReturnRate', () => {
-  it('cộng số ròng của các nhà rồi mới chia', () => {
-    const summary = summarizeReturnRate([
-      { houseName: 'Nhà A', day: buildDay(100, 100) },
-      { houseName: 'Nhà B', day: buildDay(300, 240) },
-    ])
-    expect(summary.rate).toBeCloseTo(85)
-    expect(summary.housesWithData).toBe(2)
-    expect(summary.lowest).toEqual({ houseName: 'Nhà B', rate: 80 })
+function row(id: string, name: string, day: BirdCountDay | null): HouseReturnRate {
+  return { house: { _id: id, name, farm_id: 'farm-1' }, day }
+}
+
+const ROWS = [
+  row('a', 'Nhà A', buildDay(100, 90)),
+  row('b', 'Nhà B', missingEvening),
+  row('c', 'Nhà C', buildDay(100, 70)),
+  row('d', 'Nhà D', null),
+  row('e', 'Nhà E', buildDay(100, 95)),
+]
+
+const idsOf = (rows: HouseReturnRate[]) => rows.map(item => item.house._id)
+
+describe('sortHousesByReturnRate', () => {
+  it('thấp nhất trước hoặc cao nhất trước; nhà chưa có tỷ lệ luôn đứng cuối, theo tên', () => {
+    expect(idsOf(sortHousesByReturnRate(ROWS, 'lowest-first'))).toEqual(['c', 'a', 'e', 'b', 'd'])
+    expect(idsOf(sortHousesByReturnRate(ROWS, 'highest-first'))).toEqual(['e', 'a', 'c', 'b', 'd'])
   })
 
-  it('bỏ nhà chưa đủ hai phiên', () => {
-    const summary = summarizeReturnRate([
-      { houseName: 'Nhà A', day: buildDay(200, 190) },
-      { houseName: 'Nhà B', day: missingEvening },
-    ])
-    expect(summary.rate).toBeCloseTo(95)
-    expect(summary.housesWithData).toBe(1)
-    expect(summary.lowest).toBeNull()
+  it('bằng tỷ lệ thì xếp theo tên; không sửa mảng vào', () => {
+    const rows = [row('y', 'Nhà Y', buildDay(10, 9)), row('x', 'Nhà X', buildDay(100, 90))]
+    expect(idsOf(sortHousesByReturnRate(rows, 'highest-first'))).toEqual(['x', 'y'])
+    expect(idsOf(rows)).toEqual(['y', 'x'])
+  })
+})
+
+describe('pickReturnRateHouse', () => {
+  const sorted = sortHousesByReturnRate(ROWS, 'lowest-first')
+
+  it('nhà đã chọn còn trong danh sách thì giữ, không thì nhà đứng đầu', () => {
+    expect(pickReturnRateHouse(sorted, 'e')?.house._id).toBe('e')
+    expect(pickReturnRateHouse(sorted, null)?.house._id).toBe('c')
+    expect(pickReturnRateHouse(sorted, 'removed')?.house._id).toBe('c')
   })
 
-  it('chưa nhà nào đủ dữ liệu thì tỷ lệ null', () => {
-    expect(summarizeReturnRate([{ houseName: 'Nhà A', day: missingEvening }])).toEqual({
-      rate: null,
-      housesWithData: 0,
-      lowest: null,
-    })
+  it('không có nhà nào thì null', () => {
+    expect(pickReturnRateHouse([], 'a')).toBeNull()
   })
 })

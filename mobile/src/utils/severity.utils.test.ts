@@ -1,30 +1,36 @@
 import { describe, expect, it } from '@jest/globals'
-import { getSeverityLevel, getSeverityLevelLabel, parseSeverityLevel } from '@/utils/severity.utils'
+import {
+  getLevelSeverity,
+  getSeverityLevel,
+  getSeverityLevelLabel,
+  parseSeverityLevel,
+  SEVERITY_LEVELS,
+} from '@/utils/severity.utils'
 
 describe('getSeverityLevel', () => {
-  it('gộp Nghiêm trọng và Cao vào P1 như web', () => {
+  it('mỗi mức backend một cấp như web (G-32 Q-07)', () => {
     expect(getSeverityLevel('CRITICAL')).toBe('P1')
-    expect(getSeverityLevel('HIGH')).toBe('P1')
+    expect(getSeverityLevel('HIGH')).toBe('P2')
+    expect(getSeverityLevel('MEDIUM')).toBe('P3')
+    expect(getSeverityLevel('LOW')).toBe('P4')
   })
 
-  it('Trung bình là P2, Thấp là P3', () => {
-    expect(getSeverityLevel('MEDIUM')).toBe('P2')
-    expect(getSeverityLevel('LOW')).toBe('P3')
+  it('getLevelSeverity là chiều ngược lại', () => {
+    for (const level of SEVERITY_LEVELS) expect(getSeverityLevel(getLevelSeverity(level))).toBe(level)
   })
 })
 
 describe('getSeverityLevelLabel', () => {
   it('nhãn khớp web', () => {
-    expect(getSeverityLevelLabel('P1')).toBe('Khẩn cấp')
-    expect(getSeverityLevelLabel('P3')).toBe('Thường')
+    expect(SEVERITY_LEVELS.map(getSeverityLevelLabel)).toEqual(['Khẩn cấp', 'Cao', 'Trung bình', 'Thấp'])
   })
 })
 
 describe('parseSeverityLevel', () => {
-  it('nhận cấp và đổi mức cũ của backend sang cấp', () => {
-    expect(parseSeverityLevel('P2')).toBe('P2')
-    expect(parseSeverityLevel('HIGH')).toBe('P1')
-    expect(parseSeverityLevel('LOW')).toBe('P3')
+  it('nhận cấp và đổi mức của backend sang cấp', () => {
+    expect(parseSeverityLevel('P4')).toBe('P4')
+    expect(parseSeverityLevel('HIGH')).toBe('P2')
+    expect(parseSeverityLevel('LOW')).toBe('P4')
   })
 
   it('giá trị lạ hoặc rỗng là null', () => {

@@ -7,7 +7,7 @@ import { ZoneThresholdStatTile } from '@/components/home/ZoneThresholdStatTile'
 import { Spacing } from '@/constants/theme'
 import { t } from '@/utils/i18n.utils'
 
-// Khối 3 Trang chủ: 3 ô số liệu ngang và thanh tỷ lệ về tổ, cộng mọi Farm của người dùng
+// Khối 3 Trang chủ: 3 ô số liệu ngang cộng mọi Farm của người dùng, và thanh tỷ lệ về tổ của từng nhà (chọn nhà ở thanh)
 export function OverviewStats() {
   return (
     <HomeSection title={t('Tổng quan nhà yến')}>

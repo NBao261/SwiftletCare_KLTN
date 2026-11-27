@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals'
 import type { BirdCountDay, EnvSeriesPoint } from '@/types'
 import {
+  alignOutdoorWeather,
   averageReturnRate,
   buildEnvLine,
   compareWithPrevious,
@@ -11,6 +12,7 @@ import {
   groupBirdDays,
   pearson,
   summarizeValues,
+  totalRainfall,
 } from '@/utils/analytics.utils'
 
 // Một ngày đủ hai phiên, test nào cần thì sửa trường
@@ -179,5 +181,22 @@ describe('summarizeValues và getAxisBounds', () => {
 
   it('trục gồm cả ngưỡng và nới hai đầu', () => {
     expect(getAxisBounds([80, 90], [75, 95])).toEqual({ base: 73, top: 97 })
+  })
+})
+
+describe('thời tiết ngoài trời (ANALYTICS-FR-013)', () => {
+  const hour = (h: number) => `2026-11-20T${String(h).padStart(2, '0')}:00:00.000Z`
+  const weather = (h: number, rain: number | null) => ({ timestamp: hour(h), temperature: 30 + h, humidity: 80, precipitation_mm: rain })
+
+  it('mỗi mốc lấy điểm giờ phủ nó; mốc chưa có giờ nào phủ thì null', () => {
+    const times = [hour(1), '2026-11-20T01:30:00.000Z', hour(2), hour(5)]
+    const aligned = alignOutdoorWeather(times, [weather(1, 0), weather(2, 1.5)], 60 * 60 * 1000)
+    expect(aligned.map(point => point?.temperature ?? null)).toEqual([31, 31, 32, null])
+  })
+
+  it('tổng mưa bỏ giờ không có số; không giờ nào có số thì null, không ghi 0', () => {
+    expect(totalRainfall([weather(1, 0.5), weather(2, null), weather(3, 1)])).toBe(1.5)
+    expect(totalRainfall([weather(1, null)])).toBeNull()
+    expect(totalRainfall([])).toBeNull()
   })
 })
