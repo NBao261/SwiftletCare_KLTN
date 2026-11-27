@@ -123,7 +123,7 @@ const SECTIONS_EN: PolicySection[] = [
   {
     title: '1. Scope and who is responsible',
     paragraphs: [
-      'Each SwiftletCare installation serves one swiftlet house owner and that owner’s farms. There is no public sign-up: the Administrator creates the Farm Owner’s account; Farm Technicians, co-owners and the Domain Expert join by the Farm Owner’s invitation.',
+      'Each SwiftletCare installation serves one swiftlet house owner and that owner’s farms. There is no public sign-up: the Administrator creates the Farm Owner’s account; Technicians, co-owners and the Domain Expert join by the Farm Owner’s invitation.',
       'The Farm Owner decides who is invited and what data is entered for their farms. The Administrator of the installation runs the system and is the contact for every request about personal data (section 10).',
       'Personal data is processed according to Decree 13/2023/ND-CP on personal data protection (Vietnam).',
     ],
@@ -133,7 +133,7 @@ const SECTIONS_EN: PolicySection[] = [
     items: [
       'Account: full name, e-mail, phone number (if given), role, and the farms and houses you are assigned to. The password is stored only as a bcrypt hash, never in plain text.',
       'Swiftlet house data: sensor readings (temperature, humidity, light, NH3, CO2, noise), relay states, device information and status, alerts and the history of configuration changes.',
-      'Work and ratings: Work Orders, inspection and maintenance results, daily health ratings, harvests and the photos you attach. Photos are stored separately and opened only through a temporary link valid for 1 hour.',
+      'Work and ratings: work orders, inspection and maintenance results, daily health ratings, harvests and the photos you attach. Photos are stored separately and opened only through a temporary link valid for 1 hour.',
       'Bird counting: the camera at the house entrance is processed on an AI node to count birds going in and out. The system keeps only the counts per 5 minutes and per morning and afternoon session, and does not record video. The camera may film people passing the entrance; the system does not identify people. The camera address and password entered by the Farm Owner are encrypted when stored and never shown again.',
       'Notifications: in-app notifications; the Telegram chat ID if you link it yourself; the phone’s push token if you use the mobile app and allow it.',
       'Logs: sign-ins and every important change (who made it, when, the IP address and the type of device or browser). The IP address at sign-in is also used to block repeated failed sign-ins.',
@@ -157,9 +157,9 @@ const SECTIONS_EN: PolicySection[] = [
   {
     title: '4. Who can see the data',
     items: [
-      'Farm Owner and co-owners: all data of their own farms, including the actions of Farm Technicians (section 9).',
+      'Farm Owner and co-owners: all data of their own farms, including the actions of Technicians (section 9).',
       'The farm’s Domain Expert: readings, bird counts, alerts, reports and harvests of the whole farm; edits parameters, writes conclusions and validates alerts; cannot control relays or enter harvests.',
-      'Farm Technician: only the assigned houses. Sees readings, bird counts, the camera view, alerts, reports and Work Orders of those houses; rates days and enters their own harvests; cannot see the comparison between houses or the camera address.',
+      'Technician: only the assigned houses. Sees readings, bird counts, the camera view, alerts, reports and work orders of those houses; rates days and enters their own harvests; cannot see the comparison between houses or the camera address.',
       'Administrator: accounts (name, e-mail, role, status), system logs, the devices and device alerts of every farm and the system overview figures; cannot see the environmental readings, bird counts, camera view, harvests or reports of any farm.',
     ],
   },
@@ -182,7 +182,7 @@ const SECTIONS_EN: PolicySection[] = [
     items: [
       '90 days: sensor readings, 5-minute bird counts, hourly weather and in-app notifications.',
       '180 days after being resolved: alerts.',
-      'For as long as the system is used: session counts, daily health ratings and reports, Work Orders with their photos, maintenance plans and records, recommendations, harvests, manual control history, change history and system logs.',
+      'For as long as the system is used: session counts, daily health ratings and reports, work orders with their photos, maintenance plans and records, recommendations, harvests, manual control history, change history and system logs.',
       'When an account is deleted, its personal data is anonymised. The server’s periodic backups may still hold older data until that backup is replaced.',
     ],
   },
@@ -209,10 +209,10 @@ const SECTIONS_EN: PolicySection[] = [
     ],
   },
   {
-    title: '9. Follow-up of Farm Technicians’ work',
+    title: '9. Follow-up of Technicians’ work',
     items: [
-      'Every action of a Farm Technician on a device (manual switching, restart, setup, move, removal), acknowledging an alert, recording a cause, rating a day and entering a harvest is logged with the person’s name and the time. The Farm Owner sees them in the manual control history, Work Orders, alerts and in-app notifications; the full system log is read by the Administrator.',
-      'The system computes the time from an alert to its acknowledgement and resolution, and the on-time maintenance rate, per house and per Farm Technician. These are internal targets of the farm that help the Farm Owner follow the work.',
+      'Every action of a Technician on a device (manual switching, restart, setup, move, removal), acknowledging an alert, recording a cause, rating a day and entering a harvest is logged with the person’s name and the time. The Farm Owner sees them in the manual control history, work orders, alerts and in-app notifications; the full system log is read by the Administrator.',
+      'The system computes the time from an alert to its acknowledgement and resolution, and the on-time maintenance rate, per house and per Technician. These are internal targets of the farm that help the Farm Owner follow the work.',
       'The duty roster set by the Farm Owner is stored and used to choose who receives an alert first.',
       'The system does not track location or working hours beyond the actions listed above.',
     ],

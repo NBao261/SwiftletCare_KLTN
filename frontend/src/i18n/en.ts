@@ -562,7 +562,7 @@ const en: Record<string, string> = {
   'Nhập {{date}}': 'Added {{date}}',
   'Kết nối cuối {{time}}': 'Last seen {{time}}',
   'Mọi tài khoản trên hệ thống': 'Every account in the system',
-  'Quản trị viên chỉ tạo tài khoản chủ nhà yến. Kỹ thuật viên và chuyên gia do chủ nhà yến mời vào trang trại.': 'Administrators only create Farm Owner accounts. Farm Technicians and Domain Experts are invited to a farm by its Farm Owner.',
+  'Quản trị viên chỉ tạo tài khoản chủ nhà yến. Kỹ thuật viên và chuyên gia do chủ nhà yến mời vào trang trại.': 'Administrators only create Farm Owner accounts. Technicians and Domain Experts are invited to a farm by its Farm Owner.',
   'Đăng nhập, thay đổi tài khoản': 'Sign-ins and account changes',
   'Yêu cầu {{time}}': 'Requested {{time}}',
   'Thêm thiết bị': 'Add device',

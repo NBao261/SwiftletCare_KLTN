@@ -68,7 +68,7 @@ export const roleDict: Dictionary<Role> = {
   en: {
     ADMIN: 'Administrator',
     FARM_OWNER: 'Farm Owner',
-    FARM_TECHNICIAN: 'Farm Technician',
+    FARM_TECHNICIAN: 'Technician',
     DOMAIN_EXPERT: 'Expert',
   },
 };
