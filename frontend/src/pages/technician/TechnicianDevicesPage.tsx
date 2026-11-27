@@ -10,7 +10,7 @@ import HeaderActions from "@/components/layouts/HeaderActions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import EmptyState from "@/components/ui/EmptyState";
 import DeviceListRow, { DEVICE_ROW_GRID } from "@/components/features/technician/devices/DeviceListRow";
-import { countByTab, matchesSearch, matchesTab, sortDevices, type DeviceTab } from "@/components/features/technician/devices/deviceStatus.utils";
+import { countByTab, matchesSearch, matchesTab, restartBlockReason, sortDevices, type DeviceTab } from "@/components/features/technician/devices/deviceStatus.utils";
 import LullabyTracksModal from "@/components/features/farm-owner/devices/LullabyTracksModal";
 import MoveControllerModal from "@/components/features/farm-owner/devices/MoveControllerModal";
 import ReplaceControllerModal from "@/components/features/farm-owner/devices/ReplaceControllerModal";
@@ -77,7 +77,7 @@ export default function TechnicianDevicesPage() {
       { nodeId: rebootNode._id, input: { command: "RESTART" } },
       {
         onSuccess: () => {
-          push(`Đã gửi lệnh khởi động lại tới ${deviceLabel}`);
+          push(`Đã gửi lệnh tới ${deviceLabel}, thiết bị sẽ tự kết nối lại sau vài giây`);
           setRebootNodeId(null);
         },
         onError: (err) => {
@@ -176,7 +176,7 @@ export default function TechnicianDevicesPage() {
                     isExpanded={expandedNodeId === node._id}
                     onToggleExpand={() => setExpandedNodeId(prev => prev === node._id ? null : node._id)}
                     onOpenAudio={() => setAudioNodeId(node._id)}
-                    rebootUnsupported={rebootUnsupportedIds.has(node._id)}
+                    rebootBlockedReason={restartBlockReason(node) ?? (rebootUnsupportedIds.has(node._id) ? "Firmware chưa hỗ trợ lệnh này." : null)}
                     onReboot={() => setRebootNodeId(node._id)}
                     moreActions={zone ? [
                       { label: t("action.move"), onClick: () => setMoveDevice(sensorItem(node, zone.house_id)) },

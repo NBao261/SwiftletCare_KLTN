@@ -22,8 +22,8 @@ interface DeviceListRowProps {
   onToggleExpand: () => void;
   // Không truyền → ẩn nút (role không có quyền gửi lệnh RESTART)
   onReboot?: () => void;
-  // Firmware chưa hỗ trợ lệnh RESTART (BE trả 501) → khoá nút + tooltip giải thích
-  rebootUnsupported?: boolean;
+  // Lý do chưa khởi động lại được (không online, firmware cũ): khoá nút và ghi lý do ở tooltip
+  rebootBlockedReason?: string | null;
   onOpenAudio: () => void;
   // Dời, thay, gỡ bộ điều khiển; không truyền thì ẩn menu
   moreActions?: ActionsMenuItem[];
@@ -50,7 +50,7 @@ function RssiBars({ rssi }: { rssi?: number }) {
 
 export default function DeviceListRow({
   node, zoneId, houseName, zoneName, isExpanded, onToggleExpand,
-  onReboot, rebootUnsupported,
+  onReboot, rebootBlockedReason,
   onOpenAudio, moreActions,
 }: DeviceListRowProps) {
   const isOnline = node.status === "ONLINE";
@@ -87,7 +87,9 @@ export default function DeviceListRow({
         {/* Trạng thái và các nhãn phụ */}
         <div className="flex flex-wrap items-center gap-2">
           <StatusDot status={node.status} colored />
-          {node.activation_overdue_at && <Badge tone="warning">Quá hạn kích hoạt</Badge>}
+          {node.activation_overdue_at && (
+            <Badge tone="warning" title="Thiết bị được thiết lập hơn 15 phút trước mà chưa kết nối lần nào. Kiểm tra nguồn điện, Wi-Fi 2.4 GHz và mật khẩu Wi-Fi tại nhà yến.">Quá hạn kích hoạt</Badge>
+          )}
           {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển tay</Badge>}
           {node.ota_pending && (
             <span className="inline-flex items-center gap-1 rounded-full bg-limeMist px-2.5 py-1 text-xs font-semibold text-charcoal">
@@ -118,10 +120,10 @@ export default function DeviceListRow({
           {onReboot && (
             <button
               type="button"
-              disabled={rebootUnsupported}
+              disabled={!!rebootBlockedReason}
               onClick={(event) => { event.stopPropagation(); onReboot(); }}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-charcoal transition-colors max-sm:h-11 max-sm:w-11 hover:bg-white hover:text-alertRed disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-charcoal"
-              title={rebootUnsupported ? "Firmware chưa hỗ trợ lệnh này" : "Khởi động lại thiết bị từ xa"}
+              title={rebootBlockedReason ?? "Khởi động lại thiết bị từ xa"}
               aria-label="Khởi động lại thiết bị"
             >
               <RotateCw size={16} />

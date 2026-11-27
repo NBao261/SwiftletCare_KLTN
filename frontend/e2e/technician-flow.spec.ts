@@ -122,22 +122,17 @@ test('T3 — xác nhận cảnh báo kèm nguyên nhân tìm thấy tại chỗ 
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
-test('T4 — thiết bị của nhà được giao: hàng ghi nhà và Zone, gửi được lệnh khởi động lại (FARM-FR-013)', async ({ page }) => {
+test('T4 — thiết bị của nhà được giao: hàng ghi nhà và Zone, nút khởi động lại khoá khi thiết bị chưa online (FARM-FR-013)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/devices', { farmId, houseId: houseA, zoneId: zoneA });
 
   // Cột Vị trí ghi nhà ở trên, Zone ở dưới; trang trại đã có ở thanh phạm vi
   await expect(page.getByText('A · Nhà điều khiển', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('A · Tầng 1', { exact: true }).first()).toBeVisible();
 
-  // Kỹ thuật viên được khởi động lại bộ điều khiển của nhà được giao; hộp xác nhận ghi rõ mã thiết bị
+  // Bộ điều khiển demo chưa từng kết nối nên nút khởi động lại bị khoá và ghi lý do, không chờ máy chủ từ chối
   const reboot = page.getByRole('button', { name: 'Khởi động lại thiết bị' }).first();
-  await expect(reboot).toBeEnabled();
-  await reboot.click();
-  await expect(page.getByText(/Thiết bị demo-ctl-a1 sẽ mất kết nối/)).toBeVisible();
-  await page.getByRole('button', { name: 'Khởi động lại', exact: true }).click();
-
-  // Bộ điều khiển demo chưa từng kết nối nên máy chủ từ chối lệnh; chỉ kiểm màn hình luôn trả lời sau khi bấm
-  await expect(page.getByText(/Đã gửi lệnh khởi động lại|chỉ gửi được khi thiết bị đang kết nối/)).toBeVisible();
+  await expect(reboot).toBeDisabled();
+  await expect(reboot).toHaveAttribute('title', /chỉ khởi động lại từ xa được khi đang online/);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 

@@ -1,4 +1,8 @@
+import { compareVersions } from '@/lib/firmwareFlasher'
 import type { SensorNode } from '@/types'
+
+// Firmware trước bản này bỏ qua lệnh khởi động lại từ xa (backend trả 501)
+export const RESTART_SUPPORT_SINCE = '1.4.0'
 
 // Hàng tab của trang Thiết bị: mỗi tab một nhóm trạng thái
 export type DeviceTab = 'ALL' | 'WARNING' | 'OFFLINE' | 'PENDING' | 'ONLINE'
@@ -15,6 +19,19 @@ export function matchesTab(node: SensorNode, tab: DeviceTab): boolean {
 export function countByTab(nodes: SensorNode[]): Record<DeviceTab, number> {
   const tabs: DeviceTab[] = ['ALL', 'WARNING', 'OFFLINE', 'PENDING', 'ONLINE']
   return Object.fromEntries(tabs.map(tab => [tab, nodes.filter(node => matchesTab(node, tab)).length])) as Record<DeviceTab, number>
+}
+
+// Vì sao chưa khởi động lại từ xa được; null là gửi được. Cùng điều kiện backend kiểm trước khi gửi lệnh
+export function restartBlockReason(node: SensorNode): string | null {
+  if (node.status !== 'ONLINE') {
+    const state = node.status === 'PENDING' ? 'chờ kết nối' : 'mất kết nối'
+    return `Thiết bị đang ${state}, chỉ khởi động lại từ xa được khi đang online.`
+  }
+  if (!node.firmware_version) return 'Thiết bị chưa báo phiên bản firmware nên chưa khởi động lại từ xa được.'
+  if (compareVersions(node.firmware_version, RESTART_SUPPORT_SINCE) < 0) {
+    return `Firmware v${node.firmware_version} chưa hỗ trợ khởi động lại từ xa, cần từ v${RESTART_SUPPORT_SINCE}.`
+  }
+  return null
 }
 
 // Tìm theo mã thiết bị hoặc phiên bản firmware
