@@ -158,7 +158,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           description={t(canRate ? 'table.subtitle' : 'table.subtitleExpert')}
           action={
             <div className="flex flex-wrap items-center gap-2">
-              {/* Mức chỉ số do Chủ nhà yến và Chuyên gia đặt; Kỹ thuật viên không đọc (backend 403) */}
+              {/* Mức chỉ số do chủ nhà yến và Chuyên gia đặt; Kỹ thuật viên không đọc (backend 403) */}
               {!isTechnician && (
                 <>
                   {!house && <span className="text-small text-warmGray">{t('page.levelsNeedHouse')}</span>}

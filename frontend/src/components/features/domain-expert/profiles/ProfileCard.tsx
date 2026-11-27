@@ -113,7 +113,7 @@ export default function ProfileCard({ profile, onEdit, onApprove, onArchive, dis
       <ConfirmModal
         open={confirmAction === 'approve'}
         title={t('Duyệt hồ sơ cấu hình')}
-        description={t('Hồ sơ "{{name}}" sẽ chuyển sang trạng thái Đã duyệt và sẵn sàng để Chủ nhà yến áp dụng. Tiếp tục?', { name: profile.name })}
+        description={t('Hồ sơ "{{name}}" sẽ chuyển sang trạng thái Đã duyệt và sẵn sàng để chủ nhà yến áp dụng. Tiếp tục?', { name: profile.name })}
         confirmLabel={t('Duyệt')}
         loading={disabled}
         onConfirm={() => { setConfirmAction(null); onApprove?.() }}

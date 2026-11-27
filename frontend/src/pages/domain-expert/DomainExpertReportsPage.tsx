@@ -62,7 +62,7 @@ export default function DomainExpertReportsPage() {
 
   function getTabDescription(tab: ReportsPageTab): string {
     if (tab === 'reports') {
-      return i18nT('Viết kết luận gửi Chủ nhà yến');
+      return i18nT('Viết kết luận gửi chủ nhà yến');
     }
     if (tab === 'harvest-cycles') {
       return i18nT('Kết luận chu kỳ thu hoạch đã đóng');

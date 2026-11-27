@@ -14,7 +14,7 @@ const SECTIONS_VI: PolicySection[] = [
   {
     title: '1. Phạm vi và ai chịu trách nhiệm',
     paragraphs: [
-      'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản Chủ nhà yến; Kỹ thuật viên, người đồng sở hữu và Chuyên gia tham gia qua lời mời của Chủ nhà yến.',
+      'Mỗi bản cài đặt SwiftletCare phục vụ một chủ nhà yến và các trang trại của chủ đó. Không có đăng ký công khai: Quản trị viên tạo tài khoản chủ nhà yến; Kỹ thuật viên, người đồng sở hữu và Chuyên gia tham gia qua lời mời của chủ nhà yến.',
       'Chủ nhà yến quyết định ai được mời và dữ liệu nào được nhập cho trang trại của mình. Quản trị viên của bản cài đặt vận hành hệ thống và là đầu mối nhận mọi yêu cầu về dữ liệu cá nhân (mục 10).',
       'Dữ liệu cá nhân được xử lý theo Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân.',
     ],
@@ -25,10 +25,10 @@ const SECTIONS_VI: PolicySection[] = [
       'Tài khoản: họ tên, e-mail, số điện thoại (nếu có), vai trò, các trang trại và nhà bạn được giao. Mật khẩu chỉ lưu dạng băm bcrypt, không lưu mật khẩu gốc.',
       'Dữ liệu nhà yến: số đo cảm biến (nhiệt độ, độ ẩm, ánh sáng, NH3, CO2, tiếng ồn), trạng thái rơ-le, thông tin và tình trạng thiết bị, cảnh báo và lịch sử thay đổi cấu hình.',
       'Công việc và đánh giá: phiếu công việc, kết quả kiểm tra và bảo trì, đánh giá sức khoẻ hằng ngày, các đợt thu hoạch và ảnh bạn đính kèm. Ảnh được lưu riêng và chỉ mở bằng liên kết tạm có hiệu lực 1 giờ.',
-      'Đếm chim: hình camera ở cửa nhà yến được xử lý trên máy đếm chim để đếm chim ra vào. Hệ thống chỉ lưu số đếm theo từng 5 phút và theo phiên sáng, chiều, không ghi lại video. Camera có thể quay cả người đi qua gần cửa; hệ thống không nhận dạng người. Địa chỉ camera và mật khẩu camera do Chủ nhà yến nhập được mã hoá khi lưu và không hiện lại.',
+      'Đếm chim: hình camera ở cửa nhà yến được xử lý trên máy đếm chim để đếm chim ra vào. Hệ thống chỉ lưu số đếm theo từng 5 phút và theo phiên sáng, chiều, không ghi lại video. Camera có thể quay cả người đi qua gần cửa; hệ thống không nhận dạng người. Địa chỉ camera và mật khẩu camera do chủ nhà yến nhập được mã hoá khi lưu và không hiện lại.',
       'Thông báo: thông báo trong ứng dụng; mã trò chuyện Telegram nếu bạn tự liên kết; mã nhận thông báo đẩy của điện thoại nếu bạn dùng ứng dụng di động và cho phép.',
       'Nhật ký: lần đăng nhập và mọi thay đổi quan trọng (người thực hiện, thời điểm, địa chỉ IP và loại thiết bị hoặc trình duyệt). Địa chỉ IP khi đăng nhập còn dùng để chặn đăng nhập sai liên tục.',
-      'Vị trí: toạ độ trang trại do Chủ nhà yến nhập, hoặc điền bằng nút lấy vị trí hiện tại khi tạo trang trại. Hệ thống không theo dõi vị trí của bạn.',
+      'Vị trí: toạ độ trang trại do chủ nhà yến nhập, hoặc điền bằng nút lấy vị trí hiện tại khi tạo trang trại. Hệ thống không theo dõi vị trí của bạn.',
       'Trình duyệt: cookie đăng nhập (httpOnly) và bộ nhớ của trình duyệt dùng để nhớ phiên đăng nhập, ngôn ngữ và lựa chọn giao diện. Không có cookie quảng cáo hay theo dõi.',
     ],
   },
@@ -41,7 +41,7 @@ const SECTIONS_VI: PolicySection[] = [
       'Bảo vệ tài khoản và truy vết thay đổi qua nhật ký.',
     ],
     paragraphs: [
-      'Dữ liệu được xử lý để thực hiện việc quản lý nhà yến mà Chủ nhà yến giao cho hệ thống, và khi bạn đồng ý (ví dụ liên kết Telegram, cho phép thông báo đẩy).',
+      'Dữ liệu được xử lý để thực hiện việc quản lý nhà yến mà chủ nhà yến giao cho hệ thống, và khi bạn đồng ý (ví dụ liên kết Telegram, cho phép thông báo đẩy).',
       'SwiftletCare không mua bán, không môi giới và không chia sẻ dữ liệu để quảng cáo.',
     ],
   },
@@ -103,8 +103,8 @@ const SECTIONS_VI: PolicySection[] = [
     title: '9. Theo dõi công việc của Kỹ thuật viên',
     items: [
       'Mọi thao tác của Kỹ thuật viên trên thiết bị (bật tắt tay, khởi động lại, thiết lập, dời, gỡ), xác nhận cảnh báo, ghi nguyên nhân, đánh giá ngày và nhập thu hoạch đều ghi lại tên người làm và thời điểm. Chủ nhà yến xem được ở lịch sử điều khiển tay, phiếu công việc, cảnh báo và thông báo trong ứng dụng; nhật ký hệ thống đầy đủ do Quản trị viên xem.',
-      'Hệ thống tính thời gian từ lúc có cảnh báo đến lúc xác nhận và xử lý xong, và tỷ lệ bảo trì đúng hạn, theo từng nhà và từng Kỹ thuật viên. Đây là mục tiêu nội bộ của trang trại để Chủ nhà yến theo dõi công việc.',
-      'Lịch trực do Chủ nhà yến đặt được lưu và dùng để chọn người nhận cảnh báo đầu tiên.',
+      'Hệ thống tính thời gian từ lúc có cảnh báo đến lúc xác nhận và xử lý xong, và tỷ lệ bảo trì đúng hạn, theo từng nhà và từng Kỹ thuật viên. Đây là mục tiêu nội bộ của trang trại để chủ nhà yến theo dõi công việc.',
+      'Lịch trực do chủ nhà yến đặt được lưu và dùng để chọn người nhận cảnh báo đầu tiên.',
       'Hệ thống không theo dõi vị trí hay thời gian làm việc ngoài các thao tác kể trên.',
     ],
   },
@@ -112,7 +112,7 @@ const SECTIONS_VI: PolicySection[] = [
     title: '10. Sự cố dữ liệu, liên hệ và thay đổi chính sách',
     paragraphs: [
       'Khi xảy ra sự cố làm lộ hoặc mất dữ liệu cá nhân, Quản trị viên thông báo cho người bị ảnh hưởng và cơ quan có thẩm quyền theo quy định pháp luật.',
-      'Mọi câu hỏi hoặc yêu cầu về dữ liệu cá nhân xin gửi Quản trị viên của bản cài đặt; nếu bạn chưa biết liên hệ ai, hỏi Chủ nhà yến đã mời bạn.',
+      'Mọi câu hỏi hoặc yêu cầu về dữ liệu cá nhân xin gửi Quản trị viên của bản cài đặt; nếu bạn chưa biết liên hệ ai, hỏi chủ nhà yến đã mời bạn.',
       'Khi chính sách thay đổi, phiên bản và ngày hiệu lực ở đầu trang được cập nhật.',
     ],
   },

@@ -34,7 +34,7 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
   const { data: zoneDetail } = useZone(zone?._id);
   // Tab nằm trên URL (?tab=ops) để quay lại đúng nhóm, mặc định Môi trường
   const [searchParams, setSearchParams] = useSearchParams();
-  // So sánh nhà là của Chủ nhà yến và Chuyên gia (kỹ thuật viên không đọc tổng quan trang trại)
+  // So sánh nhà là của chủ nhà yến và Chuyên gia (kỹ thuật viên không đọc tổng quan trang trại)
   const canCompare = usePermission(...FARM_SIDE_ROLES);
   const visibleTabs = TABS.filter(value => value !== 'houses' || canCompare);
   const tab: AnalyticsTab = visibleTabs.find(value => value === searchParams.get('tab')) ?? 'env';

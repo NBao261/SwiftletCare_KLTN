@@ -47,7 +47,7 @@ function useClampedPage(page: number, setPage: (page: number) => void, total: nu
 export default function AdminAccountRequestsPage() {
   return (
     <SectionCard
-      description={tr(`Người dùng xin xoá tài khoản, xử lý trong ${DELETE_DEADLINE_DAYS} ngày`)}
+      description={tr(`Người dùng xin xoá tài khoản. Hạn xử lý là ${DELETE_DEADLINE_DAYS} ngày.`)}
     >
       <DeleteRequestsTab />
     </SectionCard>
@@ -103,7 +103,7 @@ function DeleteRequestsTab() {
       // Admin hoàn tất hoặc từ chối
       render: u => (
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" onClick={() => setTarget(u)}>Xử lý</Button>
+          <Button size="sm" onClick={() => setTarget(u)}>Xoá tài khoản</Button>
           <Button size="sm" variant="secondary" onClick={() => setRejectTarget(u)}>Từ chối</Button>
         </div>
       ),
@@ -148,7 +148,7 @@ function DeleteRequestsTab() {
       <ConfirmModal
         open={!!target}
         title={`${i18nT('Xoá tài khoản')} · ${target?.full_name ?? ''}`}
-        description="Quyền sở hữu trang trại chuyển cho thành viên vào sớm nhất; không còn ai thì trang trại bị ẩn. Tài khoản rời các trang trại khác, các phân công và đề xuất liên quan bị huỷ, thông tin cá nhân được xoá danh tính. Không hoàn tác được."
+        description="Quyền sở hữu trang trại chuyển cho thành viên vào sớm nhất; không còn ai thì trang trại bị ẩn. Tài khoản rời các trang trại khác, các phân công và đề xuất liên quan bị huỷ, thông tin cá nhân được ẩn danh. Không hoàn tác được."
         confirmLabel="Xác nhận xoá"
         danger
         loading={completeDeleteRequest.isPending}

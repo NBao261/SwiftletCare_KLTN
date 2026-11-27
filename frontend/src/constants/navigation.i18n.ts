@@ -116,7 +116,7 @@ const en: Record<NavigationKey, string> = {
   'Lịch sử quyết định': 'Decision history',
   'Tham số điều khiển': 'Control parameters',
   'Tham số': 'Parameters',
-  'Cài đặt đếm chim': 'Bird counting',
+  'Cài đặt đếm chim': 'Bird counting settings',
 
   'Theo dõi': 'Monitoring',
   'Điều khiển tay': 'Manual override',

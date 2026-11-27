@@ -125,7 +125,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
         {isLowReturn ? (
           <>
             <div className="rounded-2xl border border-warmGray/15 p-4">
-              <h4 className="mb-2 text-sm font-semibold text-charcoal">{t('% Thời gian trong ngưỡng theo từng Zone trong ngày')}</h4>
+              <h4 className="mb-2 text-sm font-semibold text-charcoal">{t('Tỷ lệ thời gian trong ngưỡng của từng Zone hôm nay')}</h4>
               {evidence?.zones_in_range && evidence.zones_in_range.length > 0 ? (
                 <div className="divide-y divide-warmGray/10">
                   {evidence.zones_in_range.map(zoneItem => (
@@ -158,7 +158,7 @@ export default function MultimodalEvidenceCharts({ alert }: Props) {
               ? <MissingNote label={t('Không có số đo cảm biến trong ±30 phút quanh cảnh báo')} />
               : <EvidenceBarCard src={cfg.src1} />}
             {birdCountsMissing || !cfg.src2
-              ? <MissingNote label={t('Không có số chim đếm trong ±30 phút quanh cảnh báo')} />
+              ? <MissingNote label={t('Không có số đếm chim trong ±30 phút quanh cảnh báo')} />
               : <EvidenceBarCard src={cfg.src2} />}
 
             {/* Thiết bị đang có cảnh báo mở tại Zone */}

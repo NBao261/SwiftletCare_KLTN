@@ -98,7 +98,7 @@ export default function CoefficientProposalCard({
         <div className="min-w-0">
           <h4 className="text-sm font-semibold text-charcoal">{t('Đề xuất hệ số mờ')}</h4>
           <p className="mt-0.5 text-small text-warmGray">
-            <span className="font-semibold text-charcoal">{zoneInfo ? `${zoneInfo.farmName} • ${zoneInfo.name}` : t('Zone không xác định')}</span> · {authorName} · {formatDateTime(proposal.created_at)}
+            <span className="font-semibold text-charcoal">{zoneInfo ? `${zoneInfo.farmName} · ${zoneInfo.name}` : t('Zone không xác định')}</span> · {authorName} · {formatDateTime(proposal.created_at)}
           </p>
         </div>
         <Badge tone={status.tone}>{t(status.label)}</Badge>

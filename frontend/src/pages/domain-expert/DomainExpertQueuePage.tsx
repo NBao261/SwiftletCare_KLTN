@@ -20,10 +20,10 @@ import type { ExpertQueueItem, ExpertQueueKind } from '@/types/expert/queue.type
 
 // Tên loại việc; dựng trong component để đổi ngôn ngữ thì đổi theo
 const kindTitle = (kind: ExpertQueueKind): string => ({
-  alert_verdict: t('Cảnh báo chờ kết luận'),
+  alert_verdict: t('Cảnh báo chờ kiểm chứng'),
   parameter_review: t('Thay đổi tham số chờ duyệt'),
   coefficient_proposal: t('Đề xuất hệ số mờ'),
-  disagreeing_day: t('Ngày đánh giá khác hệ thống (14 ngày)'),
+  disagreeing_day: t('Ngày đánh giá khác hệ thống (14 ngày qua)'),
   report_conclusion: t('Báo cáo chờ kết luận'),
   weather_proposal: t('Đề xuất luật phun sương theo thời tiết'),
   profile_draft: t('Hồ sơ cấu hình chờ duyệt'),
@@ -32,7 +32,7 @@ const kindTitle = (kind: ExpertQueueKind): string => ({
 })[kind]
 
 const SECTIONS: Array<{ key: QueueSection; label: () => string; icon: typeof ShieldCheckIcon }> = [
-  { key: 'verdicts', label: () => t('Kết luận cảnh báo'), icon: ShieldCheckIcon },
+  { key: 'verdicts', label: () => t('Kiểm chứng cảnh báo'), icon: ShieldCheckIcon },
   { key: 'reviews', label: () => t('Duyệt thay đổi'), icon: ChecksIcon },
   { key: 'proposals', label: () => t('Duyệt đề xuất'), icon: LightbulbFilamentIcon },
   { key: 'conclusions', label: () => t('Viết kết luận'), icon: FileTextIcon },
@@ -104,7 +104,7 @@ export default function DomainExpertQueuePage() {
 
   return (
     <div className="relative flex w-full flex-1 flex-col gap-6">
-      <SectionCard description={t('Việc Chủ nhà yến đã nhắc và việc chờ lâu nhất đứng trước.')}>
+      <SectionCard description={t('Việc chủ nhà yến đã nhắc và việc chờ lâu nhất đứng trước.')}>
         <StatusTabs
           variant="underline"
           ariaLabel={t('Lọc việc theo loại')}
@@ -123,7 +123,7 @@ export default function DomainExpertQueuePage() {
           onRowClick={open}
           rowHeight={72}
           emptyNotice={t('Không có việc gì đang chờ')}
-          emptyContent={<TableEmptyState title={t('Không có việc gì đang chờ')} description={t('Cảnh báo cần kết luận, thay đổi và đề xuất của Chủ nhà yến sẽ hiện ở đây.')} />}
+          emptyContent={<TableEmptyState title={t('Không có việc gì đang chờ')} description={t('Cảnh báo cần kết luận, thay đổi và đề xuất của chủ nhà yến sẽ hiện ở đây.')} />}
           mobileCard={row => (
             <div className="flex flex-col gap-1.5">
               <p className="text-small text-warmGray">{kindTitle(row.kind)}</p>

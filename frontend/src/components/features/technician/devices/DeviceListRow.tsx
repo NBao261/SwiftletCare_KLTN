@@ -1,13 +1,13 @@
 import { RotateCw, ChevronDown, DownloadCloud, AlertTriangle, Clock } from "lucide-react"
 import { IconDevice } from "@/components/ui/icons"
 import type { SensorNode } from "@/types"
-import { formatDistanceToNow } from "date-fns"
-import { vi } from "date-fns/locale"
 import { Badge } from "@/components/ui"
 import ActionsMenu, { type ActionsMenuItem } from "@/components/ui/ActionsMenu"
 import StatusDot from "@/components/common/StatusDot"
 import SimulatedBadge from "@/components/common/SimulatedBadge"
 import DeviceDiagnosticsPanel from "@/components/features/technician/devices/DeviceDiagnosticsPanel"
+import { devicesDict } from "@/constants/devices.i18n"
+import { useTranslation } from "@/hooks/common/useTranslation"
 
 // Cột của danh sách: thiết bị, vị trí, trạng thái, kết nối, thao tác; dòng tiêu đề dùng chung khuôn này
 export const DEVICE_ROW_GRID = "md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1.5fr)_minmax(0,1.1fr)_7.5rem]"
@@ -32,11 +32,11 @@ interface DeviceListRowProps {
 const STALE_HEARTBEAT_MS = 5 * 60 * 1000
 
 // 4 vạch tín hiệu từ RSSI thật (dBm): > -60 mạnh, > -70 khá, > -80 yếu, còn lại rất yếu
-function RssiBars({ rssi }: { rssi?: number }) {
+function RssiBars({ rssi, label }: { rssi?: number; label: string }) {
   const level = rssi === undefined || rssi === null ? 0 : rssi > -60 ? 4 : rssi > -70 ? 3 : rssi > -80 ? 2 : 1
   const tone = level >= 3 ? "bg-success" : level === 2 ? "bg-climateOrange" : "bg-alertRed"
   return (
-    <span className="inline-flex items-end gap-[2px] h-3.5" role="img" aria-label={rssi !== undefined ? `Tín hiệu ${rssi} dBm` : "Không có tín hiệu"}>
+    <span className="inline-flex items-end gap-[2px] h-3.5" role="img" aria-label={label}>
       {[1, 2, 3, 4].map(i => (
         <span
           key={i}
@@ -53,10 +53,12 @@ export default function DeviceListRow({
   onReboot, rebootBlockedReason,
   onOpenAudio, moreActions,
 }: DeviceListRowProps) {
+  const { t, ago } = useTranslation(devicesDict)
   const isOnline = node.status === "ONLINE";
 
   const hb = node.last_heartbeat ? new Date(node.last_heartbeat) : null
   const stale = hb ? Date.now() - hb.getTime() > STALE_HEARTBEAT_MS : false
+  const hasRssi = node.rssi !== undefined && node.rssi !== null
 
   return (
     <div className={`border-b last:border-b-0 border-warmGray/15 transition-colors duration-200 ${isExpanded ? 'bg-stone/30' : 'hover:bg-stone/20'}`}>
@@ -88,17 +90,17 @@ export default function DeviceListRow({
         <div className="flex flex-wrap items-center gap-2">
           <StatusDot status={node.status} colored />
           {node.activation_overdue_at && (
-            <Badge tone="warning" title="Thiết bị được thiết lập hơn 15 phút trước mà chưa kết nối lần nào. Kiểm tra nguồn điện và sóng Wi-Fi, rồi nối điện thoại vào Wi-Fi do thiết bị phát để nhập lại Wi-Fi 2.4 GHz của nhà yến.">Quá hạn kích hoạt</Badge>
+            <Badge tone="warning" title={t("tech.overdueHint")}>{t("tech.overdue")}</Badge>
           )}
-          {node.control_mode === "MANUAL" && <Badge tone="warning">Điều khiển tay</Badge>}
+          {node.control_mode === "MANUAL" && <Badge tone="warning">{t("tech.manual")}</Badge>}
           {node.ota_pending && (
             <span className="inline-flex items-center gap-1 rounded-full bg-limeMist px-2.5 py-1 text-xs font-semibold text-charcoal">
-              <DownloadCloud size={12} /> Đang cập nhật
+              <DownloadCloud size={12} /> {t("tech.otaPending")}
             </span>
           )}
           {node.ota_failed && (
             <span className="inline-flex items-center gap-1 rounded-full bg-alertRed/10 px-2.5 py-1 text-xs font-semibold text-alertRed">
-              <AlertTriangle size={12} /> Cập nhật lỗi
+              <AlertTriangle size={12} /> {t("tech.otaFailed")}
             </span>
           )}
         </div>
@@ -106,12 +108,12 @@ export default function DeviceListRow({
         {/* Kết nối: sóng Wi-Fi và lần gửi tín hiệu cuối */}
         <div className="flex flex-col gap-1 text-xs">
           <div className="flex items-center gap-2 font-medium tabular-nums text-charcoal">
-            <RssiBars rssi={node.rssi} />
-            <span>{node.rssi !== undefined && node.rssi !== null ? `${node.rssi} dBm` : "Mất tín hiệu"}</span>
+            <RssiBars rssi={node.rssi} label={hasRssi ? t("tech.signalAria", { dbm: node.rssi ?? 0 }) : t("tech.noSignal")} />
+            <span>{hasRssi ? `${node.rssi} dBm` : t("tech.noSignal")}</span>
           </div>
           <div className={`flex items-center gap-1.5 ${stale ? 'font-semibold text-climateOrange' : 'text-warmGray'}`}>
             <Clock size={12} className="shrink-0" />
-            <span className="truncate tabular-nums">{hb ? formatDistanceToNow(hb, { addSuffix: true, locale: vi }) : "Chưa kết nối"}</span>
+            <span className="truncate tabular-nums">{hb ? ago(node.last_heartbeat) : t("tech.neverConnected")}</span>
           </div>
         </div>
 
@@ -123,8 +125,8 @@ export default function DeviceListRow({
               disabled={!!rebootBlockedReason}
               onClick={(event) => { event.stopPropagation(); onReboot(); }}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-charcoal transition-colors max-sm:h-11 max-sm:w-11 hover:bg-white hover:text-alertRed disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-charcoal"
-              title={rebootBlockedReason ?? "Khởi động lại thiết bị từ xa"}
-              aria-label="Khởi động lại thiết bị"
+              title={rebootBlockedReason ?? t("tech.restartTooltip")}
+              aria-label={t("tech.restartAria")}
             >
               <RotateCw size={16} />
             </button>
@@ -134,8 +136,8 @@ export default function DeviceListRow({
             type="button"
             onClick={(event) => { event.stopPropagation(); onToggleExpand(); }}
             aria-expanded={isExpanded}
-            aria-label="Xem chi tiết thiết bị"
-            title="Xem chi tiết thiết bị"
+            aria-label={t("tech.detailAria")}
+            title={t("tech.detailAria")}
             className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors max-sm:ml-auto max-sm:h-11 max-sm:w-11 ${isExpanded ? 'bg-charcoal text-white' : 'text-charcoal group-hover:bg-white'}`}
           >
             <ChevronDown size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />

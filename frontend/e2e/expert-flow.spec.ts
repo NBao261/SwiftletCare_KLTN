@@ -52,7 +52,7 @@ test('B1 — đăng nhập vào hàng đợi việc, 4 tab nhóm việc hiện, 
   // Hàng đợi theo trại: hàng tab Tất cả + 4 nhóm việc (kết luận cảnh báo, duyệt thay đổi, duyệt đề xuất, viết kết luận)
   await setScope(page, { farmId });
   await page.goto('/domain-expert/queue');
-  for (const label of ['Tất cả', 'Kết luận cảnh báo', 'Duyệt thay đổi', 'Duyệt đề xuất', 'Viết kết luận']) {
+  for (const label of ['Tất cả', 'Kiểm chứng cảnh báo', 'Duyệt thay đổi', 'Duyệt đề xuất', 'Viết kết luận']) {
     await expect(page.getByRole('tab', { name: new RegExp(`^${label}`) })).toBeVisible();
   }
 
@@ -71,7 +71,7 @@ test('B2 — kiểm chứng cảnh báo suy luận: bác bỏ thiếu lý do b�
   await expect(page.getByRole('tab', { name: /Chờ kiểm chứng/ })).toBeVisible();
 
   // Bác bỏ phải có lý do: thiếu ghi chú thì nút lưu khoá; ngăn kéo điền lại ghi chú cũ nên xoá trước khi kiểm
-  await page.getByRole('radio', { name: 'Bác bỏ - Báo động giả' }).click();
+  await page.getByRole('radio', { name: 'Bác bỏ: báo động giả' }).click();
   await page.locator('#expert-note').fill('');
   await expect(page.getByRole('button', { name: 'Lưu kết luận' })).toBeDisabled();
 

@@ -134,7 +134,7 @@ export default function AdminDevicesPage() {
           minRows={filtered.length > PAGE_SIZE ? PAGE_SIZE : 0}
           emptyMessage={hasActiveFilters || tab !== 'ALL'
             ? 'Không có thiết bị nào khớp bộ lọc. Thử đổi bộ lọc hoặc từ khoá tìm kiếm.'
-            : 'Chưa có thiết bị nào. Thiết bị xuất hiện ở đây khi chủ nhà yến đăng ký từ nhãn QR.'}
+            : 'Chưa có thiết bị nào. Thiết bị xuất hiện ở đây khi chủ nhà yến hoặc kỹ thuật viên thiết lập từ nhãn QR.'}
         />
 
         {/* total = số thiết bị SAU khi lọc + tìm kiếm */}

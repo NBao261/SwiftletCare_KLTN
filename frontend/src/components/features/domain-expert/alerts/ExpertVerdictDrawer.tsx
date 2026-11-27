@@ -79,9 +79,9 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
 
   const zoneLabel = useMemo(() => {
     if (!alert?.zone_id) return null
-    if (zone?.floor && zone?.name) return zone.name.toLowerCase().includes('tầng') ? zone.name : `${t('Tầng {{n}}', { n: zone.floor })} • ${zone.name}`
+    if (zone?.floor && zone?.name) return zone.name.toLowerCase().includes('tầng') ? zone.name : `${t('Tầng {{n}}', { n: zone.floor })} · ${zone.name}`
     if (zone?.name) return zone.name
-    if (selectedZoneId === alert.zone_id && selectedZoneName) return selectedZoneName.replace(/\s*-\s*/g, ' • ')
+    if (selectedZoneId === alert.zone_id && selectedZoneName) return selectedZoneName.replace(/\s*-\s*/g, ' · ')
     return t('Zone')
   }, [alert?.zone_id, zone, selectedZoneId, selectedZoneName])
 
@@ -108,7 +108,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
             {meta.length > 0 && <p className="mt-1 text-small text-warmGray">{meta.join(' · ')}</p>}
             {alert?.message && <p className="mt-2 text-sm text-charcoal">{alert.message}</p>}
           </div>
-          <Button variant="icon" size="sm" onClick={onClose} aria-label={t('Đóng ngăn kéo')}>
+          <Button variant="icon" size="sm" onClick={onClose} aria-label={t('Đóng')}>
             <XIcon size={16} weight="bold" />
           </Button>
         </div>

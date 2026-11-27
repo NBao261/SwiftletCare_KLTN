@@ -56,7 +56,7 @@ export default function DomainExpertReviewsPage() {
   const { data: allZones } = useAllZones();
   const { data: houses } = useHouses(farmId || undefined);
   const places = useMemo<ReviewPlaces>(() => ({
-    zoneNames: new Map((allZones ?? []).map(zone => [zone._id, `${zone.houseName} • ${zone.name}`])),
+    zoneNames: new Map((allZones ?? []).map(zone => [zone._id, `${zone.houseName} · ${zone.name}`])),
     houseNames: new Map((houses ?? []).map(house => [house._id, house.name])),
   }), [allZones, houses]);
 
@@ -139,7 +139,7 @@ export default function DomainExpertReviewsPage() {
     try {
       setProcessingId(proposalId);
       await approveProposalMutation.mutateAsync(proposalId);
-      pushToast('Đã duyệt và áp dụng hệ số mờ đề xuất thành công.', 'success');
+      pushToast('Đã duyệt và áp dụng đề xuất hệ số mờ.', 'success');
       void refetchProposals();
     } catch (error: unknown) {
       pushToast(apiErrorMessage(error, 'Không duyệt được đề xuất. Thử lại.'), 'error');
@@ -177,8 +177,8 @@ export default function DomainExpertReviewsPage() {
         <div className="p-8">
           <EmptyState
             icon={<AlertTriangle className="h-8 w-8 text-alertRed" />}
-            title={t('Không thể tải danh sách thay đổi tham số')}
-            description={t('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.')}
+            title={t('Không tải được danh sách thay đổi tham số')}
+            description={t('Kiểm tra kết nối mạng rồi thử lại.')}
             action={
               <Button
                 variant="secondary"
@@ -229,8 +229,8 @@ export default function DomainExpertReviewsPage() {
         <div className="p-8">
           <EmptyState
             icon={<AlertTriangle className="h-8 w-8 text-alertRed" />}
-            title={t('Không thể tải danh sách đề xuất hệ số')}
-            description={t('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.')}
+            title={t('Không tải được danh sách đề xuất hệ số mờ')}
+            description={t('Kiểm tra kết nối mạng rồi thử lại.')}
             action={
               <Button
                 variant="secondary"
