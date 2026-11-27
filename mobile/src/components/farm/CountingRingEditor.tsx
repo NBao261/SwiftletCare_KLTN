@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Alert as NativeAlert, Modal, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { GestureDetector, GestureHandlerRootView, usePanGesture } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -18,6 +18,7 @@ import type { CameraNode, CountingRing } from '@/types'
 import {
   areRingsComplete,
   createSquareRing,
+  dragRingPoint,
   findNearestVertex,
   findRingAt,
   getCountingRingErrorMessage,
@@ -29,6 +30,7 @@ import {
   removeRingAt,
   RING_MAX_COUNT,
   ringsOfCamera,
+  type RingPoint,
   type RingVertexRef,
   toRingPoint,
   toSvgPoints,
@@ -82,10 +84,11 @@ export function CountingRingEditor({ camera, player, videoMessage, reviewNote, o
   // Người dùng đã chạm vào bản nháp chưa: chỉ hỏi "bỏ thay đổi" khi đã chỉnh, không hỏi khi chỉ mở ra xem
   const [isTouched, setTouched] = useState(false)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
-  // Góc đang được kéo; null khi không kéo
-  const [dragVertex, setDragVertex] = useState<RingVertexRef | null>(null)
+  // Góc đang kéo và vị trí của nó lúc bắt đầu kéo; ghi ngay trong onBegin để lần cập nhật đầu đã có, không đợi state
+  const dragStart = useRef<{ vertex: RingVertexRef; origin: RingPoint } | null>(null)
   const isChanged = isRingListChanged(savedRings, rings)
-  const canSave = isChanged && areRingsComplete(rings)
+  // Camera chưa có vòng riêng: khung vuông mở sẵn chỉ là gợi ý, người dùng phải chỉnh nó (hoặc thêm vòng) rồi mới lưu được
+  const canSave = isChanged && areRingsComplete(rings) && (savedRings.length > 0 || isTouched)
   const activeRing = rings[activeIndex] ?? null
   const ringColor = (ring: CountingRing) => (ring.into_ring_is_exit ? palette.primary : palette.statusNew)
 
@@ -98,8 +101,7 @@ export function CountingRingEditor({ camera, player, videoMessage, reviewNote, o
   }
 
   // Kéo góc: bắt góc gần chỗ chạm nhất trong bán kính chạm; chạm giữa một khung thì chọn khung đó. Callback chạy trên luồng JS
-  // (runOnJS) nên đọc thẳng bản nháp hiện tại. Lần cập nhật đầu có thể tới trước khi góc vừa bắt kịp vào state, nên tìm lại góc
-  // ở điểm bắt đầu kéo
+  // (runOnJS) nên đọc thẳng bản nháp hiện tại. Góc đi theo quãng ngón tay đã kéo, nên chạm nhẹ không làm góc nhảy
   const frame = { width: frameWidth, height: frameHeight }
   const pan = usePanGesture({
     runOnJS: true,
@@ -107,7 +109,7 @@ export function CountingRingEditor({ camera, player, videoMessage, reviewNote, o
     onBegin: event => {
       const vertex = findNearestVertex(rings, { x: event.x, y: event.y }, frame, TOUCH_RADIUS, activeIndex)
       if (vertex) {
-        setDragVertex(vertex)
+        dragStart.current = { vertex, origin: rings[vertex.ringIndex].points[vertex.pointIndex] }
         setActiveIndex(vertex.ringIndex)
         return
       }
@@ -115,14 +117,16 @@ export function CountingRingEditor({ camera, player, videoMessage, reviewNote, o
       if (touched !== -1) setActiveIndex(touched)
     },
     onUpdate: event => {
-      const start = { x: event.x - event.translationX, y: event.y - event.translationY }
-      const vertex = dragVertex ?? findNearestVertex(rings, start, frame, TOUCH_RADIUS, activeIndex)
-      if (!vertex) return
+      const drag = dragStart.current
+      if (!drag || (event.translationX === 0 && event.translationY === 0)) return
+      const point = dragRingPoint(drag.origin, { x: event.translationX, y: event.translationY }, frame)
       setSavedMessage(null)
       setTouched(true)
-      setRings(previous => moveRingVertex(previous, vertex, toRingPoint(event.x, event.y, frameWidth, frameHeight)))
+      setRings(previous => moveRingVertex(previous, drag.vertex, point))
     },
-    onFinalize: () => setDragVertex(null),
+    onFinalize: () => {
+      dragStart.current = null
+    },
   })
 
   // Thêm một khung vuông ở chỗ còn trống, chiều do người dùng chọn

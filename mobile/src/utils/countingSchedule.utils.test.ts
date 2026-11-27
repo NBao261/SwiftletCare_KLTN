@@ -130,9 +130,11 @@ describe('khoảng của phiên: sáng 05:00–07:00, chiều 17:00–19:00', ()
     expect(getSessionLimitError('16:45', 'evening')).toBe('Khung chiều trong khoảng 17:00–19:00')
   })
 
-  it('chưa gõ xong thì chưa báo; validateDayWindows chặn khung ngoài khoảng', () => {
+  it('chưa gõ xong thì chưa báo; khung đã lưu ngoài khoảng (vd. lưu trên web) không chặn việc lưu cả lịch', () => {
     expect(getSessionLimitError('04', 'morning')).toBeNull()
-    const lateEvening = { morning: { start: '05:30', end: '07:00' }, evening: { start: '18:00', end: '20:00' } }
-    expect(validateDayWindows(lateEvening)).toBe('Khung chiều trong khoảng 17:00–19:00')
+    const lateEvening = { morning: { start: '04:30', end: '07:00' }, evening: { start: '18:00', end: '20:00' } }
+    expect(validateDayWindows(lateEvening)).toBeNull()
+    const profile = { name: 'Mùa mưa', from: '06-01', to: '08-31', ...lateEvening }
+    expect(validateCountingSchedule({ default_windows: lateEvening, profiles: [profile], temporary: [] })).toBeNull()
   })
 })

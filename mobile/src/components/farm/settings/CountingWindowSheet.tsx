@@ -73,14 +73,19 @@ function DateStepper({ label, date, onChange }: { label: string; date: string; o
   )
 }
 
-// Lỗi của từng ô giờ trong một khung, báo ngay khi gõ: giờ, phút sai; ngoài khoảng của phiên (sáng 05:00–07:00, chiều
-// 17:00–19:00); kết thúc không sau bắt đầu
-function getWindowFieldErrors(window: CountingTimeWindow, session: CountingSession) {
+// Giờ ngoài khoảng của phiên chỉ báo ở ô người dùng vừa sửa: giờ đã lưu từ trước (kể cả lưu trên web) vẫn lưu lại được
+function getEditedLimitError(time: string, savedTime: string, session: CountingSession): string | null {
+  return time === savedTime ? null : getSessionLimitError(time, session)
+}
+
+// Lỗi của từng ô giờ trong một khung, báo ngay khi gõ: giờ, phút sai; ô vừa sửa ngoài khoảng của phiên (sáng 05:00–07:00,
+// chiều 17:00–19:00, Report 3 §4.5); kết thúc không sau bắt đầu
+function getWindowFieldErrors(window: CountingTimeWindow, saved: CountingTimeWindow, session: CountingSession) {
   return {
-    start: getTimeInputError(window.start) ?? getSessionLimitError(window.start, session),
+    start: getTimeInputError(window.start) ?? getEditedLimitError(window.start, saved.start, session),
     end:
       getTimeInputError(window.end) ??
-      getSessionLimitError(window.end, session) ??
+      getEditedLimitError(window.end, saved.end, session) ??
       getTimeRangeError(window.start, window.end),
   }
 }
@@ -91,17 +96,20 @@ function WindowFields({
   session,
   start,
   end,
+  saved,
   onChange,
 }: {
   label: string
   session: CountingSession
   start: string
   end: string
+  // Khung lúc mở sheet: ô chưa sửa không bị kiểm khoảng của phiên
+  saved: CountingTimeWindow
   onChange: (start: string, end: string) => void
 }) {
   const palette = usePalette()
   const limit = COUNTING_SESSION_LIMITS[session]
-  const errors = getWindowFieldErrors({ start, end }, session)
+  const errors = getWindowFieldErrors({ start, end }, saved, session)
   return (
     <View style={styles.field}>
       <Text variant="small" weight="semiBold" color={palette.textSecondary}>
@@ -157,11 +165,10 @@ export function CountingWindowSheet({
   const [error, setError] = useState<string | null>(null)
   const isProfile = target.kind === 'profile'
   const isDefault = target.kind === 'default'
-  // Hai khoảng phiên không chồng nhau (sáng xong 07:00, chiều từ 17:00) nên khung chiều luôn sau khung sáng khi cả hai đúng khoảng
   const monthFromError = isProfile ? getMonthDayInputError(monthFrom) : null
   const monthToError = isProfile ? getMonthDayInputError(monthTo) : null
-  const morningErrors = getWindowFieldErrors(windows.morning, 'morning')
-  const eveningErrors = getWindowFieldErrors(windows.evening, 'evening')
+  const morningErrors = getWindowFieldErrors(windows.morning, initialWindows.morning, 'morning')
+  const eveningErrors = getWindowFieldErrors(windows.evening, initialWindows.evening, 'evening')
   const hasLiveError = Boolean(
     monthFromError ||
       monthToError ||
@@ -250,6 +257,7 @@ export function CountingWindowSheet({
           session="morning"
           start={windows.morning.start}
           end={windows.morning.end}
+          saved={initialWindows.morning}
           onChange={(start, end) => setWindows(current => ({ ...current, morning: { start, end } }))}
         />
         <WindowFields
@@ -257,6 +265,7 @@ export function CountingWindowSheet({
           session="evening"
           start={windows.evening.start}
           end={windows.evening.end}
+          saved={initialWindows.evening}
           onChange={(start, end) => setWindows(current => ({ ...current, evening: { start, end } }))}
         />
       </View>

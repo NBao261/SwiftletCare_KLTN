@@ -9,11 +9,12 @@ const MAX_MONTH = 12
 // Số ngày tối đa của từng tháng (tháng 2 tính 29 vì hồ sơ lặp mỗi năm, như countingSchedule.utils dayOfYear)
 const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
-// Giữ tối đa 4 chữ số rồi chèn dấu sau 2 chữ số đầu; chữ số đầu lớn hơn `firstDigitMax` thì thêm "0" phía trước
-// ("5" thành "05" vì không có giờ 50, không có tháng 5x)
+// Giữ tối đa 4 chữ số rồi chèn dấu sau 2 chữ số đầu. Chỉ khi ô mới có một chữ số lớn hơn `firstDigitMax` thì thêm "0" phía
+// trước ("5" thành "05" vì không có giờ 50, không có tháng 5x); ô đã nhiều chữ số thì giữ nguyên để xoá, sửa giữa chừng không
+// bị chèn lại "0" (chữ sai thì báo lỗi)
 function formatTwoPartInput(text: string, separator: string, firstDigitMax: number): string {
   let digits = text.replace(/\D/g, '')
-  if (digits.length > 0 && Number(digits[0]) > firstDigitMax) digits = `0${digits}`
+  if (digits.length === 1 && Number(digits) > firstDigitMax) digits = `0${digits}`
   digits = digits.slice(0, 4)
   return digits.length <= 2 ? digits : `${digits.slice(0, 2)}${separator}${digits.slice(2)}`
 }

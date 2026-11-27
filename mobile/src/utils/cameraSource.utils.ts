@@ -33,8 +33,9 @@ export const EMPTY_CAMERA_SOURCE_FORM: CameraSourceForm = {
 const HOST_PATTERN =
   /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$/
 const PATH_PATTERN = /^\/\S{0,199}$/
-// rtsp://[tài khoản[:mật khẩu]@]địa chỉ[:cổng][/đường dẫn?query]; phần tài khoản lấy tới dấu @ cuối như URL của web
-const RTSP_PATTERN = /^rtsp:\/\/(?:(.*)@)?([^@:/?#\s]+)(?::(\d{1,5}))?(\/\S*)?$/i
+// rtsp://[tài khoản[:mật khẩu]@]địa chỉ[:cổng][/đường dẫn?query]; phần tài khoản nằm trước dấu "/" đầu tiên và lấy tới dấu @
+// cuối trong đoạn đó (mật khẩu có @ chưa mã hoá vẫn tách đúng), nên dấu @ trong đường dẫn hay query không bị nhận là tài khoản
+const RTSP_PATTERN = /^rtsp:\/\/(?:([^/]*)@)?([^@:/?#\s]+)(?::(\d{1,5}))?(\/\S*)?$/i
 const USERNAME_MAX_LENGTH = 64
 const PASSWORD_MAX_LENGTH = 128
 const PORT_MAX = 65535

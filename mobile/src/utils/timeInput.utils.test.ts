@@ -16,9 +16,11 @@ describe('formatTimeInput', () => {
     expect(formatTimeInput('ab1c7')).toBe('17')
   })
 
-  it('chữ số giờ đầu lớn hơn 2 thì thêm 0 phía trước', () => {
+  it('ô mới có một chữ số giờ lớn hơn 2 thì thêm 0 phía trước; ô nhiều chữ số thì không chèn lại', () => {
     expect(formatTimeInput('5')).toBe('05')
-    expect(formatTimeInput('930')).toBe('09:30')
+    // Xoá số "0" đầu của "05:30" còn "5:30": giữ nguyên để người dùng sửa tiếp, ô báo lỗi giờ thay vì tự chèn lại "0"
+    expect(formatTimeInput('5:30')).toBe('53:0')
+    expect(formatTimeInput('930')).toBe('93:0')
   })
 
   it('xoá lùi qua dấu ":" vẫn xoá được tiếp', () => {

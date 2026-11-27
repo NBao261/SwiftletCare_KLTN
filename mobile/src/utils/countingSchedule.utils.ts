@@ -24,8 +24,9 @@ export function isValidTime(text: string): boolean {
 
 export type CountingSession = 'morning' | 'evening'
 
-// Khung sáng (chim ra) nằm trong 05:00–07:00, khung chiều (chim về) trong 17:00–19:00 — Len chốt 26/11/2026 theo giờ chim ra
-// về thực tế; khung hệ thống BR-13 (05:30–07:00, 17:30–19:00) nằm trong đó. Backend và web chưa chặn: đề xuất ghi vào VISION-FR-019
+// Khung sáng (chim ra) nằm trong 05:00–07:00, khung chiều (chim về) trong 17:00–19:00 (Report 3 §4.5, A-4); khung hệ thống
+// BR-13 (05:30–07:00, 17:30–19:00) nằm trong đó. Backend và web chưa chặn, nên mobile chỉ kiểm ô người dùng vừa sửa trong sheet
+// (CountingWindowSheet), không chặn khi lưu cả lịch: khung đã lưu từ trước ngoài khoảng vẫn lưu lại được
 export const COUNTING_SESSION_LIMITS: Record<CountingSession, CountingTimeWindow> = {
   morning: { start: '05:00', end: '07:00' },
   evening: { start: '17:00', end: '19:00' },
@@ -67,20 +68,13 @@ function validateWindow(window: CountingTimeWindow): string | null {
   return null
 }
 
-// Lỗi của khung sáng và khung chiều của một ngày: mỗi khung đúng giờ, khung sáng xong trước khi khung chiều bắt đầu, mỗi khung nằm
-// trong khoảng của phiên
+// Lỗi của khung sáng và khung chiều của một ngày, như backend: mỗi khung đúng giờ, khung sáng xong trước khi khung chiều bắt đầu
 export function validateDayWindows(windows: CountingDayWindows): string | null {
   const morningError = validateWindow(windows.morning)
   if (morningError) return t('Khung sáng: {error}', { error: morningError })
   const eveningError = validateWindow(windows.evening)
   if (eveningError) return t('Khung chiều: {error}', { error: eveningError })
   if (windows.morning.end >= windows.evening.start) return t('Khung sáng phải kết thúc trước khi khung chiều bắt đầu')
-  const sessions: CountingSession[] = ['morning', 'evening']
-  for (const session of sessions) {
-    const window = windows[session]
-    const limitError = getSessionLimitError(window.start, session) ?? getSessionLimitError(window.end, session)
-    if (limitError) return limitError
-  }
   return null
 }
 

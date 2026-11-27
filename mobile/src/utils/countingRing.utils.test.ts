@@ -3,6 +3,7 @@ import type { CountingRing } from '@/types'
 import {
   areRingsComplete,
   createSquareRing,
+  dragRingPoint,
   findNearestVertex,
   findRingAt,
   getCountingRingErrorMessage,
@@ -146,5 +147,18 @@ describe('getCountingRingErrorMessage', () => {
     expect(getCountingRingErrorMessage(backendError(422))).toBe(
       'Mỗi vòng cần từ 3 đến 12 điểm trong khung hình, hai vòng không được trùng nhau',
     )
+  })
+})
+
+describe('dragRingPoint', () => {
+  const frame = { width: 400, height: 200 }
+
+  it('góc đi theo quãng ngón tay từ chỗ nó đang đứng, không nhảy tới điểm chạm', () => {
+    expect(dragRingPoint([0.5, 0.5], { x: 40, y: -20 }, frame)).toEqual([0.6, 0.4])
+    expect(dragRingPoint([0.25, 0.75], { x: 0, y: 0 }, frame)).toEqual([0.25, 0.75])
+  })
+
+  it('kéo quá mép thì kẹp trong khung', () => {
+    expect(dragRingPoint([0.9, 0.1], { x: 400, y: -400 }, frame)).toEqual([1, 0])
   })
 })

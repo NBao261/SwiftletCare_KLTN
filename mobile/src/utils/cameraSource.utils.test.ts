@@ -36,6 +36,18 @@ describe('parseRtspInput', () => {
     })
   })
 
+  it('dấu @ trong đường dẫn hay query không bị nhận là tài khoản', () => {
+    expect(parseRtspInput('rtsp://203.0.113.7:554/live?token=a@b')).toEqual({
+      host: '203.0.113.7',
+      port: '554',
+      username: '',
+      password: '',
+      path: '/live?token=a@b',
+    })
+    const address = `rtsp://${TEST_USER}:${TEST_PASSWORD}@203.0.113.7/live?owner=x@y`
+    expect(parseRtspInput(address)).toMatchObject({ host: '203.0.113.7', username: TEST_USER, password: TEST_PASSWORD })
+  })
+
   it('không phải RTSP thì null', () => {
     expect(parseRtspInput('http://1.2.3.4/stream')).toBeNull()
     expect(parseRtspInput('203.0.113.7')).toBeNull()

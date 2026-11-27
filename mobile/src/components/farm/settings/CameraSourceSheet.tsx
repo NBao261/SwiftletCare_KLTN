@@ -70,14 +70,11 @@ function CameraSourceEditor({
   const update = (patch: Partial<CameraSourceForm>) => setForm(current => ({ ...current, ...patch }))
   const presetPath = CAMERA_PATH_PRESETS.find(preset => preset.path === form.path)?.path ?? null
 
+  // Tách được thì điền các ô rồi xoá ô dán: địa chỉ dán kèm mật khẩu không nằm lại trên màn hình
   const applyPaste = (text: string) => {
-    setPasted(text)
-    if (!text.trim()) {
-      setPasteInvalid(false)
-      return
-    }
-    const parsed = parseRtspInput(text)
-    setPasteInvalid(parsed === null)
+    const parsed = text.trim() ? parseRtspInput(text) : null
+    setPasteInvalid(Boolean(text.trim()) && parsed === null)
+    setPasted(parsed ? '' : text)
     if (parsed) setForm(parsed)
   }
 

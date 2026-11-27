@@ -125,6 +125,16 @@ export function findNearestVertex(
   return best
 }
 
+// Vị trí mới của góc đang kéo: vị trí lúc bắt đầu kéo cộng quãng ngón tay đã đi (px), kẹp trong khung. Góc đi theo ngón tay
+// từ chỗ nó đang đứng, không nhảy tới đúng điểm chạm
+export function dragRingPoint(
+  origin: RingPoint,
+  translation: { x: number; y: number },
+  frame: { width: number; height: number },
+): RingPoint {
+  return toRingPoint(origin[0] * frame.width + translation.x, origin[1] * frame.height + translation.y, frame.width, frame.height)
+}
+
 // Đổi vị trí một góc, các vòng và góc khác giữ nguyên
 export function moveRingVertex(rings: readonly CountingRing[], vertex: RingVertexRef, point: RingPoint): CountingRing[] {
   return rings.map((ring, ringIndex) =>
