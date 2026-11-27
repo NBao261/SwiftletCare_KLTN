@@ -55,6 +55,19 @@ describe('menu theo vai trò từ danh mục chung', () => {
     }
   });
 
+  it('Quản trị viên: hai nhóm, kho thiết bị và cập nhật firmware là tab của Thiết bị; vai trò khác không có hai tab đó', () => {
+    const { sections } = roleMenu('ADMIN');
+    expect(sections.map(section => section.title)).toEqual(['Vận hành', 'Hệ thống']);
+    expect(sections.flatMap(section => section.items).map(item => item.label))
+      .toEqual(['Tổng quan hệ thống', 'Cảnh báo', 'Thiết bị', 'Người dùng', 'Cấu hình mặc định', 'Nhật ký hệ thống']);
+    const devices = sections.flatMap(section => section.items).find(item => item.label === 'Thiết bị');
+    expect(devices?.tabs?.map(tab => tab.path)).toEqual(['/devices', '/system/device-stock', '/ota']);
+    for (const role of ['FARM_OWNER', 'FARM_TECHNICIAN'] as const) {
+      const own = roleMenu(role).sections.flatMap(section => section.items).find(item => item.label === 'Thiết bị');
+      expect(own).toMatchObject({ path: '/devices', tabs: undefined });
+    }
+  });
+
   it('một tab duy nhất thì mục mở thẳng trang đó, không hiện tab', () => {
     const expert = roleMenu('DOMAIN_EXPERT').sections.flatMap(section => section.items);
     // So sánh nhà nằm trong Phân tích, không còn mục riêng; chuyên gia không vào Điều khiển tay

@@ -1,6 +1,6 @@
 import {
-  BasketIcon, BirdIcon, ChartBarIcon, ClipboardTextIcon, ClockCounterClockwiseIcon, CloudArrowUpIcon, CpuIcon, CrosshairIcon,
-  FileTextIcon, GaugeIcon, GearSixIcon, HandPointingIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon, PackageIcon,
+  BasketIcon, BirdIcon, ChartBarIcon, ClipboardTextIcon, ClockCounterClockwiseIcon, CpuIcon, CrosshairIcon,
+  FileTextIcon, GaugeIcon, GearSixIcon, HandPointingIcon, HeartbeatIcon, HouseIcon, LightbulbFilamentIcon,
   ScrollIcon, ShieldCheckIcon, SlidersHorizontalIcon, SquaresFourIcon, UsersIcon, WarningIcon, WrenchIcon,
 } from '@phosphor-icons/react'
 import type { MenuItem, MenuSection } from '@/components/layouts/AppSidebar'
@@ -44,9 +44,17 @@ const CATALOG: Record<MenuGroup, MenuItem[]> = {
   ],
   // Tài sản và cấu trúc, thiết lập một lần rồi ít đụng tới
   manage: [
-    { label: 'Thiết bị', path: '/devices', icon: CpuIcon },
-    { label: 'Kho thiết bị', path: '/system/device-stock', icon: PackageIcon },
-    { label: 'Cập nhật firmware', path: '/ota', icon: CloudArrowUpIcon },
+    // Quản trị viên thêm kho thiết bị và cập nhật firmware ở hai tab; vai trò khác chỉ vào được /devices nên không có tab
+    {
+      label: 'Thiết bị',
+      path: '/devices',
+      icon: CpuIcon,
+      tabs: [
+        { label: 'Thiết bị', path: '/devices' },
+        { label: 'Kho thiết bị', path: '/system/device-stock' },
+        { label: 'Cập nhật firmware', path: '/ota' },
+      ],
+    },
     { label: 'Trang trại', path: '/farms', icon: HouseIcon },
   ],
   expertise: [
@@ -96,13 +104,16 @@ interface SectionPlan {
   group: MenuGroup
   readOnly?: boolean
   only?: string[] // chỉ giữ các mục có đường dẫn này; không ghi thì giữ cả nhóm
+  with?: MenuGroup[] // gộp thêm mục của các nhóm này vào cuối
+  title?: MenuGroup // lấy tên nhóm này làm tiêu đề thay cho tên của `group`
 }
 
 // Nhóm việc chính của vai trò đứng đầu; dock điện thoại là 4 trang vai trò đó dùng nhiều nhất
 // hide: mục hoặc tab ẩn khỏi menu của vai trò này, ở mọi nhóm (trang vẫn mở được bằng đường dẫn)
 const ROLE_PLAN: Record<Role, { sections: SectionPlan[]; dock: string[]; hide?: string[] }> = {
   ADMIN: {
-    sections: [{ group: 'monitor' }, { group: 'manage' }, { group: 'system' }],
+    // Việc hằng ngày (tổng quan, cảnh báo thiết bị, thiết bị) một nhóm, việc quản trị hệ thống một nhóm
+    sections: [{ group: 'monitor', with: ['manage'], title: 'operations' }, { group: 'system' }],
     dock: ['/system/health', '/devices', '/alerts', '/users'],
   },
   FARM_OWNER: {
@@ -133,10 +144,10 @@ function itemFor(role: Role, item: MenuItem, hide: string[] = []): MenuItem | nu
 export function roleMenu(role: Role): { sections: MenuSection[]; dock: MenuItem[] } {
   const plan = ROLE_PLAN[role]
   const sections = plan.sections
-    .map(({ group, readOnly, only }) => ({
-      title: readOnly ? `${GROUP_TITLE[group]} (chỉ đọc)` : GROUP_TITLE[group],
+    .map(({ group, readOnly, only, with: merged = [], title = group }) => ({
+      title: readOnly ? `${GROUP_TITLE[title]} (chỉ đọc)` : GROUP_TITLE[title],
       collapsible: true,
-      items: CATALOG[group]
+      items: [group, ...merged].flatMap(name => CATALOG[name])
         .filter(item => !only || only.includes(item.path))
         .map(item => itemFor(role, item, plan.hide))
         .filter((item): item is MenuItem => item !== null),
