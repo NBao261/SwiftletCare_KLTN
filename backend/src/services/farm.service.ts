@@ -218,7 +218,7 @@ export async function inviteMember(farmId: string, user: CurrentUser, input: Inv
   })
   // Thư lỗi không làm hỏng lời mời
   await sendMail(invitationMail({
-    to: normalizedEmail, farmName: farm.name, roleLabel: ROLE_LABEL[role],
+    to: normalizedEmail, farmName: farm.name, role, roleLabel: ROLE_LABEL[role],
     token: invitation.token, expiresAt: invitation.expires_at,
   }))
   return invitation

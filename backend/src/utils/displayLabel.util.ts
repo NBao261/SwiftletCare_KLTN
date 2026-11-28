@@ -13,6 +13,25 @@ export const ROLE_LABEL: Record<Role, string> = {
   DOMAIN_EXPERT: 'Chuyên gia',
 }
 
+// Việc mỗi vai làm được trong trang trại, ghi trong thư mời cho người nhận biết mình được mời làm gì
+export const ROLE_ABILITIES: Partial<Record<Role, string[]>> = {
+  FARM_OWNER: [
+    'Xem số liệu, cảnh báo và điều khiển tay các nhà yến của trang trại',
+    'Thiết lập thiết bị và đặt ngưỡng',
+    'Duyệt phiếu công việc và giao việc cho kỹ thuật viên',
+  ],
+  FARM_TECHNICIAN: [
+    'Nhận cảnh báo của nhà được giao và xử lý phiếu công việc',
+    'Thiết lập, dời và gỡ thiết bị của nhà được giao',
+    'Ghi thu hoạch và đánh giá ngày',
+  ],
+  DOMAIN_EXPERT: [
+    'Kiểm chứng cảnh báo suy luận',
+    'Chỉnh ngưỡng, tham số điều khiển và duyệt thay đổi của chủ nhà yến',
+    'Viết kết luận cho báo cáo và mùa thu hoạch',
+  ],
+}
+
 export const DEVICE_STATUS_LABEL: Record<DeviceStatus, string> = {
   PENDING: 'Chờ kết nối',
   ONLINE: 'Online',
