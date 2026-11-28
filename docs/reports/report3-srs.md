@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.34 (Review 2, final scope) |
+| Document version | 4.2.35 (Review 2, final scope) |
 | Date | 28/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -298,7 +298,7 @@ A Farm Technician acts only on the houses assigned to them (AUTH-FR-013); the Do
 | Invite Farm Technicians, assign them to houses, set the duty roster | ✓ | read own roster | – | – |
 | View devices, their diagnostics and device alerts | ✓ | assigned houses | read | ✓ (every farm) ² |
 | Register a device from its label, assign it to a zone, move, remove or replace it | ✓ | assigned houses | – | – |
-| Enter the address of a bird-counting camera (FARM-FR-004b) | ✓ | – | – | – |
+| Enter the address of a bird-counting camera (FARM-FR-004b) | ✓ | assigned houses | – | – |
 | Print the QR code of a floor | ✓ | – | – | – |
 | Remote commands (restart, configuration push), OTA | restart | restart, assigned houses | – | ✓ (every farm) ² |
 | Maintain the provisioned-device stock: add devices and issue labels, re-issue or revoke an activation key | – | – | – | ✓ |
@@ -524,7 +524,7 @@ FARM-FR-003…012 (except 004, 005 and 009) form supporting flow SF-01: the Farm
 | FARM-FR-003b | Farm Owner, Farm Technician (assigned houses) | Provision the farm Wi-Fi through the controller's access-point mode, without reflashing; the mobile application guides this step right after registration. | After submitting SSID and password in AP mode, the controller joins the network and its first heartbeat sets it `ONLINE`. | M |
 | FARM-FR-003c | Controller, Backend | The AP-mode page takes only the Wi-Fi network. The controller knows only its device ID, its broker credential and the broker address, all set when the firmware is flashed (a development build may also find a broker on the local network by mDNS, Report 4 §3.4); its farm, house and zone are kept by the backend from its registration (BR-27), and it publishes and subscribes only on its own device topics. | The AP-mode page has no broker, farm, house, zone, key or credential field; a controller registered or moved to a zone receives that zone's configuration at its first heartbeat after the registration or the move, with nothing changed on the device. | M |
 | FARM-FR-004 | Farm Owner, Farm Technician (assigned houses) | Register the AI node of an entrance of a house with its device ID and activation key, scanned from its label or typed. | A registered camera node is linked to exactly one house; the rejections of FARM-FR-003 apply; a Farm Technician request for a house that is not assigned to them is rejected with 403; registration takes no camera address (FARM-FR-004b); the camera list never returns its RTSP address. | M |
-| FARM-FR-004b | Farm Owner, AI node, Backend | Enter the address of the IP camera an AI node reads (host, port, user name, password, stream path, or a pasted RTSP address) on the web; the AI node fetches it with its own device login and reports whether it receives the video. | The password is stored encrypted and never returned by any API, list or audit row; leaving the password empty keeps the saved one; each change reaches the AI node through its configuration within one heartbeat, without anything changed on the AI node's machine; the address is given only to the AI node itself (another device login or a wrong secret is rejected with 401); the camera card shows `OK`, no address, wrong user name or password, unreachable or no video from the AI node's heartbeat; a Farm Technician, Domain Expert or Administrator cannot read or edit the address (403). | M |
+| FARM-FR-004b | Farm Owner, Farm Technician (assigned houses), AI node, Backend | Enter the address of the IP camera an AI node reads (host, port, user name, password, stream path, or a pasted RTSP address) on the web; the AI node fetches it with its own device login and reports whether it receives the video. | The password is stored encrypted and never returned by any API, list or audit row; leaving the password empty keeps the saved one; each change reaches the AI node through its configuration within one heartbeat, without anything changed on the AI node's machine; the address is given only to the AI node itself (another device login or a wrong secret is rejected with 401); the camera card shows `OK`, no address, wrong user name or password, unreachable or no video from the AI node's heartbeat; a Farm Technician of a house that is not assigned to them, a Domain Expert or an Administrator cannot read or edit the address (403); a change by a Farm Technician is audited and notified to the Farm Owners, without the address. | M |
 | FARM-FR-005 | Farm Owner, Domain Expert | See each device online or offline in real time. | A device switches to offline within the limit of BR-10 for its kind and back to online at its next heartbeat. | M |
 | FARM-FR-006 | Farm Owner, Administrator | See device details for remote diagnosis: firmware version, uptime, Wi-Fi RSSI, free memory, last reset reason and IP address. | The values shown equal those of the last heartbeat; a reset caused by a watchdog, a crash or a brown-out is shown as such. | M |
 | FARM-FR-007 | Farm Owner, Farm Technician (assigned houses) | Choose the zone of a controller at registration by scanning the QR code fixed on that floor (FARM-FR-011) or by picking the zone from the list; a zone may have several controllers. | Scanning the floor code fills in its zone; a zone of a farm the user cannot access, or of a house not assigned to a Farm Technician, is rejected with 403; a Domain Expert request is rejected with 403. | M |
@@ -1188,6 +1188,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.35 | 28/11/2026 | FARM-FR-004b: the Farm Technician of an assigned house can also enter the IP camera address (decision of the leader, 28/11/2026); the Domain Expert and the Administrator still cannot; permission table of Section 2.4 follows |
 | 4.2.34 | 28/11/2026 | VISION-FR-014: the counting rings are no longer drawn on the published stream, only the boxes with track IDs and the day's total; the rings keep counting and can be shown on the local preview |
 | 4.2.33 | 28/11/2026 | EXPERT-FR-009, 010: a save that changes no value (a reset while the values are the defaults, a save of the same values) is not recorded, sent, notified or reviewed |
 | 4.2.32 | 28/11/2026 | ANALYTICS-FR-013: the current outdoor condition (sunny, cloudy, rain…) of the farm is shown to the people who see the house; Section 4.5 keeps it 10 min |
