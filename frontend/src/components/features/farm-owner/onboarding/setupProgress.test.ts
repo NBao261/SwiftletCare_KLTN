@@ -57,11 +57,11 @@ describe('tiến trình chờ thiết bị kết nối', () => {
   describe('camera đếm chim', () => {
     const camera: SetupInput = { ...base, isCamera: true, status: 'ONLINE' }
 
-    it('nút AI online là sẵn sàng; chưa nhập địa chỉ camera là việc của chủ nhà yến, không phải lỗi', () => {
+    it('nút AI online là sẵn sàng; chưa nhập địa chỉ camera là việc còn phải làm, không phải lỗi', () => {
       const progress = evaluateSetup({ ...camera, cameraStatus: 'NO_SOURCE' })
       expect(progress.verdict).toBe('ready')
       expect(progress.steps[2]).toMatchObject({ state: 'pending' })
-      expect(progress.steps[2].detail).toContain('Chủ nhà yến nhập')
+      expect(progress.steps[2].detail).toContain('Nhập ở trang chi tiết thiết bị')
     })
 
     it('nói đúng lý do khi camera IP không có hình', () => {
