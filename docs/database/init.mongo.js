@@ -2915,6 +2915,19 @@ ensureCollection("workorders", {
     "escalated_at": {
       "bsonType": ["date", "null"]
     },
+    "device_left": {
+      "bsonType": ["object", "null"],
+      "properties": {
+        "kind": {
+          "bsonType": "string",
+          "enum": ["REMOVED", "REPLACED", "MOVED"]
+        },
+        "at": {
+          "bsonType": "date"
+        }
+      },
+      "required": ["kind", "at"]
+    },
     "history": {
       "bsonType": ["array", "null"],
       "items": {

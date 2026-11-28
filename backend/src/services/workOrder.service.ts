@@ -6,14 +6,14 @@ import { House, Zone } from '@/models/houseZone.model'
 import { Telemetry } from '@/models/telemetry.model'
 import { User } from '@/models/user.model'
 import {
-  ChecklistItem, IWorkOrder, OPEN_WORK_ORDER_STATUSES, SiteCause, WorkOrder, WorkOrderHistoryEntry, WorkOrderOrigin,
+  ChecklistItem, DeviceLeftKind, IWorkOrder, OPEN_WORK_ORDER_STATUSES, SiteCause, WorkOrder, WorkOrderHistoryEntry, WorkOrderOrigin,
   WorkOrderStatus,
 } from '@/models/workOrder.model'
 import { findAlertHouse, ESCALATION_MS } from '@/services/alertRouting.service'
 import { logAction } from '@/services/auditLog.service'
 import { findRecipients, notifyUser } from '@/services/notification.service'
 import { recordMaintenance } from '@/services/maintenanceRecord.service'
-import { presignedGetUrl, putObject } from '@/config/minio.config'
+import { presignedGetUrl, putObject, removeObject } from '@/config/minio.config'
 import { AppError, BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import {
   activeHouseTechnicianIds, activeTechnicianOnDuty, assertFarmAccess, assertHouseAccess, assertNodeHouseAccess, listAccessibleFarmIds,
@@ -58,6 +58,22 @@ export async function storePhotos(files: UploadedPhoto[], prefix: string): Promi
 
 export const photoUrls = (keys: string[] | undefined): Promise<string[]> => Promise.all((keys ?? []).map(k => presignedGetUrl(k)))
 
+// Ảnh đã lưu mà lần ghi bị từ chối (409) thì xoá, kẻo nằm lại kho không bản ghi nào trỏ tới. Xoá lỗi chỉ ghi log
+export async function discardPhotos(keys: Array<string | undefined>): Promise<void> {
+  await Promise.all(keys.filter((key): key is string => !!key).map(key => removeObject(key).catch((err: Error) =>
+    logger.warn('Không xoá được ảnh của lần ghi bị từ chối', { key, err: err.message }))))
+}
+
+// Chạy lần ghi; lỗi thì xoá ảnh vừa lưu rồi ném lại
+export async function withStoredPhotos<T>(keys: Array<string | undefined>, write: () => Promise<T>): Promise<T> {
+  try {
+    return await write()
+  } catch (err) {
+    await discardPhotos(keys)
+    throw err
+  }
+}
+
 async function ownerIdsOf(farmId: unknown): Promise<string[]> {
   return (await findRecipients(String(farmId))).map(u => String(u._id))
 }
@@ -82,15 +98,39 @@ function historyEntry(from: WorkOrderStatus | undefined, to: WorkOrderStatus, by
   return { from, to, by: by as never, note, at: new Date() }
 }
 
-// Thiết bị được thay thì phiếu còn mở của nó ghi lại, để chủ nhà hiểu vì sao phiếu tự đóng hoặc chờ xác nhận
-export async function noteDeviceReplaced(oldNodeId: string, oldDeviceId: string, newDeviceId: string, userId: string): Promise<number> {
-  const open = await WorkOrder.find({ node_id: oldNodeId, is_open: true })
-  const note = `Thiết bị ${oldDeviceId} đã được thay bằng ${newDeviceId}`
-  for (const wo of open) {
-    await WorkOrder.updateOne({ _id: wo._id }, { $push: { history: historyEntry(wo.status, wo.status, userId, note) } })
-  }
-  return open.length
+// Gọi trước khi lưu việc gỡ, thay, dời: lỗi ở đây thì thiết bị chưa đổi gì. Cảnh báo đóng theo việc đó không được job kiểm
+// coi là đã phục hồi. Trạng thái phiếu giữ nguyên; một lệnh ghi cho mọi phiếu. Phiếu phòng ngừa đóng theo checklist nên không đụng
+export async function markDeviceLeft(nodeId: unknown, kind: DeviceLeftKind, user: CurrentUser, note: string): Promise<IWorkOrder[]> {
+  const ids = await WorkOrder.find({ node_id: nodeId, is_open: true, kind: 'REPAIR' }).distinct('_id')
+  if (ids.length === 0) return []
+  const at = new Date()
+  await WorkOrder.updateMany({ _id: { $in: ids }, is_open: true }, [{
+    $set: {
+      device_left: { $literal: { kind, at } },
+      history: { $concatArrays: ['$history', [{ from: '$status', to: '$status', by: new Types.ObjectId(user._id), note: { $literal: note }, at }]] },
+    },
+  }])
+  return WorkOrder.find({ _id: { $in: ids }, 'device_left.at': at })
 }
+
+// Gọi sau khi thao tác thiết bị đã xong. Thông báo hỏng không được làm hỏng việc gỡ, thay, dời
+export async function notifyDeviceLeft(orders: IWorkOrder[], kind: DeviceLeftKind, user: CurrentUser, note: string): Promise<void> {
+  for (const wo of orders) {
+    try {
+      const recipients = new Set([...await handlerIds(wo), ...await ownerIdsOf(wo.farm_id)])
+      recipients.delete(user._id)
+      await notifyAll([...recipients], wo, `Thiết bị của phiếu công việc đã ${DEVICE_LEFT_LABEL[kind]}: ${wo.title}`,
+        `${asSentence(note)} Phiếu không còn tự kiểm phục hồi bằng dữ liệu: chủ nhà yến kiểm tại nhà yến rồi duyệt, hoặc huỷ phiếu nếu không cần sửa nữa.`)
+    } catch (err) {
+      logger.warn('Báo việc thiết bị rời chỗ cho phiếu công việc thất bại', { workOrderId: String(wo._id), err })
+    }
+  }
+}
+
+// Lý do người dùng gõ có thể đã có dấu chấm
+const asSentence = (text: string) => `${text.trim().replace(/[.\s]+$/, '')}.`
+
+const DEVICE_LEFT_LABEL: Record<DeviceLeftKind, string> = { REMOVED: 'bị gỡ', REPLACED: 'được thay', MOVED: 'được dời' }
 
 // Có điều kiện: 2 thao tác đồng thời không cùng qua được; sai trạng thái → 409
 async function transition(
@@ -372,9 +412,33 @@ export async function getWorkOrder(id: string, user: CurrentUser) {
   return presentWorkOrder(await findWorkOrderWithAccess(id, user), true)
 }
 
+interface TakeOver { set: Record<string, unknown>; note?: string; previousId?: string }
+
+// Kỹ thuật viên làm phiếu của người khác, hay phiếu chưa giao ai, thì thành người nhận: thông báo sau đó tới đúng người đang làm.
+// Farm Owner tự làm thì người nhận giữ nguyên
+async function takeOverBy(wo: IWorkOrder, user: CurrentUser): Promise<TakeOver> {
+  if (user.role !== 'FARM_TECHNICIAN' || (wo.assignee_id && String(wo.assignee_id) === user._id)) return { set: {} }
+  const set = { assignee_id: user._id, assigned_at: new Date() }
+  if (!wo.assignee_id) return { set, note: 'Nhận phiếu chưa giao ai' }
+  const previous = await User.findById(wo.assignee_id).select('full_name').lean()
+  return { set, note: `Nhận làm thay ${previous?.full_name ?? 'người được giao trước'}`, previousId: String(wo.assignee_id) }
+}
+
+async function afterTakeOver(wo: IWorkOrder, user: CurrentUser, claim: TakeOver): Promise<void> {
+  if (!claim.note) return
+  await audit(user, 'WORK_ORDER_REASSIGNED', wo, { from: claim.previousId ?? null, to: user._id, taken_over: true })
+  if (claim.previousId) {
+    const me = await User.findById(user._id).select('full_name').lean()
+    await notifyAll([claim.previousId], wo, `Phiếu công việc đã có người nhận làm: ${wo.title}`,
+      `${me?.full_name ?? 'Một kỹ thuật viên khác'} đã nhận làm phiếu này thay bạn.`)
+  }
+}
+
 export async function startWorkOrder(id: string, user: CurrentUser) {
   const wo = await findWorkOrderWithAccess(id, user)
-  const updated = await transition(wo, ['OPEN'], 'IN_PROGRESS', { started_at: new Date() }, user._id)
+  const claim = await takeOverBy(wo, user)
+  const updated = await transition(wo, ['OPEN'], 'IN_PROGRESS', { started_at: new Date(), ...claim.set }, user._id, claim.note)
+  await afterTakeOver(updated, user, claim)
   return presentWorkOrder(updated, true)
 }
 
@@ -389,7 +453,6 @@ export async function updateChecklistItem(
   const current = wo.checklist[input.item_index]
   if (!current) throw BadRequestError('Mục checklist không tồn tại')
 
-  const [photoKey] = photo ? await storePhotos([photo], `work-orders/${wo._id}/checklist`) : []
   const prefix = `checklist.${input.item_index}`
   let repairId = current.repair_work_order_id
   if (input.result === 'DEFECT' && !repairId) {
@@ -424,23 +487,28 @@ export async function updateChecklistItem(
     }
   }
   const note = input.note?.trim()
-  const updated = await WorkOrder.findOneAndUpdate(
-    { _id: wo._id, status: 'IN_PROGRESS' },
-    {
-      $set: {
-        [`${prefix}.result`]: input.result,
-        [`${prefix}.by`]: user._id,
-        [`${prefix}.at`]: new Date(),
-        ...(note && { [`${prefix}.note`]: note }),
-        ...(photoKey && { [`${prefix}.photo`]: photoKey }),
-        ...(repairId && { [`${prefix}.repair_work_order_id`]: repairId }),
+  // Lưu ảnh ngay trước lần ghi dùng nó: lỗi ở các bước trên không để lại ảnh
+  const [photoKey] = photo ? await storePhotos([photo], `work-orders/${wo._id}/checklist`) : []
+  const updated = await withStoredPhotos([photoKey], async () => {
+    const result = await WorkOrder.findOneAndUpdate(
+      { _id: wo._id, status: 'IN_PROGRESS' },
+      {
+        $set: {
+          [`${prefix}.result`]: input.result,
+          [`${prefix}.by`]: user._id,
+          [`${prefix}.at`]: new Date(),
+          ...(note && { [`${prefix}.note`]: note }),
+          ...(photoKey && { [`${prefix}.photo`]: photoKey }),
+          ...(repairId && { [`${prefix}.repair_work_order_id`]: repairId }),
+        },
+        // Mongoose bỏ qua key undefined trong $set
+        ...(!note && { $unset: { [`${prefix}.note`]: 1 } }),
       },
-      // Mongoose bỏ qua key undefined trong $set
-      ...(!note && { $unset: { [`${prefix}.note`]: 1 } }),
-    },
-    { new: true },
-  )
-  if (!updated) throw ConflictError('Work Order vừa được người khác cập nhật, hãy tải lại')
+      { new: true },
+    )
+    if (!result) throw ConflictError('Work Order vừa được người khác cập nhật, hãy tải lại')
+    return result
+  })
   return presentWorkOrder(updated, true)
 }
 
@@ -469,10 +537,14 @@ export async function completeWorkOrder(
   const photos = await storePhotos(files, `work-orders/${wo._id}`)
   const now = new Date()
   const to: WorkOrderStatus = wo.alert_id && !preventive ? 'VERIFYING' : 'AWAITING_APPROVAL'
-  const updated = await transition(wo, ['IN_PROGRESS'], to, {
+  const claim = await takeOverBy(wo, user)
+  // Diễn biến của bước này vẫn đọc là báo xong; nhận làm thay ghi kèm
+  const doneNote = claim.note && `Báo xong, ${claim.note.charAt(0).toLowerCase()}${claim.note.slice(1)}`
+  const updated = await withStoredPhotos(photos, () => transition(wo, ['IN_PROGRESS'], to, {
     done_at: now, cause: input.cause, work_note: input.work_note?.trim() || undefined,
-    photos: [...wo.photos, ...photos], ...(to === 'AWAITING_APPROVAL' && { verified_at: now }),
-  }, user._id)
+    photos: [...wo.photos, ...photos], ...(to === 'AWAITING_APPROVAL' && { verified_at: now }), ...claim.set,
+  }, user._id, doneNote))
+  await afterTakeOver(updated, user, claim)
   if (wo.alert_id && input.cause) {
     await Alert.updateOne({ _id: wo.alert_id }, {
       $set: { site_cause: { cause: input.cause, photos, by: user._id, at: now } },
@@ -502,11 +574,17 @@ export async function approveWorkOrder(id: string, user: CurrentUser) {
     closed_at: now, result: preventive ? 'DONE' : 'REPAIRED',
   }, user._id)
   if (wo.alert_id) {
-    await Alert.updateOne(
-      { _id: wo.alert_id, status: { $in: OPEN_ALERT_STATUSES } },
-      { $set: { status: 'RESOLVED', resolved_at: now, acknowledgement_note: preventive
-        ? 'Đã bảo trì, chờ chủ nhà yến duyệt phiếu bảo trì' : 'Đã sửa, chờ chủ nhà yến duyệt phiếu công việc' } },
-    )
+    const closingNote = preventive ? 'Đã bảo trì, chủ nhà yến đã duyệt phiếu bảo trì' : 'Đã sửa, chủ nhà yến đã duyệt phiếu công việc'
+    // Ghi chú người xác nhận đã viết thì giữ
+    await Alert.updateOne({ _id: wo.alert_id, status: { $in: OPEN_ALERT_STATUSES } }, [{
+      $set: {
+        status: 'RESOLVED',
+        resolved_at: now,
+        acknowledgement_note: {
+          $cond: [{ $gt: [{ $strLenCP: { $ifNull: ['$acknowledgement_note', ''] } }, 0] }, '$acknowledgement_note', { $literal: closingNote }],
+        },
+      },
+    }])
   }
   if (preventive) await recordMaintenance(updated, user._id, now)
   await audit(user, 'WORK_ORDER_APPROVED', updated)
@@ -531,6 +609,44 @@ export async function cancelWorkOrder(id: string, user: CurrentUser, reason: str
   const updated = await transition(wo, ['OPEN', 'IN_PROGRESS', 'VERIFYING'], 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
   await audit(user, 'WORK_ORDER_CANCELLED', updated, { reason })
   return presentWorkOrder(updated, true)
+}
+
+const VERDICT_CANCELLABLE: WorkOrderStatus[] = ['OPEN', 'IN_PROGRESS', 'VERIFYING']
+
+// Cảnh báo bị bác bỏ: phiếu do chính lần "cần tới nhà" mở và chưa làm xong thì huỷ. Phiếu khác (thợ thấy hỏng tại chỗ,
+// chủ nhà mở tay, đã làm xong chờ duyệt) có thể vẫn cần làm: ghi vào diễn biến, báo người giữ phiếu và chủ nhà yến quyết
+export async function handleAlertRejected(alertId: unknown, user: CurrentUser, note: string): Promise<{ cancelled: number; noted: number }> {
+  const result = { cancelled: 0, noted: 0 }
+  const open = await WorkOrder.find({ alert_id: alertId, is_open: true, kind: 'REPAIR' })
+  for (const wo of open) {
+    const recipients = new Set(await handlerIds(wo))
+    if (wo.origin === 'EXPERT' && VERDICT_CANCELLABLE.includes(wo.status)) {
+      const reason = `Cảnh báo đã bị bác bỏ: ${note}`
+      try {
+        const updated = await transition(wo, VERDICT_CANCELLABLE, 'CANCELLED', { closed_at: new Date(), cancel_reason: reason }, user._id, reason)
+        await audit(user, 'WORK_ORDER_CANCELLED', updated, { reason, alert_rejected: true })
+        recipients.delete(user._id)
+        await notifyAll([...recipients], updated, `Phiếu công việc đã huỷ: ${updated.title}`, reason)
+        result.cancelled++
+        continue
+      } catch (err) {
+        // Vừa đổi trạng thái (409): ghi chú như phiếu không huỷ được
+        if (!(err instanceof AppError && err.statusCode === 409)) throw err
+      }
+    }
+    const updated = await WorkOrder.findOneAndUpdate(
+      { _id: wo._id, is_open: true },
+      { $push: { history: historyEntry(wo.status, wo.status, user._id, `Cảnh báo của phiếu đã bị bác bỏ: ${note}`) } },
+      { new: true },
+    )
+    if (!updated) continue
+    for (const id of await ownerIdsOf(updated.farm_id)) recipients.add(id)
+    recipients.delete(user._id)
+    await notifyAll([...recipients], updated, `Cảnh báo của phiếu công việc đã bị bác bỏ: ${updated.title}`,
+      `${asSentence(note)} Phiếu vẫn mở: chủ nhà yến quyết định làm tiếp hay huỷ phiếu.`)
+    result.noted++
+  }
+  return result
 }
 
 // Vừa đổi trạng thái giữa lúc đọc và huỷ thì đọc lại
@@ -636,7 +752,8 @@ async function verificationOf(
   if (RERAISED_ON_RECURRENCE.includes(alert.type) && alert.status !== 'RESOLVED' && alert.last_seen_at && alert.last_seen_at > doneAt) {
     return 'RECURRED'
   }
-  if (UNVERIFIABLE_RECOVERY.includes(alert.type)) return 'UNVERIFIABLE'
+  // Cảnh báo đóng vì thiết bị rời chỗ, số đo sau đó cũng không còn của chỗ hỏng
+  if (wo.device_left || UNVERIFIABLE_RECOVERY.includes(alert.type)) return 'UNVERIFIABLE'
   const elapsedSince = (from: Date) => now.getTime() - from.getTime() >= RECOVERY_VERIFY_MS
   const since = resolvedSince(alert)
   if (since) return elapsedSince(since > doneAt ? since : doneAt) ? 'RECOVERED' : null
@@ -660,8 +777,9 @@ async function verificationOf(
   }
 }
 
-// Mở tay hay chuyên gia mở trên cảnh báo đã đóng từ trước thì vẫn chờ người làm
+// Mở tay hay chuyên gia mở trên cảnh báo đã đóng từ trước thì vẫn chờ người làm. Thiết bị rời chỗ thì chủ nhà yến quyết
 function selfRecovered(wo: IWorkOrder, alert: VerifiedAlert, now: Date): boolean {
+  if (wo.device_left) return false
   const since = resolvedSince(alert)
   return !!since && since > wo.opened_at && now.getTime() - since.getTime() >= RECOVERY_VERIFY_MS
 }
@@ -686,8 +804,9 @@ export async function verifyWorkOrders(now = new Date()): Promise<{ verified: nu
           await notifyOwnersAwaitingApproval(updated)
           result.verified++
         } else if (outcome === 'UNVERIFIABLE') {
-          const updated = await transition(wo, ['VERIFYING'], 'AWAITING_APPROVAL', { verified_at: now }, undefined,
-            'Chưa có dữ liệu để kiểm phục hồi: chủ nhà yến kiểm tại nhà yến khi duyệt')
+          const updated = await transition(wo, ['VERIFYING'], 'AWAITING_APPROVAL', { verified_at: now }, undefined, wo.device_left
+            ? 'Thiết bị đã rời chỗ nên không kiểm phục hồi bằng dữ liệu được: chủ nhà yến kiểm tại nhà yến khi duyệt'
+            : 'Chưa có dữ liệu để kiểm phục hồi: chủ nhà yến kiểm tại nhà yến khi duyệt')
           await notifyOwnersAwaitingApproval(updated, true)
           result.verified++
         }

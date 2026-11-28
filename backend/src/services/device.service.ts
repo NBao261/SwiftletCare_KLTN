@@ -11,7 +11,7 @@ import { publishNodeConfig, publishZoneConfig } from '@/services/deviceConfig.se
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraLowFpsAlert, raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
-import { noteDeviceReplaced } from '@/services/workOrder.service'
+import { markDeviceLeft, notifyDeviceLeft } from '@/services/workOrder.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange, type ReviewApplyOptions } from '@/services/parameterReview.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
@@ -297,6 +297,9 @@ export async function reassignZone(
   }
   const destChain = await assertZoneAccess(input.newZoneId, user, 'device')
 
+  // Trước khi lưu việc dời: lỗi ở đây thì thiết bị chưa đổi gì, phiếu không tự đóng như đã phục hồi
+  const moveNote = `Thiết bị ${node.device_id} đã được dời từ Zone "${sourceChain.zone.name}" sang Zone "${destChain.zone.name}"`
+  const leftOrders = await markDeviceLeft(node._id, 'MOVED', user, moveNote)
   // Override đang chạy thuộc Zone cũ nên kết thúc ở đây
   node.zone_id = destChain.zone._id
   resetOverrides(node)
@@ -320,6 +323,7 @@ export async function reassignZone(
   }
   await notifyOwnersOfTechnicianAction(user, destChain.farm._id, node._id, moved)
   if (String(sourceChain.farm._id) !== String(destChain.farm._id)) await notifyOwnersOfTechnicianAction(user, sourceChain.farm._id, node._id, moved)
+  await notifyDeviceLeft(leftOrders, 'MOVED', user, moveNote)
   return { node, delivered }
 }
 
@@ -613,9 +617,10 @@ async function locateDevice(kind: DeviceKind, node: { zone_id?: unknown; house_i
 // Giữ document vì telemetry/alert tham chiếu node_id
 export async function decommissionDevice(
   kind: DeviceKind, nodeId: string, user: CurrentUser, reason: string,
-  opts: { replacedBy?: unknown; force?: boolean } = {},
+  opts: { replacement?: { _id: unknown; device_id: string }; force?: boolean } = {},
 ) {
-  const { replacedBy, force } = opts
+  const { replacement, force } = opts
+  const replacedBy = replacement?._id
   const Model = DEVICE_MODELS[kind]
   const node = await Model.findById(nodeId)
   if (!node) throw NotFoundError('Không tìm thấy thiết bị')
@@ -631,6 +636,13 @@ export async function decommissionDevice(
       'Gửi kèm force=true nếu vẫn muốn gỡ.',
     )
   }
+
+  // Trước khi lưu việc gỡ: lỗi ở đây thì thiết bị chưa đổi gì, phiếu không tự đóng như đã phục hồi
+  const leftKind = replacement ? 'REPLACED' : 'REMOVED'
+  const leftNote = replacement
+    ? `Thiết bị ${node.device_id} đã được thay bằng ${replacement.device_id}. Lý do: ${reason}`
+    : `Thiết bị ${node.device_id} đã được gỡ khỏi ${loc.place}. Lý do: ${reason}`
+  const leftOrders = await markDeviceLeft(node._id, leftKind, user, leftNote)
 
   node.decommissioned_at = new Date()
   node.decommission_reason = reason
@@ -655,6 +667,7 @@ export async function decommissionDevice(
     title: 'Thiết bị đã được gỡ khỏi nhà yến',
     body: `Kỹ thuật viên đã gỡ ${node.device_id} khỏi ${loc.place}. Lý do: ${reason}`,
   })
+  await notifyDeviceLeft(leftOrders, leftKind, user, leftNote)
   return node
 }
 
@@ -742,10 +755,7 @@ export async function replaceSensorNode(
   await newNode.save()
 
   // Thiết bị cũ thường vẫn ONLINE
-  const oldNode = await decommissionDevice('sensor', nodeId, user, input.reason, { replacedBy: newNode._id, force: true })
-  // Máy đã thay xong: ghi chú phiếu lỗi gặp trục trặc thì thôi, không làm hỏng việc thay
-  await noteDeviceReplaced(nodeId, old.device_id, input.new_device_id, user._id)
-    .catch(err => logger.warn('Không ghi được việc thay thiết bị vào phiếu công việc', { nodeId, err }))
+  const oldNode = await decommissionDevice('sensor', nodeId, user, input.reason, { replacement: newNode, force: true })
   await logAction(user._id, 'DEVICE_REPLACED', 'sensor_node', String(old._id), {
     oldDeviceId: old.device_id, newDeviceId: input.new_device_id, newNodeId: String(newNode._id), reason: input.reason,
   })

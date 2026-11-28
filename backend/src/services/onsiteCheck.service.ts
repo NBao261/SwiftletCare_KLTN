@@ -1,6 +1,6 @@
 import { Alert, type OnsiteObservation } from '@/models/alert.model'
 import { getAlert, getAlertDetail } from '@/services/alert.service'
-import { openWorkOrderForAlert, storePhotos, type UploadedPhoto } from '@/services/workOrder.service'
+import { discardPhotos, openWorkOrderForAlert, storePhotos, type UploadedPhoto } from '@/services/workOrder.service'
 import { ConflictError } from '@/utils/appError.util'
 import type { CurrentUser } from '@/types'
 
@@ -26,7 +26,11 @@ export async function answerOnsiteCheck(
       },
     },
   )
-  if (modifiedCount === 0) throw ConflictError('Yêu cầu kiểm tra tại chỗ đã được trả lời')
+  if (modifiedCount === 0) {
+    // Lần trả lời khác vừa ghi trước: ảnh của lần này không ai trỏ tới
+    await discardPhotos([photoKey])
+    throw ConflictError('Yêu cầu kiểm tra tại chỗ đã được trả lời')
+  }
 
   if (alert.type === 'SENSOR_ANOMALY' && input.observation === 'SENSOR_DIRTY_OR_FAULTY') {
     await openWorkOrderForAlert(alert, 'ONSITE_CHECK')
