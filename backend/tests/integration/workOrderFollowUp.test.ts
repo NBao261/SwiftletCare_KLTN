@@ -152,6 +152,46 @@ describe('thiết bị rời chỗ: phiếu không tự đóng như đã phục 
     expect((await workOrder()).status).toBe('OPEN')
   })
 
+  it('đánh dấu phiếu lỗi: gỡ thiết bị dừng trước khi đổi gì, cảnh báo còn mở', async () => {
+    const { user, node, raise } = await seed()
+    const alert = (await raise('SENSOR_FAULT'))!
+    jest.spyOn(WorkOrder, 'updateMany').mockRejectedValueOnce(new Error('ghi lỗi'))
+
+    await expect(decommissionDevice('sensor', String(node._id), user, 'Cảm biến cháy', { force: true })).rejects.toThrow('ghi lỗi')
+
+    expect((await SensorNode.findById(node._id).lean())!.decommissioned_at).toBeUndefined()
+    expect((await Alert.findById(alert._id).lean())!.status).toBe('ACTIVE')
+    expect((await workOrder()).device_left).toBeUndefined()
+  })
+
+  it('đánh dấu phiếu lỗi: dời thiết bị dừng trước khi đổi Zone', async () => {
+    const { user, node, zone, house, farm, raise } = await seed()
+    await raise('SENSOR_FAULT')
+    const dest = await Zone.create({ house_id: house._id, farm_id: farm._id, name: 'Z2' })
+    jest.spyOn(WorkOrder, 'updateMany').mockRejectedValueOnce(new Error('ghi lỗi'))
+
+    await expect(reassignZone(String(node._id), user, { newZoneId: String(dest._id) })).rejects.toThrow('ghi lỗi')
+
+    expect(String((await SensorNode.findById(node._id).lean())!.zone_id)).toBe(String(zone._id))
+  })
+
+  it('gửi thông báo lỗi: việc gỡ vẫn xong, cảnh báo đóng, phiếu vẫn được đánh dấu, có nhật ký', async () => {
+    const { user, node, raise } = await seed()
+    const alert = (await raise('SENSOR_FAULT'))!
+    ;(notifyUser as jest.Mock).mockRejectedValue(new Error('gửi lỗi'))
+    try {
+      await decommissionDevice('sensor', String(node._id), user, 'Cảm biến cháy', { force: true })
+    } finally {
+      // clearAllMocks không trả lại cách mock: để nguyên thì các test sau cũng lỗi gửi
+      ;(notifyUser as jest.Mock).mockResolvedValue(undefined)
+    }
+
+    expect((await SensorNode.findById(node._id).lean())!.decommissioned_at).toBeInstanceOf(Date)
+    expect((await Alert.findById(alert._id).lean())!.status).toBe('RESOLVED')
+    expect((await workOrder()).device_left?.kind).toBe('REMOVED')
+    expect(await AuditLog.exists({ action: 'DEVICE_DECOMMISSIONED', target_id: node._id })).toBeTruthy()
+  })
+
   it('phiếu đã đóng và phiếu phòng ngừa của thiết bị không bị đánh dấu', async () => {
     const { user, node, farm, house, raise } = await seed()
     await raise('SPEAKER_FAILURE')
@@ -351,7 +391,10 @@ describe('kỹ thuật viên làm phiếu thì thành người nhận phiếu', 
     const { _id } = await workOrder()
     await tech$.post(`/work-orders/${_id}/start`).expect(200)
     await tech2$.post(`/work-orders/${_id}/done`, { cause: 'SPEAKER' }).expect(200)
-    expect(String((await workOrder()).assignee_id)).toBe(String(tech2.user._id))
+    const done = await workOrder()
+    expect(String(done.assignee_id)).toBe(String(tech2.user._id))
+    // Diễn biến bước báo xong vẫn nói là báo xong
+    expect(done.history.at(-1)).toMatchObject({ from: 'IN_PROGRESS', to: 'VERIFYING', note: `Báo xong, nhận làm thay ${tech.user.full_name}` })
 
     await verifyWorkOrders()
     expect((await workOrder()).status).toBe('AWAITING_APPROVAL')

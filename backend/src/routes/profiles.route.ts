@@ -18,7 +18,7 @@ const content = () => [
 
 router.get ('/', requireRole(...READERS), query('farmId').isString().isMongoId(),
   query('status').optional().isString().isIn(['DRAFT', 'APPROVED', 'ARCHIVED']),
-  query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 }), validate, profileController.list)
+  query('page').optional().isString().isInt({ min: 1 }), query('limit').optional().isString().isInt({ min: 1 }), validate, profileController.list)
 router.post('/', requireRole(...READERS), body('farm_id').isString().isMongoId(), ...content(), validate, profileController.create)
 router.get ('/:id', requireRole(...READERS), param('id').isMongoId(), validate, profileController.getOne)
 router.put ('/:id', requireRole(...READERS), param('id').isMongoId(), ...content(), validate, profileController.update)

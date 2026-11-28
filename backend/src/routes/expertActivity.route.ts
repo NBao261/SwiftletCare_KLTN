@@ -10,7 +10,7 @@ import { isoRange } from '@/utils/inputRules.util'
 const router = Router()
 router.use(authenticate, requireRole('FARM_OWNER', 'DOMAIN_EXPERT'))
 
-const pageQuery = [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 })]
+const pageQuery = [query('page').optional().isString().isInt({ min: 1 }), query('limit').optional().isString().isInt({ min: 1 })]
 const farmScope = [query('farmId').isString().isMongoId(), query('zoneId').optional().isString().isMongoId()]
 
 router.get('/',

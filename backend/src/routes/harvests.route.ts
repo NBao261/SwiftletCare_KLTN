@@ -35,7 +35,7 @@ const harvestFields = (optional: boolean) => {
 router.get('/cycles', canRead,
   ...['zoneId', 'houseId', 'farmId'].map(name => query(name).optional().isString().bail().isMongoId()),
   query('status').optional().isString().bail().isIn(['OPEN', 'CLOSED', 'CONCLUDED']),
-  query('page').optional().isInt({ min: 1 }).toInt(), query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('page').optional().isString().isInt({ min: 1 }).toInt(), query('limit').optional().isString().isInt({ min: 1, max: 100 }).toInt(),
   validate, harvestController.listCycles)
 router.get('/cycles/:id', canRead, param('id').isMongoId(), validate, harvestController.getCycle)
 router.put('/cycles/:id/conclusion', requireRole('DOMAIN_EXPERT'), param('id').isMongoId(),

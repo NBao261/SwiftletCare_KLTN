@@ -41,7 +41,7 @@ router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(
 router.delete('/:id/members/:userId', requireRole('FARM_OWNER'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
 router.get   ('/:id/invitations', requireRole('FARM_OWNER'), param('id').isMongoId(),
   query('status').optional().isString().isIn(['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED']),
-  query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 }), validate, farmController.listInvitations)
+  query('page').optional().isString().isInt({ min: 1 }), query('limit').optional().isString().isInt({ min: 1 }), validate, farmController.listInvitations)
 
 router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),

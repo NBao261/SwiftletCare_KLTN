@@ -16,8 +16,8 @@ router.use(authenticate, requireRole('ADMIN'))
 const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 // paginate() tự kẹp về mức tối đa
 const paginationQuery = [
-  query('page').optional().isInt({ min: 1 }),
-  query('limit').optional().isInt({ min: 1 }),
+  query('page').optional().isString().isInt({ min: 1 }),
+  query('limit').optional().isString().isInt({ min: 1 }),
 ]
 
 router.get('/users',
