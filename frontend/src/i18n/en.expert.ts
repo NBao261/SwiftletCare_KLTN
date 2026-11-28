@@ -54,7 +54,7 @@ const enExpert: Record<string, string> = {
   '{{n}} thay đổi chưa lưu': '{{n}} unsaved changes',
   'Chưa có thay đổi': 'No changes yet',
   'Áp dụng ngay, chuyên gia sẽ xem lại.': 'Applied right away; the expert will review it.',
-  'Gửi chuyên gia xác nhận': 'Send to the expert to confirm',
+  'Lưu và báo chuyên gia': 'Save and notify the expert',
   'Chưa nhập hoặc không phải số': 'Empty or not a number',
   'Ngưỡng của Zone sẽ về mặc định hệ thống do Quản trị viên đặt. Không hoàn tác được.':
     'The Zone thresholds go back to the system default set by the Administrator. This cannot be undone.',

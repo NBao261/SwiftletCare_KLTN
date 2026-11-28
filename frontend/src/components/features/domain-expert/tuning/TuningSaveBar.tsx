@@ -11,8 +11,7 @@ interface TuningSaveBarProps {
   onCancel: () => void
 }
 
-// Nút lưu riêng của mỗi khối tham số: sáng lên khi có thay đổi, xám khi chưa có gì để lưu.
-// Chuyên gia lưu là xong; Farm Owner ở farm có chuyên gia thì thay đổi áp dụng ngay và gửi chuyên gia xác nhận
+// Nút lưu riêng của mỗi khối tham số: sáng khi có thay đổi, xám khi chưa có gì để lưu
 export default function TuningSaveBar({ changedCount, isSaving, onSave, onCancel }: TuningSaveBarProps) {
   const { canEditParameters, ownerNeedsExpert } = useExpertDecisionRights()
   if (!canEditParameters) return null
@@ -29,7 +28,7 @@ export default function TuningSaveBar({ changedCount, isSaving, onSave, onCancel
       <div className="flex items-center gap-2">
         {hasChanges && <Button variant="secondary" size="sm" disabled={isSaving} onClick={onCancel}>{t('Huỷ')}</Button>}
         <Button variant="accent" size="sm" disabled={!hasChanges} loading={isSaving} onClick={onSave}>
-          {ownerNeedsExpert ? t('Gửi chuyên gia xác nhận') : t('Lưu')}
+          {ownerNeedsExpert ? t('Lưu và báo chuyên gia') : t('Lưu')}
         </Button>
       </div>
     </div>
