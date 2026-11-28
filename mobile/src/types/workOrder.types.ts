@@ -67,6 +67,8 @@ export interface WorkOrder {
   verified_at?: string | null
   closed_at?: string | null
   escalated_at?: string | null
+  // Thiết bị của phiếu đã bị gỡ, thay hay dời Zone khi phiếu còn mở: hệ thống không kiểm phục hồi bằng dữ liệu nữa
+  device_left?: { kind: 'REMOVED' | 'REPLACED' | 'MOVED'; at: string } | null
   history?: WorkOrderHistoryEntry[]
 }
 

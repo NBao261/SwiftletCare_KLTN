@@ -49,9 +49,12 @@ export function getOwnerWorkOrderActions(workOrder: Pick<WorkOrder, 'status' | '
   return actions
 }
 
-// Phiếu chờ duyệt mà dữ liệu chưa xác nhận phục hồi (BR-41): chủ trại phải kiểm tại nhà trước khi duyệt
-export function isApprovalUnverified(workOrder: Pick<WorkOrder, 'status' | 'verified_at'>): boolean {
-  return workOrder.status === 'AWAITING_APPROVAL' && !workOrder.verified_at
+// Phiếu sửa chữa chờ duyệt mà hệ thống không kiểm phục hồi bằng dữ liệu (BR-41): chủ trại phải kiểm tại nhà trước khi duyệt.
+// Không dựa vào verified_at: backend đặt mốc đó cả khi chuyển chờ duyệt mà không kiểm được. Phiếu phòng ngừa kiểm bằng checklist
+export function isApprovalUnverified(
+  workOrder: Pick<WorkOrder, 'status' | 'kind' | 'alert_id' | 'alert_type' | 'device_left'>,
+): boolean {
+  return workOrder.status === 'AWAITING_APPROVAL' && workOrder.kind !== 'PREVENTIVE' && !hasRecoveryCheck(workOrder)
 }
 
 // Người nhận được khi giao lại: kỹ thuật viên của nhà trừ người đang giữ phiếu (backend 400 với người không phải thợ của nhà)
@@ -81,8 +84,9 @@ const UNVERIFIABLE_RECOVERY_TYPES: ReadonlySet<AlertType> = new Set(['ACTUATOR_F
 export const RECOVERY_VERIFY_MINUTES = 10
 
 // Báo xong có được hệ thống kiểm dữ liệu phục hồi không (BR-41): chỉ Work Order gắn cảnh báo, trừ loại chưa có dữ liệu để kiểm
-export function hasRecoveryCheck(workOrder: Pick<WorkOrder, 'alert_id' | 'alert_type'>): boolean {
-  if (!workOrder.alert_id) return false
+// và phiếu có thiết bị đã bị gỡ, thay, dời (cảnh báo đóng theo việc đó chứ không theo dữ liệu)
+export function hasRecoveryCheck(workOrder: Pick<WorkOrder, 'alert_id' | 'alert_type' | 'device_left'>): boolean {
+  if (!workOrder.alert_id || workOrder.device_left) return false
   return !workOrder.alert_type || !UNVERIFIABLE_RECOVERY_TYPES.has(workOrder.alert_type)
 }
 
@@ -102,6 +106,14 @@ export function getWorkOrderMilestones(workOrder: WorkOrder): { label: string; t
     { label: t('Đóng lúc'), time: workOrder.closed_at },
   ]
   return milestones.flatMap(item => (item.time ? [{ label: item.label, time: item.time }] : []))
+}
+
+// Dòng báo thiết bị đã rời chỗ ở chi tiết phiếu; null khi thiết bị còn ở chỗ
+export function getDeviceLeftLabel(workOrder: Pick<WorkOrder, 'device_left'>): string | null {
+  if (!workOrder.device_left) return null
+  if (workOrder.device_left.kind === 'REMOVED') return t('Thiết bị đã bị gỡ')
+  if (workOrder.device_left.kind === 'REPLACED') return t('Thiết bị đã được thay')
+  return t('Thiết bị đã được dời Zone')
 }
 
 // Kiểu ảnh theo đuôi file; backend nhận JPEG/PNG/WebP, camera trả JPEG

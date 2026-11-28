@@ -9,6 +9,7 @@ import {
   getRemainingPhotoSlots,
   getWorkOrderAction,
   getWorkOrderMilestones,
+  getDeviceLeftLabel,
   hasRecoveryCheck,
   isCauseAlertType,
   isOnsiteCheckAnswered,
@@ -122,6 +123,19 @@ describe('hasRecoveryCheck (BR-41)', () => {
     expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'UNEXPECTED_RESTART' })).toBe(false)
     expect(hasRecoveryCheck({ alert_id: null, alert_type: null })).toBe(false)
   })
+
+  it('thiết bị của phiếu đã bị gỡ, thay, dời: không kiểm được, kể cả loại kiểm được bằng dữ liệu', () => {
+    for (const kind of ['REMOVED', 'REPLACED', 'MOVED'] as const) {
+      expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'SENSOR_FAULT', device_left: { kind, at: '2026-11-29T01:00:00Z' } })).toBe(false)
+    }
+    expect(hasRecoveryCheck({ alert_id: 'alert-1', alert_type: 'SENSOR_FAULT', device_left: null })).toBe(true)
+  })
+
+  it('getDeviceLeftLabel: nhãn theo việc đã làm với thiết bị, null khi thiết bị còn ở chỗ', () => {
+    expect(getDeviceLeftLabel({ device_left: { kind: 'REMOVED', at: '2026-11-29T01:00:00Z' } })).toBe('Thiết bị đã bị gỡ')
+    expect(getDeviceLeftLabel({ device_left: { kind: 'MOVED', at: '2026-11-29T01:00:00Z' } })).toBe('Thiết bị đã được dời Zone')
+    expect(getDeviceLeftLabel({ device_left: null })).toBeNull()
+  })
 })
 
 describe('getRemainingPhotoSlots', () => {
@@ -167,10 +181,18 @@ describe('getOwnerWorkOrderActions', () => {
 })
 
 describe('isApprovalUnverified', () => {
-  it('chờ duyệt mà chưa có mốc xác minh thì chưa xác minh', () => {
-    expect(isApprovalUnverified({ status: 'AWAITING_APPROVAL', verified_at: null })).toBe(true)
-    expect(isApprovalUnverified({ status: 'AWAITING_APPROVAL', verified_at: '2026-11-19T01:00:00.000Z' })).toBe(false)
-    expect(isApprovalUnverified({ status: 'IN_PROGRESS', verified_at: null })).toBe(false)
+  const repair = { status: 'AWAITING_APPROVAL', kind: 'REPAIR', alert_id: 'alert-1', alert_type: 'SENSOR_FAULT' } as const
+
+  it('sửa chữa chờ duyệt mà hệ thống không kiểm được bằng dữ liệu thì chủ trại phải kiểm tại nhà', () => {
+    expect(isApprovalUnverified({ ...repair, alert_type: 'ACTUATOR_FAULT' })).toBe(true)
+    expect(isApprovalUnverified({ ...repair, alert_id: null, alert_type: null })).toBe(true)
+    expect(isApprovalUnverified({ ...repair, device_left: { kind: 'REPLACED', at: '2026-11-29T01:00:00Z' } })).toBe(true)
+  })
+
+  it('dữ liệu đã kiểm, phiếu phòng ngừa, hay chưa tới bước duyệt thì không cảnh báo', () => {
+    expect(isApprovalUnverified(repair)).toBe(false)
+    expect(isApprovalUnverified({ ...repair, kind: 'PREVENTIVE', alert_id: null, alert_type: null })).toBe(false)
+    expect(isApprovalUnverified({ ...repair, status: 'IN_PROGRESS', alert_type: 'ACTUATOR_FAULT' })).toBe(false)
   })
 })
 
