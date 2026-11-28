@@ -277,6 +277,7 @@ describe('bộ lọc query lặp lại hoặc là object → 422', () => {
     const { token, farm } = await seedOwnerFarm()
     await request(app).get(`/farms/${farm._id}/invitations?${twice('page', '1')}`).set(bearer(token)).expect(422)
     await request(app).get(`/harvests/cycles?${twice('limit', '5')}`).set(bearer(token)).expect(422)
+    await request(app).get('/harvests?page=1&page=2').set(bearer(token)).expect(422)
     const admin = await User.create({ email: `admin-p-${Date.now()}@test.vn`, password_hash: 'password123', full_name: 'A', role: 'ADMIN' })
     const adminToken = jwt.sign({ sub: String(admin._id), role: 'ADMIN' }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
     await request(app).get(`/admin/users?${twice('page', '1')}`).set(bearer(adminToken)).expect(422)
