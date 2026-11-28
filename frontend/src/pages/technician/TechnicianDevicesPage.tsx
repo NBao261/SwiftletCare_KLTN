@@ -13,6 +13,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import DeviceListRow, { DEVICE_ROW_GRID } from "@/components/features/technician/devices/DeviceListRow";
 import { countByTab, matchesSearch, matchesTab, sortDevices, type DeviceTab } from "@/components/features/technician/devices/deviceStatus.utils";
 import { restartBlockReason } from "@/lib/deviceCommand";
+import TechnicianCameraSection from "@/components/features/technician/devices/TechnicianCameraSection";
+import { housesInScope } from "@/components/features/technician/devices/deviceScope.utils";
 import LullabyTracksModal from "@/components/features/farm-owner/devices/LullabyTracksModal";
 import MoveControllerModal from "@/components/features/farm-owner/devices/MoveControllerModal";
 import ReplaceControllerModal from "@/components/features/farm-owner/devices/ReplaceControllerModal";
@@ -70,6 +72,7 @@ export default function TechnicianDevicesPage() {
   const rebootNode = nodes?.find((n) => n._id === rebootNodeId) ?? null;
 
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+  const cameraHouses = useMemo(() => housesInScope(scope.houses, scope.farmId, scope.houseId), [scope.houses, scope.farmId, scope.houseId]);
 
   function handleReboot() {
     if (!rebootNode) return;
@@ -220,6 +223,8 @@ export default function TechnicianDevicesPage() {
         />
 
       </SectionCard>
+      {/* camera gắn cả nhà nên nằm ngoài danh sách bộ điều khiển theo Zone */}
+      <TechnicianCameraSection houses={cameraHouses} />
       {/* thiết bị gỡ nhầm khôi phục được trong 24 giờ */}
       <RemovedDevicesSection />
     </div>
