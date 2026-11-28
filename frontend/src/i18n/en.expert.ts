@@ -260,7 +260,6 @@ const enExpert: Record<string, string> = {
   'Khung {{n}} · Từ': 'Window {{n}}: from',
   '+ Thêm khung 2': '+ Add window 2',
   'Lưu thay đổi': 'Save changes',
-  '{{n}} thay đổi': '{{n}} changes',
   'Bộ ngưỡng và hệ số mẫu để áp cho nhiều nhà': 'Threshold and coefficient sets to apply to many houses',
   'Tự chỉnh mức phun sương theo dự báo thời tiết': 'Adjusts misting to the weather forecast',
   'Chim bay qua vòng quanh lỗ ra vào mới được đếm': 'Only birds crossing the ring at the entrance are counted',

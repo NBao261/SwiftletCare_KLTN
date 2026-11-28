@@ -67,7 +67,7 @@ export default function OutdoorWeatherCard({ zoneId, houseId }: { zoneId?: strin
             <div key={stat.key} className="flex items-center gap-3 rounded-xl border border-dashed border-warmGray/30 bg-white/70 px-3.5 py-3">
               <Icon size={18} className="shrink-0 text-warmGray" aria-hidden />
               <div className="min-w-0">
-                <p className="label-caption truncate">{stat.label}</p>
+                <p className="label-caption">{stat.label}</p>
                 <p className={cn('text-xl font-extrabold leading-tight tabular-nums', hasValue ? 'text-charcoal' : 'text-warmGray')}>
                   {hasValue ? num(stat.value as number, stat.digits) : NO_VALUE}
                   <span className="ml-1 text-xs font-medium text-warmGray">{stat.unit}</span>
