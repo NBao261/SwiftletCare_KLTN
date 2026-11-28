@@ -103,6 +103,8 @@ interface OpenMeteoCurrent {
 }
 
 const currentCache = new Map<string, { at: number; value: CurrentWeather }>()
+// Lần gọi đang chạy theo toạ độ: nhiều request cùng lúc chỉ gọi ra ngoài một lần
+const currentInFlight = new Map<string, Promise<CurrentWeather>>()
 
 const numberOrNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
@@ -112,7 +114,14 @@ export async function fetchCurrentWeather(coordinates: { lat: number; lng: numbe
   const key = `${coordinates.lat.toFixed(2)},${coordinates.lng.toFixed(2)}`
   const cached = currentCache.get(key)
   if (cached && now.getTime() - cached.at < CURRENT_WEATHER_TTL_MS) return cached.value
+  const running = currentInFlight.get(key)
+  if (running) return running
+  const request = requestCurrentWeather(coordinates, key, now).finally(() => currentInFlight.delete(key))
+  currentInFlight.set(key, request)
+  return request
+}
 
+async function requestCurrentWeather(coordinates: { lat: number; lng: number }, key: string, now: Date): Promise<CurrentWeather> {
   const url = new URL(OPEN_METEO_URL())
   url.searchParams.set('latitude', String(coordinates.lat))
   url.searchParams.set('longitude', String(coordinates.lng))
@@ -122,14 +131,15 @@ export async function fetchCurrentWeather(coordinates: { lat: number; lng: numbe
   if (!res.ok) throw new Error(`Open-Meteo trả ${res.status}`)
   const current = ((await res.json()) as { current?: OpenMeteoCurrent }).current
   const observedAt = typeof current?.time === 'string' ? Date.parse(`${current.time}Z`) : Number.NaN
-  if (!current || !Number.isFinite(observedAt)) throw new Error('Open-Meteo không trả số hiện tại')
+  // Thiếu giờ quan trắc hoặc is_day thì không đoán: ban đêm trời quang sẽ thành "nắng"
+  if (!current || !Number.isFinite(observedAt) || (current.is_day !== 0 && current.is_day !== 1)) throw new Error('Open-Meteo không trả số hiện tại')
 
   const condition = conditionOfWeatherCode(current.weather_code)
   const value: CurrentWeather = {
     observed_at: new Date(observedAt).toISOString(),
     condition,
     is_raining: isRainy(condition),
-    is_day: current.is_day !== 0,
+    is_day: current.is_day === 1,
     temperature_c: numberOrNull(current.temperature_2m),
     humidity_pct: numberOrNull(current.relative_humidity_2m),
     precipitation_mm: numberOrNull(current.precipitation),

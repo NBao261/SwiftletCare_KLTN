@@ -106,6 +106,31 @@ describe('GET /farms/houses/:houseId/weather/current', () => {
     expect(res.body.data.reason).toBe('UNAVAILABLE')
   })
 
+  it('thiếu is_day: coi là chưa lấy được, không đoán ban ngày', async () => {
+    const { token, path } = await seedWithCoordinates()
+    mockFetch(current({ is_day: null }))
+    const res = await request(app).get(path).set(bearer(token)).expect(200)
+    expect(res.body.data).toMatchObject({ weather: null, reason: 'UNAVAILABLE' })
+  })
+
+  it('nhiều request cùng lúc cho một toạ độ chỉ gọi dịch vụ ngoài một lần', async () => {
+    const { token, path } = await seedWithCoordinates()
+    const spy = mockFetch(current())
+    await Promise.all([1, 2, 3].map(() => request(app).get(path).set(bearer(token)).expect(200)))
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('Farm Technician: nhà được giao xem được (200), nhà không được giao 403', async () => {
+    const { farm, path } = await seedWithCoordinates()
+    mockFetch(current())
+    const tech = await User.create({ email: 'tech@test.vn', password_hash: 'password123', full_name: 'T', role: 'FARM_TECHNICIAN' })
+    await Farm.updateOne({ _id: farm._id }, { $push: { members: { user_id: tech._id, role: 'FARM_TECHNICIAN' } } })
+    const techToken = jwt.sign({ sub: String(tech._id), role: 'FARM_TECHNICIAN' }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
+    await request(app).get(path).set(bearer(techToken)).expect(403)
+    await House.updateOne({ farm_id: farm._id }, { $set: { technicians: [{ user_id: tech._id, primary: true }] } })
+    await request(app).get(path).set(bearer(techToken)).expect(200)
+  })
+
   it('Administrator không xem được (403); id sai thì 422; người ngoài farm 403', async () => {
     const { path } = await seedWithCoordinates()
     mockFetch(current())
