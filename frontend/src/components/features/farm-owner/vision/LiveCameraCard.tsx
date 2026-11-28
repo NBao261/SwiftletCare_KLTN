@@ -1,7 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { ArrowsInIcon, ArrowsOutIcon, HourglassIcon, VideoCameraSlashIcon, WifiSlashIcon } from '@phosphor-icons/react'
 import SimulatedBadge from '@/components/common/SimulatedBadge'
-import { ringsOfCamera } from '@/components/common/countingRing.utils'
 import StatusDot from '@/components/common/StatusDot'
 import { Button, Card, SelectMenu } from '@/components/ui'
 import { NO_VALUE } from '@/constants/display'
@@ -30,9 +29,9 @@ interface LiveCameraCardProps {
   compact?: boolean
 }
 
-// Xem trực tiếp camera của 1 nhà, kèm thông số và số đếm hôm nay
+// Xem trực tiếp camera của 1 nhà, kèm thông số và số đếm hôm nay; vòng đếm không hiện cho người xem
 export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action, showTodayCounts = true, compact = false }: LiveCameraCardProps) {
-  const { t, num, ago, date } = useTranslation(dashboardDict)
+  const { t, num, ago } = useTranslation(dashboardDict)
   const videoRef = useRef<HTMLVideoElement>(null)
   const { data: cameras, isLoading, isError, refetch } = useHouseCameras(houseId)
   const showCounts = showTodayCounts
@@ -59,8 +58,6 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
   const expandLabel = expanded ? t('camera.collapse') : t('camera.expand')
   // Số đếm hôm nay: nhà chưa có tin đếm (updated_at null) thì "_", không hiện 0
   const hasToday = today?.updatedAt != null
-  const ringCount = camera ? ringsOfCamera(camera).length : 0
-  const ringUpdatedAt = camera?.counting_ring?.updated_at
 
   // Thông số camera + đếm hôm nay; mọi giá trị từ GET /devices/camera-nodes và /analytics/bird-count/current
   // Tổng quan chỉ cần hai số tổng của cả nhà: ra buổi sáng, vào buổi chiều. Trạng thái camera đã có ở lớp phủ trên hình
@@ -71,12 +68,6 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
   const params: Array<{ label: string; value: ReactNode }> = compact ? exitAndEntry : [
     { label: t('camera.paramStatus'), value: camera ? <StatusDot status={camera.status} /> : NO_VALUE },
     { label: t('camera.paramHeartbeat'), value: camera ? ago(camera.last_heartbeat) : NO_VALUE },
-    {
-      label: t('camera.paramRing'),
-      value: !camera ? NO_VALUE : ringCount > 0
-        ? t('camera.ringSet', { n: ringCount, date: ringUpdatedAt ? date(ringUpdatedAt) : NO_VALUE })
-        : t('camera.ringDefault'),
-    },
     ...exitAndEntry,
     ...(showCounts ? [{ label: t('camera.paramReturn'), value: hasToday && today.returnRate !== null ? `${num(today.returnRate, 1)}%` : NO_VALUE }] : []),
   ]
