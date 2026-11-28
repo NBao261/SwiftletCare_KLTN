@@ -16,7 +16,7 @@ import { recordMaintenance } from '@/services/maintenanceRecord.service'
 import { presignedGetUrl, putObject } from '@/config/minio.config'
 import { AppError, BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import {
-  activeHouseTechnicianIds, activeTechnicianOnDuty, assertFarmAccess, assertHouseAccess, listAccessibleFarmIds,
+  activeHouseTechnicianIds, activeTechnicianOnDuty, assertFarmAccess, assertHouseAccess, assertNodeHouseAccess, listAccessibleFarmIds,
   listAssignedHouseIds,
 } from '@/utils/farmAccess.util'
 import { paginate } from '@/utils/helpers.util'
@@ -80,6 +80,16 @@ export async function remindPreventiveWorkOrder(wo: IWorkOrder, alsoOwners: bool
 
 function historyEntry(from: WorkOrderStatus | undefined, to: WorkOrderStatus, by?: string, note?: string) {
   return { from, to, by: by as never, note, at: new Date() }
+}
+
+// Thiết bị được thay thì phiếu còn mở của nó ghi lại, để chủ nhà hiểu vì sao phiếu tự đóng hoặc chờ xác nhận
+export async function noteDeviceReplaced(oldNodeId: string, oldDeviceId: string, newDeviceId: string, userId: string): Promise<number> {
+  const open = await WorkOrder.find({ node_id: oldNodeId, is_open: true })
+  const note = `Thiết bị ${oldDeviceId} đã được thay bằng ${newDeviceId}`
+  for (const wo of open) {
+    await WorkOrder.updateOne({ _id: wo._id }, { $push: { history: historyEntry(wo.status, wo.status, userId, note) } })
+  }
+  return open.length
 }
 
 // Có điều kiện: 2 thao tác đồng thời không cùng qua được; sai trạng thái → 409
@@ -318,6 +328,8 @@ export async function presentWorkOrder(wo: IWorkOrder, withPhotos: boolean) {
 export interface ListWorkOrdersQuery {
   farmId?: string
   houseId?: string
+  // Phiếu của một thiết bị: bộ điều khiển hoặc camera
+  nodeId?: string
   alertId?: string
   assigneeId?: string
   status?: WorkOrderStatus
@@ -338,6 +350,11 @@ export async function listWorkOrders(user: CurrentUser, query: ListWorkOrdersQue
   }
   // Nhà không được giao: 403 như các route theo nhà khác, không phải danh sách rỗng
   if (query.houseId) filter.$and = [{ house_id: (await assertHouseAccess(query.houseId, user)).house._id }]
+  if (query.nodeId) {
+    // Nhà của thiết bị không được giao: 403; thiết bị không có: 404
+    await assertNodeHouseAccess(query.nodeId, user)
+    filter.node_id = query.nodeId
+  }
   if (query.alertId) filter.alert_id = query.alertId
   if (query.assigneeId) filter.assignee_id = query.assigneeId === 'me' ? user._id : query.assigneeId
   if (query.status) filter.status = query.status

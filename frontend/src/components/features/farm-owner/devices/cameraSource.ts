@@ -1,3 +1,6 @@
+import type { DevicesKey } from '@/constants/devices.i18n'
+import type { CameraStatus } from '@/types'
+
 // Địa chỉ camera IP Farm Owner nhập cho nút AI: gợi ý đường dẫn theo hãng, tách địa chỉ RTSP dán vào, kiểm ô (cùng giới hạn backend)
 
 export interface CameraSourceForm {
@@ -35,6 +38,18 @@ export function parseRtspInput(text: string): CameraSourceForm | null {
     username: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     path: `${url.pathname || '/'}${url.search}`,
+  }
+}
+
+// Việc nên kiểm khi camera IP chưa có hình, theo tình trạng nút AI báo; chỉ gợi ý, không khẳng định nguyên nhân
+export function cameraHelpKeys(status: CameraStatus | null | undefined): DevicesKey[] {
+  switch (status) {
+    case 'OK': return []
+    case 'NO_SOURCE': return ['help.nosource']
+    case 'AUTH_FAILED': return ['help.auth1', 'help.auth2']
+    case 'UNREACHABLE': return ['help.unreach1', 'help.unreach2', 'help.unreach3']
+    case 'NO_FRAMES': return ['help.noframes1', 'help.noframes2']
+    default: return ['help.unknown']
   }
 }
 

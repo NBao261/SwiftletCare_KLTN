@@ -6,7 +6,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import authRoutes from '@/routes/auth.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { Alert, IAlert } from '@/models/alert.model'
+import { SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
+import { House, Zone } from '@/models/houseZone.model'
 import { User } from '@/models/user.model'
 import { dispatchAlertNotification, notifyUser } from '@/services/notification.service'
 import { handleTelegramUpdate, sendTelegram } from '@/services/telegram.service'
@@ -37,7 +39,8 @@ beforeEach(() => {
   fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ok: true, result: {} }) })
 })
 afterEach(async () => {
-  await Promise.all([Alert, Farm, User].map(m => (m as typeof User).deleteMany({})))
+  delete process.env.APP_PUBLIC_URL
+  await Promise.all([Alert, Farm, House, SensorNode, User, Zone].map(m => (m as typeof User).deleteMany({})))
 })
 
 let seq = 0
@@ -190,7 +193,48 @@ describe('gửi cảnh báo qua Telegram', () => {
   it('gửi tới chủ farm đã liên kết; không gửi cho người chưa liên kết và Domain Expert', async () => {
     const { alert } = await farmWith(DAY)
     await dispatchAlertNotification(alert('MEDIUM'))
-    expect(sent()).toEqual([{ chat_id: '100', text: 'Thường · Bơm chạy khô\nĐã ngừng phun' }])
+    expect(sent()).toHaveLength(1)
+    expect(sent()[0]).toMatchObject({ chat_id: '100', parse_mode: 'HTML' })
+    const { text } = sent()[0] as { text: string }
+    expect(text).toContain('<b>Thường</b>')
+    expect(text).toContain('<b>Bơm chạy khô</b>\nĐã ngừng phun')
+    expect(text).toContain('<b>Trang trại:</b> F')
+  })
+
+  it('tin cảnh báo ghi tên trang trại, nhà, Zone và mã thiết bị của cảnh báo; nút mở cảnh báo khi địa chỉ ứng dụng công khai', async () => {
+    process.env.APP_PUBLIC_URL = 'https://app.swiftletcare.io.vn'
+    const owner = await mkUser({ telegram_chat_id: '100', notification_preferences: { push: false, telegram: true } })
+    const farm = await Farm.create({ name: 'Trại yến Demo', address: 'x', owner_id: owner._id, members: [{ user_id: owner._id, is_primary: true }] })
+    const house = await House.create({ farm_id: farm._id, name: 'A · Nhà điều khiển' })
+    const zone = await Zone.create({ house_id: house._id, name: 'A · Tầng 1' })
+    const node = await SensorNode.create({ device_id: 'demo-ctl-a1', zone_id: zone._id, status: 'OFFLINE' })
+    const alert = new Alert({
+      farm_id: farm._id, zone_id: zone._id, node_id: node._id, type: 'NODE_OFFLINE', severity: 'CRITICAL', title: 'Thiết bị mất kết nối', message: 'Không gửi dữ liệu 30 giây.',
+    }) as IAlert
+    await dispatchAlertNotification(alert)
+
+    const message = sent()[0] as { text: string; reply_markup?: { inline_keyboard: Array<Array<{ text: string; url: string }>> } }
+    expect(message.text).toContain('🔴 <b>Khẩn cấp</b>')
+    expect(message.text).toContain('<b>Trang trại:</b> Trại yến Demo')
+    expect(message.text).toContain('<b>Nhà yến:</b> A · Nhà điều khiển')
+    expect(message.text).toContain('<b>Vị trí:</b> A · Tầng 1')
+    expect(message.text).toContain('<b>Thiết bị:</b> demo-ctl-a1')
+    expect(message.reply_markup?.inline_keyboard[0][0]).toEqual({ text: 'Mở cảnh báo', url: `https://app.swiftletcare.io.vn/alerts?highlight=${alert._id}` })
+  })
+
+  it('Telegram từ chối nút thì gửi lại đúng tin đó không nút; không có nút thì không gửi lại', async () => {
+    const reject = { ok: false, status: 400, json: async () => ({ ok: false, description: 'Bad Request: wrong HTTP URL' }) }
+    fetchMock.mockResolvedValueOnce(reject)
+    const message = { text: '<b>x</b>', button: { label: 'Mở', url: 'https://app.swiftletcare.io.vn/alerts' } }
+    expect(await sendTelegram('1', message)).toBe(true)
+    const [first, second] = sent() as Array<Record<string, unknown>>
+    expect(first).toHaveProperty('reply_markup')
+    expect(second).not.toHaveProperty('reply_markup')
+    expect(second).toMatchObject({ text: '<b>x</b>', parse_mode: 'HTML' })
+
+    fetchMock.mockReset().mockResolvedValue(reject)
+    expect(await sendTelegram('1', { text: 'y' })).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('tôn trọng giờ im lặng, trừ cảnh báo CRITICAL', async () => {
@@ -218,7 +262,9 @@ describe('gửi cảnh báo qua Telegram', () => {
     const unlinked = await mkUser()
     await notifyUser(String(linked._id), { title: 'Báo cáo sức khỏe Zone A', body: 'Đã sẵn sàng' })
     await notifyUser(String(unlinked._id), { title: 'x', body: 'y' })
-    expect(sent()).toEqual([{ chat_id: '555', text: 'Báo cáo sức khỏe Zone A\nĐã sẵn sàng' }])
+    expect(sent()).toEqual([{
+      chat_id: '555', text: '<b>Báo cáo sức khỏe Zone A</b>\nĐã sẵn sàng', parse_mode: 'HTML', link_preview_options: { is_disabled: true },
+    }])
 
     // Tài khoản bị khoá vẫn còn chat id nhưng không được nhận tiếp
     await User.updateOne({ _id: linked._id }, { status: 'LOCKED' })

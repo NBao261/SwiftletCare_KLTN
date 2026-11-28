@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CpuIcon, SlidersHorizontalIcon, SquaresFourIcon, WarningIcon, WifiHighIcon } from '@phosphor-icons/react';
 
-import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { Button, EmptyState, ErrorNotice, LoadingSkeleton } from '@/components/ui';
 import DeviceDetailCard from '@/components/features/farm-owner/devices/DeviceDetailCard';
 import DeviceSection from '@/components/features/farm-owner/devices/DeviceSection';
 import LullabyTracksModal from '@/components/features/farm-owner/devices/LullabyTracksModal';
@@ -27,6 +27,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { canManageController, canRestartController, canSetCameraSource } from '@/components/features/farm-owner/devices/deviceActions';
+import { NO_OPEN_ITEMS } from '@/components/features/farm-owner/devices/deviceWork';
+import { RESTART_SUPPORT_SINCE, restartBlockCode } from '@/lib/deviceCommand';
+import { useDeviceOpenItems } from '@/hooks/farm-owner/useDeviceOpenItems';
 import CameraSourceModal from '@/components/features/farm-owner/devices/CameraSourceModal';
 import MoveControllerModal from '@/components/features/farm-owner/devices/MoveControllerModal';
 import ReplaceControllerModal from '@/components/features/farm-owner/devices/ReplaceControllerModal';
@@ -53,8 +56,12 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const houseZones = house ? zones : [];
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
-  // Lịch và bài loa ru chỉ Farm Owner đặt; Domain Expert chỉ đọc
+  // Việc còn mở của cả nhà, gom theo thiết bị để mỗi thẻ hiện việc của mình
+  const openItems = useDeviceOpenItems(house ? [house._id] : [], true);
+  const { itemsByDevice } = openItems;
+  // Lịch loa ru chỉ Farm Owner đặt; danh sách bài thì Farm Technician cũng xem được (chỉ đọc)
   const canOperateSpeaker = usePermission('FARM_OWNER');
+  const canSeeTracks = usePermission('FARM_OWNER', 'FARM_TECHNICIAN');
   // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning; popup ở đây là lịch và bài loa ru của 1 bộ điều khiển
   const openZoneTuning = useOpenZoneTuning();
   const [scheduleNodeId, setScheduleNodeId] = useState<string>();
@@ -64,7 +71,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const sensorNodeById = useMemo(() => new Map((sensorNodes ?? []).map(node => [node._id, node])), [sensorNodes]);
   const scheduleNode = scheduleNodeId ? sensorNodeById.get(scheduleNodeId) : undefined;
   const tracksNode = tracksNodeId ? sensorNodeById.get(tracksNodeId) : undefined;
-  // khởi động lại bộ điều khiển (Farm Owner, thiết bị ONLINE)
+  // khởi động lại bộ điều khiển (Farm Owner và Farm Technician, thiết bị ONLINE)
   const role = useAuthStore(state => state.user?.role);
   const sendCommand = useSendNodeCommand();
   const push = useToastStore(state => state.push);
@@ -120,6 +127,11 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
     );
   }
 
+  // Vì sao chưa gửi được lệnh khởi động lại: mất kết nối, đang chờ kết nối, firmware cũ
+  const restartBlock = (device: DeviceItem): string | undefined => {
+    const code = restartBlockCode({ status: device.status, firmware_version: device.version });
+    return code ? t(`block.${code}`, { version: device.version ?? '', min: RESTART_SUPPORT_SINCE }) : undefined;
+  };
   const sensorCount = item.zoneGroups.reduce((sum, group) => sum + group.devices.length, 0);
   const renderCards = (devices: DeviceItem[], zoneName?: string) => (
     <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
@@ -129,8 +141,10 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
           device={device}
           zoneName={zoneName}
           onOpenSchedule={canOperateSpeaker && device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
-          onOpenTracks={canOperateSpeaker && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
-          onRestart={canRestartController(role, device) ? () => setRestartDevice(device) : undefined}
+          onOpenTracks={canSeeTracks && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
+          items={itemsByDevice.get(device.id) ?? NO_OPEN_ITEMS}
+          onRestart={canRestartController(role, device) && !restartBlock(device) ? () => setRestartDevice(device) : undefined}
+          restartBlockedReason={canRestartController(role, device) ? restartBlock(device) : undefined}
           onOpenCameraSource={canSetCameraSource(role, device) ? () => setCameraSourceDevice(device) : undefined}
           moreActions={canManageController(role, device) ? [
             { label: t('action.move'), onClick: () => setMoveDevice(device) },
@@ -144,6 +158,9 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-5">
+      {openItems.isError && (
+        <ErrorNotice onRetry={openItems.refetch}>{apiErrorMessage(openItems.error, t('open.loadFailed'))}</ErrorNotice>
+      )}
       <FarmFrame title={house.name} description={t('detail.subtitle', { farm: scope.farmNames.get(houseFarmId) ?? NO_VALUE })} help={t('detail.readOnly')}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiTile icon={SquaresFourIcon} label={t('detail.kpiZones')} value={num(item.zoneGroups.length)} sub={t('detail.kpiZonesSub')} />

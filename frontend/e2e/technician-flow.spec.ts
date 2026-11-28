@@ -122,17 +122,22 @@ test('T3 — xác nhận cảnh báo kèm nguyên nhân tìm thấy tại chỗ 
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 
-test('T4 — thiết bị của nhà được giao: hàng ghi nhà và Zone, nút khởi động lại khoá khi thiết bị chưa online (FARM-FR-013)', async ({ page }) => {
+test('T4 — thiết bị của nhà được giao: danh sách của Farm Owner, mở chi tiết nhà, nút khởi động lại khoá kèm lý do khi thiết bị chưa online (FARM-FR-013, 015)', async ({ page }) => {
   const crashes = await openAsTechnician(page, '/devices', { farmId, houseId: houseA, zoneId: zoneA });
 
-  // Cột Vị trí ghi nhà ở trên, Zone ở dưới; trang trại đã có ở thanh phạm vi
+  // Mở thẳng tab "Cần xử lý" khi có việc; xem "Tất cả" cho chắc thấy hết thiết bị
+  await page.getByRole('tab', { name: /Tất cả/ }).click();
+  // Danh sách ghi nhà và Zone của từng thiết bị; trang trại đã có ở thanh phạm vi
   await expect(page.getByText('A · Nhà điều khiển', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('A · Tầng 1', { exact: true }).first()).toBeVisible();
 
-  // Bộ điều khiển demo chưa từng kết nối nên nút khởi động lại bị khoá và ghi lý do, không chờ máy chủ từ chối
-  const reboot = page.getByRole('button', { name: 'Khởi động lại thiết bị' }).first();
-  await expect(reboot).toBeDisabled();
-  await expect(reboot).toHaveAttribute('title', /chỉ khởi động lại từ xa được khi đang online/);
+  // Bấm một thiết bị mở chi tiết của nhà; bộ điều khiển demo chưa từng kết nối nên nút khởi động lại bị khoá và ghi lý do
+  await page.getByRole('button', { name: /demo-ctl-a1/ }).first().click();
+  await expect(page).toHaveURL(/\/devices\/detail$/);
+  await expect(page.getByRole('heading', { name: 'A · Nhà điều khiển' })).toBeVisible();
+  const restart = page.getByRole('button', { name: 'Khởi động lại' }).first();
+  await expect(restart).toBeDisabled();
+  await expect(restart).toHaveAttribute('title', /chỉ khởi động lại từ xa được khi đang online/);
   expect(crashes, crashes.join('\n')).toHaveLength(0);
 });
 

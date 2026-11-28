@@ -37,10 +37,10 @@ export interface SetupProgress {
   remainingMs: number
 }
 
-// Lý do camera IP chưa có hình do nút AI báo; chưa nhập địa chỉ là việc của chủ nhà yến, không phải lỗi
+// Lý do camera IP chưa có hình do nút AI báo; chưa nhập địa chỉ là việc còn phải làm, không phải lỗi
 const VIDEO_DETAIL: Record<CameraStatus, string> = {
   OK: 'Đang nhận hình',
-  NO_SOURCE: 'Chưa nhập địa chỉ camera. Chủ nhà yến nhập ở trang chi tiết thiết bị',
+  NO_SOURCE: 'Chưa nhập địa chỉ camera. Nhập ở trang chi tiết thiết bị',
   AUTH_FAILED: 'Sai tài khoản hoặc mật khẩu camera',
   UNREACHABLE: 'Không kết nối được camera',
   NO_FRAMES: 'Kết nối được nhưng không có hình',

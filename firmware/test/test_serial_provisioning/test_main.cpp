@@ -21,11 +21,11 @@ void test_info_and_unknown_command() {
 
 void test_set_reads_every_field() {
   SerialRequest r = parseSerialLine(
-      "SC SET {\"deviceId\":\"ctl-a1b2c3\",\"brokerSecret\":\"s3cr3t_-x\",\"broker\":\"mqtt.swiftletcare.vn\",\"force\":true}");
+      "SC SET {\"deviceId\":\"ctl-a1b2c3\",\"brokerSecret\":\"s3cr3t_-x\",\"broker\":\"mqtt.swiftletcare.io.vn\",\"force\":true}");
   TEST_ASSERT_EQUAL(SerialRequest::SET, r.type);
   TEST_ASSERT_EQUAL_STRING("ctl-a1b2c3", r.deviceId);
   TEST_ASSERT_EQUAL_STRING("s3cr3t_-x", r.brokerSecret);
-  TEST_ASSERT_EQUAL_STRING("mqtt.swiftletcare.vn", r.broker);
+  TEST_ASSERT_EQUAL_STRING("mqtt.swiftletcare.io.vn", r.broker);
   TEST_ASSERT_TRUE(r.force);
 }
 

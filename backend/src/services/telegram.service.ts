@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { User } from '@/models/user.model'
 import { BadRequestError, NotFoundError, ServiceUnavailableError } from '@/utils/appError.util'
 import { criticalHasOutsideChannel } from '@/utils/notificationChannels.util'
+import { telegramLinkRejected, telegramLinked, telegramWelcome, type TelegramMessage } from '@/utils/telegramMessage.util'
 import logger from '@/utils/logger.util'
 
 // Liên kết bằng mã một lần qua deep link `/start <mã>`
@@ -31,11 +32,25 @@ async function callTelegram<T = unknown>(method: string, body: Record<string, un
   return json.result as T
 }
 
-// Không throw. false khi chưa cấu hình hoặc bị từ chối
-export async function sendTelegram(chatId: string, text: string): Promise<boolean> {
+// Không throw. false khi chưa cấu hình hoặc bị từ chối. Chuỗi gửi nguyên văn; TelegramMessage gửi dạng HTML kèm nút
+export async function sendTelegram(chatId: string, content: string | TelegramMessage): Promise<boolean> {
   if (!isTelegramConfigured()) return false
+  const message: TelegramMessage = typeof content === 'string' ? { text: content } : content
+  const html = typeof content !== 'string'
+  const payload = (withButton: boolean) => ({
+    chat_id: chatId,
+    text: message.text,
+    ...(html && { parse_mode: 'HTML', link_preview_options: { is_disabled: true } }),
+    ...(withButton && message.button && { reply_markup: { inline_keyboard: [[{ text: message.button.label, url: message.button.url }]] } }),
+  })
   try {
-    await callTelegram('sendMessage', { chat_id: chatId, text })
+    try {
+      await callTelegram('sendMessage', payload(true))
+    } catch (err) {
+      // Nút bị từ chối (địa chỉ không hợp lệ với Telegram) thì vẫn phải gửi được nội dung
+      if (!message.button) throw err
+      await callTelegram('sendMessage', payload(false))
+    }
     return true
   } catch (err) {
     // Không log token
@@ -87,7 +102,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
 
   const code = /^\/start\s+([0-9a-f]{32})$/i.exec(text)?.[1]
   if (!code) {
-    await sendTelegram(String(chatId), 'Đây là bot thông báo của SwiftletCare. Để nhận cảnh báo, mở Cài đặt trong ứng dụng và bấm "Kết nối Telegram".')
+    await sendTelegram(String(chatId), telegramWelcome())
     return
   }
 
@@ -99,9 +114,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
   if (user) {
     await User.updateMany({ _id: { $ne: user._id }, telegram_chat_id: String(chatId) }, { $unset: { telegram_chat_id: 1 } })
   }
-  await sendTelegram(String(chatId), user
-    ? `Đã kết nối với tài khoản ${user.email}. Bạn sẽ nhận cảnh báo của nhà yến tại đây.`
-    : 'Mã kết nối không đúng hoặc đã hết hạn. Hãy bấm "Kết nối Telegram" trong ứng dụng để lấy mã mới.')
+  await sendTelegram(String(chatId), user ? telegramLinked(user.email) : telegramLinkRejected())
 }
 
 // Long polling: chạy được không cần URL công khai. Chỉ đúng với 1 instance, nhiều instance thì dùng webhook

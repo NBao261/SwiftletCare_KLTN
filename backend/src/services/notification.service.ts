@@ -1,5 +1,7 @@
 import { User, SIGN_IN_FILTER, canSignIn } from '@/models/user.model'
+import { CameraNode, SensorNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
+import { House, Zone } from '@/models/houseZone.model'
 import { Notification, type NotificationRefKind } from '@/models/notification.model'
 import { sendPushToUser } from '@/services/push.service'
 import { sendTelegram } from '@/services/telegram.service'
@@ -10,6 +12,7 @@ import { paginate } from '@/utils/helpers.util'
 import logger from '@/utils/logger.util'
 import { channelEnabled } from '@/utils/notificationChannels.util'
 import { SEVERITY_LABEL } from '@/utils/displayLabel.util'
+import { alertTelegram, noticeTelegram, placeLine, type AlertPlace } from '@/utils/telegramMessage.util'
 import type { IAlert } from '@/models/alert.model'
 import type { CurrentUser, NotificationPreferences } from '@/types'
 
@@ -80,6 +83,24 @@ async function notifyExpertsPendingVerdict(alert: IAlert): Promise<void> {
 
 export { channelEnabled } from '@/utils/notificationChannels.util'
 
+// Tên trang trại, nhà, Zone và thiết bị của cảnh báo, tra một lần cho mọi người nhận. Lỗi tra thì tin vẫn đi, chỉ thiếu vị trí
+async function alertPlace(alert: IAlert): Promise<AlertPlace> {
+  try {
+    const zone = alert.zone_id ? await Zone.findById(alert.zone_id).select('name house_id').lean() : null
+    const houseId = alert.house_id ?? zone?.house_id
+    const [house, farm, sensor, camera] = await Promise.all([
+      houseId ? House.findById(houseId).select('name').lean() : null,
+      Farm.findById(alert.farm_id).select('name').lean(),
+      alert.node_id ? SensorNode.findById(alert.node_id).select('device_id').lean() : null,
+      alert.node_id ? CameraNode.findById(alert.node_id).select('device_id').lean() : null,
+    ])
+    return { farm: farm?.name, house: house?.name, zone: zone?.name, device: sensor?.device_id ?? camera?.device_id }
+  } catch (err) {
+    logger.warn('Không tra được vị trí của cảnh báo', { alertId: String(alert._id), err })
+    return {}
+  }
+}
+
 export interface DispatchAlertOptions {
   awaitsVerdict?: boolean
   repeat?: boolean
@@ -103,6 +124,7 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
     return
   }
 
+  const place = await alertPlace(alert)
   // Gửi song song: 1 người lỗi không chặn cảnh báo của người khác
   const results = await Promise.allSettled(recipients.map(async user => {
     const prefs = user.notification_preferences
@@ -115,13 +137,17 @@ export async function dispatchAlertNotification(alert: IAlert, opts: DispatchAle
     }
 
     const title = opts.escalation ? `Chưa ai xác nhận: ${alert.title}` : opts.repeat ? `Nhắc lại: ${alert.title}` : alert.title
-    // Không đưa mã enum ra tin nhắn (FE_Design)
-    const body = `${SEVERITY_LABEL[alert.severity]} · ${title}\n${alert.message}`
+    // Không đưa mã enum ra tin nhắn (FE_Design). Tiêu đề push là tên cảnh báo; thân tin là mức, vị trí rồi nội dung
+    const body = `${[SEVERITY_LABEL[alert.severity], placeLine(place)].filter(Boolean).join(' · ')}\n${alert.message}`
+    const telegram = alertTelegram({
+      alertId: String(alert._id), severity: alert.severity, title: alert.title, message: alert.message,
+      at: alert.created_at ?? new Date(), place, kind: opts.escalation ? 'escalation' : opts.repeat ? 'repeat' : undefined,
+    })
 
     // Các kênh chạy song song; kênh lỗi ghi log riêng
     const channels: Array<[string, Promise<unknown> | undefined]> = [
       ['push', channelEnabled(prefs, alert.severity, 'push') ? sendPush(String(user._id), title, body, { kind: 'alert', id: String(alert._id) }, alert.severity === 'CRITICAL') : undefined],
-      ['telegram', channelEnabled(prefs, alert.severity, 'telegram') && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, body) : undefined],
+      ['telegram', channelEnabled(prefs, alert.severity, 'telegram') && user.telegram_chat_id ? sendTelegram(user.telegram_chat_id, telegram) : undefined],
     ]
     const outcomes = await Promise.allSettled(channels.map(([, sending]) => sending))
     outcomes.forEach((outcome, i) => {
@@ -175,7 +201,7 @@ export async function notifyUser(userId: string, message: UserNotification, opts
       await sendPush(String(user._id), message.title, message.body, message.ref)
     }
     if (!emailOnly && user.notification_preferences?.telegram !== false && user.telegram_chat_id) {
-      await sendTelegram(user.telegram_chat_id, `${message.title}\n${message.body}`)
+      await sendTelegram(user.telegram_chat_id, noticeTelegram(message))
     }
     await sendEmail(opts.email ?? user.email, message.title, message.body)
   } catch (err) {

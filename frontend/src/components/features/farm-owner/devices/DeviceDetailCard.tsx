@@ -4,7 +4,10 @@ import { ArrowClockwiseIcon, CalendarBlankIcon, CpuIcon, GearSixIcon, MusicNotes
 import SimulatedBadge from '@/components/common/SimulatedBadge';
 import { ActionsMenu, Badge, type ActionsMenuItem } from '@/components/ui';
 import StatusDot from '@/components/common/StatusDot';
+import DeviceWorkPanel from '@/components/features/farm-owner/devices/DeviceWorkPanel';
 import { uptimeParts, type DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
+import { NO_OPEN_ITEMS, type DeviceOpenItems } from '@/components/features/farm-owner/devices/deviceWork';
+import { isUnexpectedReset, resetReasonKey } from '@/components/features/farm-owner/devices/resetReason';
 import { CAMERA_STATUS_TONE } from '@/components/features/farm-owner/devices/CameraSourceModal';
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { NO_VALUE } from '@/constants/display';
@@ -22,8 +25,12 @@ interface DeviceDetailCardProps {
   // Node cảm biến: mở popup lịch loa ru / bài loa ru
   onOpenSchedule?: () => void;
   onOpenTracks?: () => void;
-  // Farm Owner khởi động lại bộ điều khiển đang ONLINE
+  // Farm Owner và Farm Technician khởi động lại bộ điều khiển đang ONLINE
   onRestart?: () => void;
+  // Có quyền khởi động lại nhưng chưa gửi được: nút khoá, lý do nằm ở chú thích của nút
+  restartBlockedReason?: string;
+  // Cảnh báo thiết bị và Work Order còn mở của thiết bị này
+  items?: DeviceOpenItems;
   // Camera: Farm Owner nhập địa chỉ camera IP cho nút AI
   onOpenCameraSource?: () => void;
   // dời, thay, gỡ bộ điều khiển (chỉ Farm Owner); rỗng thì không hiện menu
@@ -31,11 +38,12 @@ interface DeviceDetailCardProps {
 }
 
 // Thẻ chi tiết 1 thiết bị, nút theo quyền
-export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, onOpenCameraSource, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
+export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, restartBlockedReason, items = NO_OPEN_ITEMS, onOpenCameraSource, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
   const { t, num, day, ago, dateTime } = useTranslation(devicesDict);
   const isSensor = device.type === 'sensor';
   const quality = wifiQuality(device.rssi);
   const uptime = isSensor ? uptimeParts(device.bootedAt) : undefined;
+  const resetKey = isSensor ? resetReasonKey(device.resetReason) : undefined;
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5">
@@ -65,8 +73,14 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
               {t('action.tracks')}
             </button>
           )}
-          {onRestart && (
-            <button type="button" className={cn(DETAIL_BUTTON_CLASS, 'inline-flex items-center gap-1.5')} onClick={onRestart}>
+          {(onRestart || restartBlockedReason) && (
+            <button
+              type="button"
+              className={cn(DETAIL_BUTTON_CLASS, 'inline-flex items-center gap-1.5', restartBlockedReason && 'cursor-not-allowed opacity-50')}
+              disabled={Boolean(restartBlockedReason)}
+              title={restartBlockedReason}
+              onClick={onRestart}
+            >
               <ArrowClockwiseIcon size={14} />
               {t('action.restart')}
             </button>
@@ -80,6 +94,8 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
           {moreActions.length > 0 && <ActionsMenu items={moreActions} />}
         </div>
       </div>
+
+      <DeviceWorkPanel device={device} items={items} />
 
       <div className="grid grid-cols-1 gap-4 border-t border-gray-200 pt-4 sm:grid-cols-3">
         <InfoSection title={t('detail.sectionStatus')}>
@@ -105,6 +121,7 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
           />
           <InfoRow label={t('detail.bootedAt')} value={device.bootedAt ? dateTime(device.bootedAt) : NO_VALUE} />
           <InfoRow label={t('detail.uptime')} value={uptime ? t('detail.uptimeValue', uptime) : NO_VALUE} />
+          <InfoRow label={t('detail.lastReset')} value={resetKey ? t(resetKey) : NO_VALUE} warn={isUnexpectedReset(device.resetReason)} />
           <InfoRow
             label={t('detail.freeHeap')}
             value={device.freeHeap !== undefined ? t('detail.freeHeapValue', { kb: num(device.freeHeap / BYTES_PER_KILOBYTE) }) : NO_VALUE}
@@ -133,12 +150,12 @@ function InfoSection({ title, children }: { title: string; children: ReactNode }
 }
 
 // Hàng không có số (chỉ "_") thì không vẽ, trừ hàng luôn cần thấy (vị trí, phiên bản, kết nối cuối)
-function InfoRow({ label, value, sub, keep = false }: { label: string; value: ReactNode; sub?: string; keep?: boolean }): JSX.Element | null {
+function InfoRow({ label, value, sub, keep = false, warn = false }: { label: string; value: ReactNode; sub?: string; keep?: boolean; warn?: boolean }): JSX.Element | null {
   if (value === NO_VALUE && !sub && !keep) return null;
   return (
     <div>
       <dt className="text-small text-warmGray">{label}</dt>
-      <dd className={cn('text-body font-semibold', value === NO_VALUE ? 'text-warmGray' : 'text-charcoal')}>{value}</dd>
+      <dd className={cn('text-body font-semibold', value === NO_VALUE ? 'text-warmGray' : warn ? 'text-climateOrange' : 'text-charcoal')}>{value}</dd>
       {sub && <dd className="text-small text-warmGray">{sub}</dd>}
     </div>
   );

@@ -9,8 +9,8 @@ import { repeatRecipientIds, rerouteReconfirmedAlert, routeNewAlert } from '@/se
 import { handleNewAlert, openWorkOrderForAlert } from '@/services/workOrder.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import {
-  assertExpertDecision, assertFarmAccess, assertHouseAccess, assertZoneAccess, listAccessibleFarmIds, listAccessibleHouseIds,
-  listAccessibleZoneIds,
+  assertExpertDecision, assertFarmAccess, assertHouseAccess, assertNodeHouseAccess, assertZoneAccess, listAccessibleFarmIds,
+  listAccessibleHouseIds, listAccessibleZoneIds,
 } from '@/utils/farmAccess.util'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { logAction } from '@/services/auditLog.service'
@@ -358,6 +358,8 @@ export interface ListAlertsQuery {
   farmId?: string
   zoneId?: string
   houseId?: string
+  // Cảnh báo của một thiết bị: bộ điều khiển hoặc camera
+  nodeId?: string
   status?: string
   // status đi kèm thì status thắng
   open?: boolean
@@ -402,6 +404,11 @@ export async function listAlerts(user: CurrentUser, query: ListAlertsQuery) {
     const zoneIds = await Zone.find({ house_id: query.houseId }).distinct('_id')
     const house = { $or: [{ house_id: query.houseId }, { zone_id: { $in: zoneIds } }] }
     filter.$and = [...((filter.$and as unknown[] | undefined) ?? []), house]
+  }
+  if (query.nodeId) {
+    // Nhà của thiết bị ngoài phạm vi: 403; thiết bị không có: 404
+    await assertNodeHouseAccess(query.nodeId, user, 'device')
+    filter.node_id = query.nodeId
   }
   if (query.status) filter.status = query.status
   else if (query.open) filter.status = { $in: IN_FORCE_STATUSES }

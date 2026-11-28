@@ -3680,7 +3680,7 @@ paths:
   /devices/camera-nodes/{id}/source:
     get:
       tags: [Devices]
-      summary: "Địa chỉ camera IP và tình trạng camera của một nút AI (FARM-FR-004b) — FARM_OWNER của farm"
+      summary: "Địa chỉ camera IP và tình trạng camera của một nút AI (FARM-FR-004b) — FARM_OWNER của farm, FARM_TECHNICIAN của nhà được giao"
       description: Không bao giờ trả mật khẩu camera, chỉ `has_password`. `source` null khi chưa nhập.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -3696,12 +3696,12 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [Devices]
-      summary: "Nhập hoặc sửa địa chỉ camera IP của nút AI (FARM-FR-004b) — FARM_OWNER của farm"
+      summary: "Nhập hoặc sửa địa chỉ camera IP của nút AI (FARM-FR-004b) — FARM_OWNER của farm, FARM_TECHNICIAN của nhà được giao"
       description: |
         Mật khẩu lưu bằng AES-256-GCM với `CAMERA_SOURCE_KEY` (thiếu khoá thì 503). Không gửi `password` = giữ mật khẩu
         cũ; chuỗi rỗng = bỏ mật khẩu. Mỗi lần sửa tăng `version` và gửi lại `config` retained của nút AI kèm
         `camera_source_version` (không có mật khẩu); nút AI lấy địa chỉ mới qua `GET /agent/camera-source`.
-        Audit `CAMERA_SOURCE_UPDATED` (không ghi mật khẩu).
+        Audit `CAMERA_SOURCE_UPDATED` (không ghi mật khẩu); Farm Technician sửa thì báo các Farm Owner của farm, thông báo không chứa địa chỉ.
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: true
@@ -4388,7 +4388,7 @@ paths:
                   description: "Bắt buộc khi command=OTA"
                   properties:
                     version: { type: string, pattern: "^\\d+\\.\\d+\\.\\d+$", example: "1.4.1", description: "Không có tiền tố \"v\" — phải khớp đúng FIRMWARE_VERSION thiết bị báo về" }
-                    url: { type: string, example: "https://fw.swiftletcare.vn/esp32-1.4.1.bin" }
+                    url: { type: string, example: "https://fw.swiftletcare.io.vn/esp32-1.4.1.bin" }
                     sha256: { type: string, example: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
       responses:
         "202":
@@ -4594,6 +4594,7 @@ paths:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string }, description: "Cảnh báo của một nhà yến: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà (ALERT-FR-007). Nhà ngoài phạm vi → 403, như `zoneId`" }
+        - { name: nodeId, in: query, schema: { type: string, format: objectId }, description: "Cảnh báo của một thiết bị (bộ điều khiển hoặc camera). Nhà của thiết bị ngoài phạm vi → 403, thiết bị không có → 404 (FARM-FR-015)" }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/AlertType" } }
         - name: verdict
           in: query
@@ -4933,6 +4934,7 @@ paths:
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }
+        - { name: nodeId, in: query, schema: { type: string, format: objectId }, description: "Phiếu công việc của một thiết bị (bộ điều khiển hoặc camera). Nhà của thiết bị không được giao cho kỹ thuật viên → 403, thiết bị không có → 404 (FARM-FR-015)" }
         - { name: alertId, in: query, schema: { type: string }, description: "Work Order của một cảnh báo (mở từ màn chi tiết cảnh báo)" }
         - { name: assigneeId, in: query, schema: { type: string }, description: "id người được giao, hoặc `me`" }
         - { name: status, in: query, schema: { $ref: "#/components/schemas/WorkOrderStatus" } }

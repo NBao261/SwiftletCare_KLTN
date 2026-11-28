@@ -5,7 +5,7 @@
  * C++ thuần (không include Arduino) để chạy unit test trên host: pio test -e native
  *
  *   SC INFO
- *   SC SET {"deviceId":"ctl-a1b2c3","brokerSecret":"…","broker":"mqtt.swiftletcare.vn","force":false}
+ *   SC SET {"deviceId":"ctl-a1b2c3","brokerSecret":"…","broker":"mqtt.swiftletcare.io.vn","force":false}
  *
  * Trả lời một dòng `SC> {json}` để trang web tách khỏi log thường.
  */

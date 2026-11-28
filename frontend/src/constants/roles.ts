@@ -78,7 +78,7 @@ export const MENU_ACCESS: { path: string; roles: Role[] }[] = [
   { path: '/system/health',    roles: ADMIN_ONLY },
   { path: '/relay-control',    roles: RELAY_CONTROL_ROLES },
   { path: '/dashboard',        roles: FARM_WORK_ROLES },
-  { path: '/devices/detail',   roles: FARM_SIDE_ROLES },
+  { path: '/devices/detail',   roles: FARM_WORK_ROLES },
   { path: '/devices/onboarding', roles: DEVICE_SETUP_ROLES },
   { path: '/devices',          roles: DEVICE_LIST_ROLES },
   { path: '/alerts',           roles: ALERT_ROLES },

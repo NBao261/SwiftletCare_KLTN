@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LockSimpleIcon } from '@phosphor-icons/react';
 
 import { Badge, Button, Input, LoadingSkeleton, Modal, ModalHeader, SelectMenu, type BadgeTone } from '@/components/ui';
+import CameraSourceHelp from '@/components/features/farm-owner/devices/CameraSourceHelp';
 import {
   CAMERA_PATH_PRESETS, DEFAULT_RTSP_PORT, parseRtspInput, validateCameraSource, type CameraSourceForm,
 } from '@/components/features/farm-owner/devices/cameraSource';
@@ -99,6 +100,8 @@ export default function CameraSourceModal({ camera, onClose }: Props): JSX.Eleme
               <Badge tone={status ? CAMERA_STATUS_TONE[status] : 'neutral'}>{t(status ? `cameraStatus.${status}` : 'cameraStatus.unknown')}</Badge>
               {source.data.camera_status_at && <span className="text-xs text-warmGray">{dateTime(source.data.camera_status_at)}</span>}
             </p>
+
+            {status !== 'NO_SOURCE' && <CameraSourceHelp status={status} />}
 
             <Input
               label={t('source.paste')}

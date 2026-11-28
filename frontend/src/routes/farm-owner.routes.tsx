@@ -51,7 +51,7 @@ export const farmOwnerRoutes = (
     <Route
       path="devices/detail"
       element={
-        <RequireRole allow={FARM_SIDE_ROLES}>
+        <RequireRole allow={FARM_WORK_ROLES}>
           <FarmOwnerDeviceDetailPage />
         </RequireRole>
       }

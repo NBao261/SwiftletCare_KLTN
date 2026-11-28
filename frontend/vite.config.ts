@@ -32,7 +32,7 @@ export default defineConfig({
         // Cache shell pages for offline
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\.swiftletcare\.vn\/.*$/,
+            urlPattern: /^https:\/\/api\.swiftletcare\.io\.vn\/.*$/,
             handler: 'NetworkFirst',
             options: { cacheName: 'api-cache', networkTimeoutSeconds: 5 },
           },
