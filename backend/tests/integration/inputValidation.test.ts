@@ -12,8 +12,10 @@ import authRoutes from '@/routes/auth.route'
 import deviceRoutes from '@/routes/devices.route'
 import farmRoutes from '@/routes/farms.route'
 import harvestRoutes from '@/routes/harvests.route'
+import healthReportRoutes from '@/routes/healthReports.route'
 import invitationRoutes from '@/routes/invitations.route'
 import notificationRoutes from '@/routes/notifications.route'
+import systemRoutes from '@/routes/system.route'
 import telemetryRoutes from '@/routes/telemetry.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { publishDeviceCommand } from '@/mqtt/mqtt.client'
@@ -30,8 +32,10 @@ app.use('/auth', authRoutes)
 app.use('/devices', deviceRoutes)
 app.use('/farms', farmRoutes)
 app.use('/harvests', harvestRoutes)
+app.use('/health-reports', healthReportRoutes)
 app.use('/invitations', invitationRoutes)
 app.use('/notifications', notificationRoutes)
+app.use('/system', systemRoutes)
 app.use('/telemetry', telemetryRoutes)
 app.use(errorHandler)
 
@@ -234,5 +238,43 @@ describe('Administrator tạo Farm Owner', () => {
   it('lý do từ chối yêu cầu xoá quá dài → 422', async () => {
     const token = await adminToken()
     await request(app).put(`/admin/delete-requests/${ID}/reject`).set(bearer(token)).send({ reason: long(501) }).expect(422)
+  })
+})
+
+// Tham số lặp (?x=a&x=b) thành mảng: isMongoId/isIn kiểm từng phần tử nên vẫn qua nếu thiếu isString
+describe('bộ lọc query lặp lại hoặc là object → 422', () => {
+  const twice = (name: string, value: string) => `${name}=${value}&${name}=${value}`
+
+  it.each([
+    ['/health-reports/days', `${twice('houseId', ID)}`],
+    ['/health-reports/days', `farmId=${ID}&${twice('from', '2026-11-01')}`],
+    ['/health-reports/days', `farmId=${ID}&${twice('myRatingState', 'PENDING')}`],
+    ['/health-reports/days.csv', `farmId=${ID}&${twice('lang', 'vi')}`],
+    ['/health-reports', `${twice('farmId', ID)}`],
+    ['/health-reports', `farmId=${ID}&${twice('kind', 'DAILY')}`],
+    ['/health-reports', `farmId=${ID}&${twice('hasConclusion', 'true')}`],
+    ['/analytics/env/summary', `${twice('zoneId', ID)}`],
+    ['/analytics/correlation', `zoneId[$ne]=${ID}`],
+  ])('Farm Owner GET %s?%s', async (path, query) => {
+    const { token } = await seedOwnerFarm()
+    await request(app).get(`${path}?${query}`).set(bearer(token)).expect(422)
+  })
+
+  it.each([
+    ['/system/audit-logs', `${twice('actorId', ID)}`],
+    ['/system/audit-logs', `targetId[$ne]=${ID}`],
+    ['/admin/users', `${twice('role', 'FARM_OWNER')}`],
+    ['/admin/users', `${twice('status', 'active')}`],
+    ['/admin/provisioned-devices', `${twice('kind', 'SENSOR')}`],
+    ['/admin/provisioned-devices', `${twice('claimed', 'true')}`],
+  ])('Administrator GET %s?%s', async (path, query) => {
+    const admin = await User.create({ email: `admin-q-${Date.now()}@test.vn`, password_hash: 'password123', full_name: 'A', role: 'ADMIN' })
+    const token = jwt.sign({ sub: String(admin._id), role: 'ADMIN' }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
+    await request(app).get(`${path}?${query}`).set(bearer(token)).expect(422)
+  })
+
+  it('một giá trị thì vẫn qua kiểm tra', async () => {
+    const { token, zone } = await seedOwnerFarm()
+    await request(app).get(`/analytics/env/summary?zoneId=${zone._id}`).set(bearer(token)).expect(200)
   })
 })

@@ -15,15 +15,15 @@ const ownerOrExpert = requireRole('FARM_OWNER', 'DOMAIN_EXPERT')
 
 // Trước '/:id'
 const dayScope = [
-  query('houseId').optional().isMongoId(), query('farmId').optional().isMongoId(),
-  query('from').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
-  query('to').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
+  query('houseId').optional().isString().isMongoId(), query('farmId').optional().isString().isMongoId(),
+  query('from').optional().isString().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
+  query('to').optional().isString().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
 ]
 const dayId = param('dayId').isMongoId()
-router.get('/days', readers, ...dayScope, query('myRatingState').optional().isIn(['PENDING', 'RATED', 'SKIPPED', 'EXPIRED']),
+router.get('/days', readers, ...dayScope, query('myRatingState').optional().isString().isIn(['PENDING', 'RATED', 'SKIPPED', 'EXPIRED']),
   validate, healthDayController.listDays)
-router.get('/days.csv', readers, ...dayScope, query('lang').optional().isIn(REASON_LANGS), validate, healthDayController.exportCsv)
-router.get('/evaluation', ownerOrExpert, ...dayScope, query('role').optional().isIn([...ASSESSOR_ROLES]), validate, healthDayController.evaluation)
+router.get('/days.csv', readers, ...dayScope, query('lang').optional().isString().isIn(REASON_LANGS), validate, healthDayController.exportCsv)
+router.get('/evaluation', ownerOrExpert, ...dayScope, query('role').optional().isString().isIn([...ASSESSOR_ROLES]), validate, healthDayController.evaluation)
 router.get('/disagreements', ownerOrExpert, ...dayScope, validate, healthDayController.disagreements)
 router.get('/days/:dayId', readers, dayId, validate, healthDayController.getDay)
 const assessorOnly = requireRole(...ASSESSOR_ROLES)
@@ -34,12 +34,12 @@ router.post('/days/:dayId/skip', assessorOnly, dayId, validate, healthDayControl
 router.patch('/days/:dayId/rating/note', assessorOnly, dayId, body('note').isString().trim().isLength({ min: 1, max: 1000 }), validate, healthDayController.addNote)
 
 router.get('/', readers,
-  query('houseId').optional().isMongoId(), query('farmId').optional().isMongoId(),
-  query('kind').optional().isIn(HOUSE_REPORT_KINDS),
-  query('from').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
-  query('to').optional().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
+  query('houseId').optional().isString().isMongoId(), query('farmId').optional().isString().isMongoId(),
+  query('kind').optional().isString().isIn(HOUSE_REPORT_KINDS),
+  query('from').optional().isString().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
+  query('to').optional().isString().isDate({ format: 'YYYY-MM-DD', strictMode: true }),
   // toBoolean(): isBoolean() không đổi kiểu
-  query('hasConclusion').optional().isBoolean().toBoolean(),
+  query('hasConclusion').optional().isString().isBoolean().toBoolean(),
   validate, healthReportController.list)
 router.post('/', readers,
   body('houseId').isMongoId(),
