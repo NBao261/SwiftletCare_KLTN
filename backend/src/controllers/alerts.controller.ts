@@ -13,6 +13,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     farmId:   req.query.farmId as string | undefined,
     zoneId:   req.query.zoneId as string | undefined,
     houseId:  req.query.houseId as string | undefined,
+    nodeId:   req.query.nodeId as string | undefined,
     status:   req.query.status as string | undefined,
     open:     req.query.open === 'true',
     severity: req.query.severity as string | undefined,

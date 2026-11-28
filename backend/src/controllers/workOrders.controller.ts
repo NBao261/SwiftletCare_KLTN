@@ -8,6 +8,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   const { records, total, page, limit } = await workOrderService.listWorkOrders(req.user, {
     farmId:     req.query.farmId as string | undefined,
     houseId:    req.query.houseId as string | undefined,
+    nodeId:     req.query.nodeId as string | undefined,
     alertId:    req.query.alertId as string | undefined,
     assigneeId: req.query.assigneeId as string | undefined,
     status:     req.query.status as WorkOrderStatus | undefined,
