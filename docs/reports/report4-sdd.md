@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.37 (Review 2, final scope) |
+| Document version | 2.2.38 (Review 2, final scope) |
 | Date | 29/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.28 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -663,7 +663,7 @@ erDiagram
     date started_at
     date expires_at
     date ended_at
-    string end_reason "EXPIRED | CANCELLED"
+    string end_reason "EXPIRED | CLEARED_EARLY | REPLACED"
   }
   AUDIO_TRACK {
     ObjectId _id PK
@@ -1914,6 +1914,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.38 | 29/11/2026 | RELAY_OVERRIDE_LOG.end_reason lists the stored values `EXPIRED`, `CLEARED_EARLY`, `REPLACED` (Report 3 4.2.38, ENV-FR-019) |
 | 2.2.37 | 29/11/2026 | Section 8.19 and the WORK_ORDER entity follow Report 3 4.2.37: `device_left` set when the device of an open repair Work Order is removed, replaced or moved; cancellation when the alert of a needs-visit verdict is rejected; the technician who works a Work Order becomes its assignee |
 | 2.2.36 | 28/11/2026 | The device pages show the open device alerts and Work Orders of each device and what to do for its state (Report 3 4.2.36, FARM-FR-015): `GET /alerts` and `GET /work-orders` take `nodeId`; the web and mobile technician client follow |
 | 2.2.35 | 27/11/2026 | Header baseline SRS 4.2.28 (BR-36 lists the Work Orders, maintenance and recommendations kept for good); the privacy policy page of the web has a table of contents and is rewritten as version 1.2 |
