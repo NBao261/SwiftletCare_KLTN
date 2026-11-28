@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { shiftDate, vietnamDate, withBold } from '@/components/common/healthDay.utils';
 import { MAX_REPORT_DAYS, reportRangeError } from '@/components/common/healthReport.utils';
-import { Button, DatePicker, Modal } from '@/components/ui';
+import { Button, DatePicker, ErrorNotice, Modal } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
@@ -59,7 +59,7 @@ export default function HealthReportCreateModal({ open, onClose, house, onCreate
           <DatePicker id="report-from" label={t('create.from')} value={from} max={today} onChange={setFrom} />
           <DatePicker id="report-to" label={t('create.to')} value={to} max={today} onChange={setTo} />
         </div>
-        {errorText && <p className="text-sm text-alertRed">{errorText}</p>}
+        {errorText && <ErrorNotice>{errorText}</ErrorNotice>}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose} disabled={create.isPending}>{t('action.cancel')}</Button>
           <Button onClick={handleCreate} loading={create.isPending}>{t('report.create')}</Button>

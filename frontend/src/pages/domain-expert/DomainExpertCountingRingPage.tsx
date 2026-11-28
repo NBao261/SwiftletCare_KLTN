@@ -1,7 +1,8 @@
 // Chuyên gia, Farm Owner và Kỹ thuật viên (nhà được giao) vẽ vòng đếm, trên web như trên mobile
 import { useState, useEffect } from 'react'
-import { Crosshair, AlertTriangle } from 'lucide-react'
+import { Crosshair } from 'lucide-react'
 import EmptyState from '@/components/ui/EmptyState'
+import LoadError from '@/components/ui/LoadError'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import SectionCard from '@/components/ui/SectionCard'
 import SelectMenu, { type SelectMenuOption } from '@/components/ui/SelectMenu'
@@ -21,7 +22,7 @@ export default function DomainExpertCountingRingPage() {
   const canDrawRing = canEditParameters || isTechnician
   const { selectedHouseId } = useZoneStore()
   const houseId = selectedHouseId || undefined
-  const { data: cameras, isLoading, isError } = useHouseCameras(houseId)
+  const { data: cameras, isLoading, isError, error, refetch } = useHouseCameras(houseId)
   const [selectedCameraId, setSelectedCameraId] = useState('')
 
   useEffect(() => {
@@ -56,12 +57,7 @@ export default function DomainExpertCountingRingPage() {
       >
         {isLoading && <LoadingSkeleton count={1} className="aspect-video w-full rounded-2xl" />}
 
-        {isError && !isLoading && (
-          <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3.5 py-2.5 text-sm text-alertRed">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{t('Không tải được danh sách camera. Thử lại.')}</span>
-          </div>
-        )}
+        {isError && !isLoading && <LoadError title={t('Không tải được danh sách camera')} error={error} onRetry={() => void refetch()} />}
 
         {!isLoading && !isError && list.length === 0 && (
           <EmptyState icon={<Crosshair className="w-7 h-7" />} title={t('Nhà yến này chưa gắn camera nào.')} />

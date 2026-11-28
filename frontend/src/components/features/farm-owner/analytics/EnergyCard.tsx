@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
-import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { ChartEmptyFrame, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import StatStrip from '@/components/common/StatStrip';
 import { BAR_MARK, CHART_FONT, CHART_LEGEND, SERIES_COLORS, axisTitle } from '@/components/features/farm-owner/analytics/analytics.constants';
@@ -10,6 +10,7 @@ import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseEnergy } from '@/hooks/farm-owner/useAnalytics';
 import { baseChartOptions } from '@/lib/chartTheme';
+import LoadError from '@/components/ui/LoadError'
 
 // "2026-10" → "10/2026"
 const monthLabel = (month: string) => month.split('-').reverse().join('/');
@@ -17,7 +18,7 @@ const monthLabel = (month: string) => month.split('-').reverse().join('/');
 // điện năng ước tính của bơm và quạt theo tháng; tải không có dòng đo ghi "không đo được"
 export default function EnergyCard({ houseId, houseName }: { houseId: string; houseName: string }): JSX.Element {
   const { t, num, exact } = useTranslation(analyticsDict);
-  const { data, isLoading, isError, refetch } = useHouseEnergy(houseId);
+  const { data, isLoading, isError, error, refetch } = useHouseEnergy(houseId);
   const months = useMemo(() => data?.months ?? [], [data]);
 
   const chartData = useMemo(() => ({
@@ -47,10 +48,7 @@ export default function EnergyCard({ houseId, houseName }: { houseId: string; ho
   let body = <LoadingSkeleton className="h-72 w-full" />;
   if (!isLoading && isError) {
     body = (
-      <EmptyState
-        title={t('common.loadError')}
-        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={error} onRetry={() => void refetch()} />
     );
   }
   if (!isLoading && !isError && data) {

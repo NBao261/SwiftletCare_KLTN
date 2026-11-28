@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Button, Input } from '@/components/ui';
+import { Button, ErrorNotice, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
@@ -54,9 +54,7 @@ export default function ForgotPasswordPage(): JSX.Element {
             value={email}
             onChange={event => setEmail(event.target.value)}
           />
-          {sendError && (
-            <p className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">{sendError}</p>
-          )}
+          {sendError && <ErrorNotice>{sendError}</ErrorNotice>}
           <Button type="submit" size="lg" loading={forgotPassword.isPending} className="mt-2 w-full">
             Gửi mã đặt lại
           </Button>
@@ -97,9 +95,7 @@ export default function ForgotPasswordPage(): JSX.Element {
             onChange={event => setConfirmPassword(event.target.value)}
             error={isSubmitted ? errors.confirmPassword : undefined}
           />
-          {resetError && (
-            <p className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">{resetError}</p>
-          )}
+          {resetError && <ErrorNotice>{resetError}</ErrorNotice>}
           <Button type="submit" size="lg" loading={resetPassword.isPending} className="mt-2 w-full">
             Đặt lại mật khẩu
           </Button>

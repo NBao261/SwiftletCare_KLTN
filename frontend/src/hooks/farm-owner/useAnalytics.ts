@@ -134,6 +134,7 @@ export function useHousesBirdCountTrends(houseIds: string[], days: number) {
       return {
         isLoading: results.some(result => result.isLoading),
         isError: results.some(result => result.isError),
+        error: results.find(result => result.isError)?.error,
         refetch: () => results.forEach(result => void result.refetch()),
         records: single ? single.records : mergeBirdCountRecords(lists.map(list => list.records)),
         single,

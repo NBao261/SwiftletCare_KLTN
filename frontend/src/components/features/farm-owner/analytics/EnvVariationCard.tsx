@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import WeatherSource from '@/components/common/WeatherSource';
-import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { ChartEmptyFrame, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import LineChartPanel, { type LineSeries } from '@/components/features/farm-owner/analytics/LineChartPanel';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
@@ -18,6 +18,7 @@ import type { AnalyticsRange } from '@/apis/farm-owner/analytics.api';
 import type { Thresholds, ZoneThresholdHistoryEntry } from '@/types';
 import { thresholdSource } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
 import { NO_VALUE } from '@/constants/display';
+import LoadError from '@/components/ui/LoadError'
 
 // 1 bản ghi thời tiết ngoài trời là số liệu của 1 giờ
 const HOUR_MS = 3600_000;
@@ -76,7 +77,7 @@ function diffLine(indoor: Array<number | null>, outdoor: Array<number | null>, d
 export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory }: EnvVariationCardProps): JSX.Element {
   const { t, exact, ago, date, num, hourMinute } = useTranslation(analyticsDict);
   const [range, setRange] = useState<AnalyticsRange>('24h');
-  const { data, isLoading, isError, refetch } = useEnvSummary(zoneId, range);
+  const { data, isLoading, isError, error, refetch } = useEnvSummary(zoneId, range);
   const telemetry = useTelemetry(zoneId);
 
   const rangeOptions = ANALYTICS_RANGES.map(value => ({ value, label: t(`range.${value}`) }));
@@ -169,10 +170,7 @@ export default function EnvVariationCard({ zoneId, thresholds, thresholdHistory 
   let charts = <LoadingSkeleton className="h-64 w-full" />;
   if (!isLoading && isError) {
     charts = (
-      <EmptyState
-        title={t('common.loadError')}
-        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={error} onRetry={() => void refetch()} />
     );
   }
   const hasChartData = Boolean(data && (data.series.length > 0 || data.outdoor.length > 0));

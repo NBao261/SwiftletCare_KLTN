@@ -9,6 +9,7 @@ import type { ExpertThresholds } from '@/types/expert.types'
 import { t } from '@/i18n'
 import { FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
 import { THRESHOLD_LIMITS, validateThresholds } from '@/validations/common/threshold.validation'
+import FieldError from '@/components/ui/FieldError'
 
 interface Props {
   data: ExpertThresholds | undefined
@@ -93,7 +94,7 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
         </fieldset>
 
         {/* Lỗi kiểm ngưỡng; nút Lưu chung ở thanh dính đáy của trang */}
-        {error && <p className="text-xs text-alertRed">{error}</p>}
+        {error && <FieldError>{error}</FieldError>}
       </SectionCard>
 
       <ConfirmModal

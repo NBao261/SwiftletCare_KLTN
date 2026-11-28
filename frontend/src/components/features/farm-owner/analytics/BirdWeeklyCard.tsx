@@ -4,7 +4,7 @@ import type { ChartOptions } from 'chart.js';
 import { format, parseISO } from 'date-fns';
 import { WarningIcon } from '@phosphor-icons/react';
 
-import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { ChartEmptyFrame, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import StatStrip from '@/components/common/StatStrip';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
@@ -15,6 +15,7 @@ import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics';
 import { baseChartOptions } from '@/lib/chartTheme';
+import LoadError from '@/components/ui/LoadError'
 
 interface BirdWeeklyCardProps {
   // 1 nhà, hoặc mọi nhà của farm khi lọc tất cả nhà yến (số đếm cộng theo ngày)
@@ -26,7 +27,7 @@ interface BirdWeeklyCardProps {
 export default function BirdWeeklyCard({ houseIds, scopeLabel }: BirdWeeklyCardProps): JSX.Element {
   const { t, num, date } = useTranslation(analyticsDict);
   const [weeks, setWeeks] = useState<BirdWeekOption>(12);
-  const { records, single, isLoading, isError, refetch } = useHousesBirdCountTrends(houseIds, weeks * 7);
+  const { records, single, isLoading, isError, error, refetch } = useHousesBirdCountTrends(houseIds, weeks * 7);
 
   const weekOptions = BIRD_WEEK_OPTIONS.map(value => ({ value, label: t('common.weeks', { n: value }) }));
   const weeklyRates = useMemo(() => summarizeWeeklyReturnRates(records), [records]);
@@ -92,10 +93,7 @@ export default function BirdWeeklyCard({ houseIds, scopeLabel }: BirdWeeklyCardP
   let body = <LoadingSkeleton className="h-72 w-full" />;
   if (!isLoading && isError) {
     body = (
-      <EmptyState
-        title={t('common.loadError')}
-        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={error} onRetry={() => void refetch()} />
     );
   }
   if (!isLoading && !isError) {

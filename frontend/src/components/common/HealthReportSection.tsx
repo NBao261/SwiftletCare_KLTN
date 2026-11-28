@@ -5,14 +5,14 @@ import { PlusIcon } from '@phosphor-icons/react';
 import TableEmptyState from '@/components/common/TableEmptyState';
 import HealthReportCreateModal from '@/components/common/HealthReportCreateModal';
 import { HEALTH_REPORT_PATH, reportPeriod, type HealthReportState } from '@/components/common/healthReport.utils';
-import { ActionsMenu, Badge, Button, EmptyState, LoadingSkeleton, SectionCard, SelectMenu, type DataTableColumn } from '@/components/ui';
+import { ActionsMenu, Badge, Button, LoadingSkeleton, SectionCard, SelectMenu, type DataTableColumn } from '@/components/ui';
 import FixedRowsTable from '@/components/ui/FixedRowsTable';
 import { healthDict } from '@/constants/health.i18n';
-import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { REPORT_PAGE_SIZE, useHouseHealthReports } from '@/hooks/shared/useHealthDays';
 import { useHealthReportPdf } from '@/hooks/shared/useHealthReportPdf';
 import type { HealthReportKind, HouseHealthReportSummary } from '@/types';
+import LoadError from '@/components/ui/LoadError'
 
 const KINDS: HealthReportKind[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
 // Lọc theo kết luận ('' = mọi báo cáo) → hasConclusion của GET /health-reports
@@ -30,7 +30,6 @@ interface HealthReportSectionProps {
 // danh sách báo cáo theo nhà (phân trang server), xem chi tiết, tải PDF, tạo báo cáo theo yêu cầu
 export default function HealthReportSection({ scope, house }: HealthReportSectionProps): JSX.Element {
   const { t, date, dateTime, exact } = useTranslation(healthDict);
-  const apiErrorMessage = useApiErrorMessage();
   const navigate = useNavigate();
   const location = useLocation();
   const backTo = location.pathname + location.search;
@@ -125,11 +124,7 @@ export default function HealthReportSection({ scope, house }: HealthReportSectio
       ) : isLoading ? (
         <LoadingSkeleton count={5} className="h-14 w-full" />
       ) : isError ? (
-        <EmptyState
-          title={t('report.errorTitle')}
-          description={apiErrorMessage(error)}
-          action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-        />
+        <LoadError title={t('report.errorTitle')} error={error} onRetry={() => void refetch()} />
       ) : reports.length === 0 ? (
         <div className="flex items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12">
           <TableEmptyState title={t('report.emptyTitle')} description={t('report.emptyHint')} />

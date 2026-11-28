@@ -9,6 +9,7 @@ import { useTranslation } from '@/hooks/common/useTranslation'
 import { useMarkAllNotificationsRead, useNotificationsInfinite } from '@/hooks/shared/useNotifications'
 import { useOpenNotification } from '@/hooks/shared/useOpenNotification'
 import { useToastStore } from '@/stores/toastStore'
+import LoadError from '@/components/ui/LoadError'
 
 const PAGE_SIZE = 20
 
@@ -34,10 +35,7 @@ export default function NotificationsPage(): JSX.Element {
   if (inbox.isLoading) body = <LoadingSkeleton count={4} className="h-16 w-full" />
   if (inbox.isError) {
     body = (
-      <EmptyState
-        title={apiErrorMessage(inbox.error, t('notif.loadFailed'))}
-        action={<Button variant="secondary" size="sm" onClick={() => void inbox.refetch()}>{t('notif.retry')}</Button>}
-      />
+      <LoadError title={t('notif.loadFailed')} error={inbox.error} onRetry={() => void inbox.refetch()} />
     )
   }
   if (!inbox.isLoading && !inbox.isError && notifications.length === 0) {

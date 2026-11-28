@@ -1,11 +1,13 @@
 // Soạn và duyệt hồ sơ cấu hình
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { BookCopy, AlertTriangle } from 'lucide-react'
+import { BookCopy } from 'lucide-react'
 import { PlusIcon } from '@phosphor-icons/react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Button } from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
+import ErrorNotice from '@/components/ui/ErrorNotice'
+import LoadError from '@/components/ui/LoadError'
 import SectionCard from '@/components/ui/SectionCard'
 import StatusTabs from '@/components/common/StatusTabs'
 import { useZoneStore } from '@/stores/zoneStore'
@@ -45,7 +47,7 @@ export default function DomainExpertProfilesPage() {
   const [editTarget, setEditTarget] = useState<ConfigProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: profiles, isLoading, isError, refetch } = useProfiles(farmId, statusFilter === 'ALL' ? undefined : statusFilter)
+  const { data: profiles, isLoading, isError, error: loadError, refetch } = useProfiles(farmId, statusFilter === 'ALL' ? undefined : statusFilter)
   const createMut = useCreateProfile(farmId)
   const updateMut = useUpdateProfile(farmId)
   const approveMut = useApproveProfile(farmId)
@@ -71,7 +73,7 @@ export default function DomainExpertProfilesPage() {
       }
       setDrawerOpen(false)
     } catch (err) {
-      setError(getError(err))
+      setError(getError(err, t('Lưu hồ sơ thất bại')))
     }
   }
 
@@ -81,7 +83,7 @@ export default function DomainExpertProfilesPage() {
       await approveMut.mutateAsync(id)
       pushToast('Hồ sơ đã được duyệt.', 'success')
     } catch (err) {
-      setError(getError(err))
+      setError(getError(err, t('Duyệt hồ sơ thất bại')))
     }
   }
 
@@ -91,7 +93,7 @@ export default function DomainExpertProfilesPage() {
       await archiveMut.mutateAsync(id)
       pushToast('Đã lưu trữ hồ sơ.', 'success')
     } catch (err) {
-      setError(getError(err))
+      setError(getError(err, t('Lưu trữ hồ sơ thất bại')))
     }
   }
 
@@ -108,13 +110,7 @@ export default function DomainExpertProfilesPage() {
   function renderProfiles() {
     if (isLoading) return <LoadingSkeleton count={3} className="h-16 w-full rounded-2xl" />
     if (isError) {
-      return (
-        <EmptyState
-          icon={<AlertTriangle className="w-9 h-9 text-alertRed" />}
-          title={t('Không thể tải danh sách hồ sơ. Kiểm tra kết nối và thử lại.')}
-          action={<Button variant="secondary" size="sm" onClick={() => refetch()}>{t('Thử lại')}</Button>}
-        />
-      )
+      return <LoadError title={t('Không tải được danh sách hồ sơ')} error={loadError} onRetry={() => void refetch()} />
     }
     if (!profiles || profiles.length === 0) {
       const filterLabel = STATUS_FILTERS.find(f => f.value === statusFilter)?.label ?? ''
@@ -163,12 +159,7 @@ export default function DomainExpertProfilesPage() {
           tabs={STATUS_FILTERS.map(f => ({ id: f.value, label: t(f.label) }))}
         />
 
-        {error && (
-          <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3 py-2 text-sm text-alertRed">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
+        {error && <ErrorNotice>{error}</ErrorNotice>}
 
         {renderProfiles()}
       </SectionCard>

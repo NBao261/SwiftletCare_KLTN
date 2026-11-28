@@ -11,6 +11,7 @@ import {
   CHECKLIST_ITEM_MAX_LENGTH, CHECKLIST_MAX_ITEMS, EQUIPMENTS, NOTE_MAX_LENGTH, SOURCE_MAX_LENGTH, basesFor, filledChecklist,
   validateMaintenancePlan, type MaintenancePlanErrors,
 } from '@/validations/farm-owner/maintenancePlan.validation';
+import FieldError from '@/components/ui/FieldError'
 
 interface MaintenancePlanFormModalProps {
   open: boolean;
@@ -183,7 +184,7 @@ export default function MaintenancePlanFormModal({ open, house, plan, onClose }:
                 </Button>
               </div>
             ))}
-            {errors.checklist && <span className="text-xs text-alertRed">{t(errors.checklist, { max: CHECKLIST_MAX_ITEMS })}</span>}
+            {errors.checklist && <FieldError>{t(errors.checklist, { max: CHECKLIST_MAX_ITEMS })}</FieldError>}
             <div>
               <Button
                 type="button"

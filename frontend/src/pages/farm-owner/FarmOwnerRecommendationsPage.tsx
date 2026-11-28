@@ -7,7 +7,7 @@ import RecommendationTable from '@/components/features/farm-owner/recommendation
 import { ruleOf } from '@/components/features/farm-owner/recommendations/recommendations.constants';
 import HeaderActions from '@/components/layouts/HeaderActions';
 import StatusTabs from '@/components/common/StatusTabs';
-import { Button, ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard } from '@/components/ui';
+import { ConfirmModal, EmptyState, LoadingSkeleton, NoteActionModal, SectionCard } from '@/components/ui';
 import { recommendationsDict } from '@/constants/recommendations.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
@@ -17,6 +17,7 @@ import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useToastStore } from '@/stores/toastStore';
 import type { Recommendation } from '@/types';
 import { REJECT_REASON_MAX_LENGTH } from '@/validations/common/recommendationRule.validation';
+import LoadError from '@/components/ui/LoadError'
 
 // Tab trạng thái: chờ quyết định trước, 'all' = mọi trạng thái
 const STATUS_TABS = ['OPEN', 'ACCEPTED', 'MEASURED', 'REJECTED', 'EXPIRED', 'all'] as const;
@@ -99,11 +100,7 @@ export default function FarmOwnerRecommendationsPage(): JSX.Element {
   if (hasScope && list.isLoading) body = <LoadingSkeleton count={5} className="h-14 w-full" />;
   if (hasScope && !list.isLoading && list.isError) {
     body = (
-      <EmptyState
-        title={t('common.loadError')}
-        description={apiErrorMessage(list.error)}
-        action={<Button variant="secondary" size="sm" onClick={() => void list.refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={list.error} onRetry={() => void list.refetch()} />
     );
   }
   if (hasScope && !list.isLoading && !list.isError && list.records.length === 0) {

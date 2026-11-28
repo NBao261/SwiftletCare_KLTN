@@ -4,6 +4,7 @@ import { ImageSquareIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
 import { harvestDict } from '@/constants/harvest.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { cn } from '@/lib/cn';
+import FieldError from '@/components/ui/FieldError'
 
 // Số ảnh tối đa mỗi lần thu: giữ popup gọn; backend chỉ lưu danh sách link nên không có giới hạn riêng
 export const MAX_IMAGE_LINKS = 5;
@@ -82,7 +83,7 @@ export default function ImageLinksField({ links, onChange, disabled = false }: I
         </button>
       </div>
 
-      {message && <p className="text-xs text-alertRed">{message}</p>}
+      {message && <FieldError>{message}</FieldError>}
 
       {/* Xem trước: link không mở được thì hiện ô xám có icon */}
       {links.length > 0 && (

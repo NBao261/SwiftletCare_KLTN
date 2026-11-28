@@ -1,9 +1,10 @@
 // trình vẽ vòng đếm trên khung live: tối đa 4 vòng, mỗi vòng đếm cả chim vào lẫn ra; xoá hoặc vẽ lại từng vòng
 import { useRef, useState } from 'react'
-import { Undo2, Trash2, Save, X, Pencil, AlertTriangle, RefreshCw, Plus, RotateCcw } from 'lucide-react'
+import { Undo2, Trash2, Save, X, Pencil, RefreshCw, Plus, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/Button'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import ErrorNotice from '@/components/ui/ErrorNotice'
 import { useWhepStream } from '@/hooks/shared/useWhepStream'
 import { useUpdateCountingRing } from '@/hooks/domain-expert/useCountingRing'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
@@ -119,7 +120,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
       )
     } catch (error) {
       setConfirming(null)
-      setSaveError(getErrorMessage(error))
+      setSaveError(getErrorMessage(error, t('Lưu vòng đếm thất bại')))
     }
   }
 
@@ -164,12 +165,7 @@ export default function CountingRingEditor({ camera, houseId }: Props) {
         )}
       </div>
 
-      {saveError && (
-        <div className="flex items-start gap-2 p-3 rounded-2xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{saveError}</span>
-        </div>
-      )}
+      {saveError && <ErrorNotice>{saveError}</ErrorNotice>}
 
       {isEditing ? (
         <>
