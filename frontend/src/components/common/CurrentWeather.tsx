@@ -1,11 +1,10 @@
 import { CloudFogIcon, CloudIcon, CloudLightningIcon, CloudMoonIcon, CloudRainIcon, CloudSlashIcon, CloudSunIcon, MoonIcon, SunIcon, type Icon } from '@phosphor-icons/react'
-import { describeWeather, type WeatherIconName, type WeatherTone } from '@/components/common/currentWeather.utils'
+import { describeWeather, formatWeatherNumber, rainfallText, type WeatherIconName, type WeatherTone } from '@/components/common/currentWeather.utils'
 import { LoadingSkeleton } from '@/components/ui'
 import { useCurrentWeather } from '@/hooks/shared/useCurrentWeather'
 import { cn } from '@/lib/cn'
 import { formatHourMinute } from '@/lib/i18n'
-import { intlLocale, t } from '@/i18n'
-import type { CurrentWeather as CurrentWeatherData } from '@/types'
+import { t } from '@/i18n'
 
 export const WEATHER_ICON: Record<WeatherIconName, Icon> = {
   sun: SunIcon, moon: MoonIcon, 'partly-cloudy': CloudSunIcon, cloud: CloudIcon, fog: CloudFogIcon, rain: CloudRainIcon,
@@ -17,15 +16,6 @@ export const WEATHER_TONE_CLASS: Record<WeatherTone, string> = {
   sunny: 'bg-statusYellow/25 text-charcoal',
   rainy: 'bg-infoBlue/10 text-charcoal',
   neutral: 'bg-warmGray/10 text-charcoal',
-}
-
-export const formatWeatherNumber = (value: number, digits = 1) => value.toLocaleString(intlLocale(), { maximumFractionDigits: digits })
-
-// "Mưa 0,7 mm" chỉ khi đang mưa và có lượng mưa
-export function rainfallText(weather: Pick<CurrentWeatherData, 'is_raining' | 'precipitation_mm'>): string | null {
-  return weather.is_raining && weather.precipitation_mm !== null && weather.precipitation_mm > 0
-    ? `${t('Mưa')} ${formatWeatherNumber(weather.precipitation_mm)} mm`
-    : null
 }
 
 // Giờ cập nhật và nguồn dữ liệu trên một dòng: giấy phép CC BY 4.0 của Open-Meteo bắt ghi nguồn ở mọi màn hiện thời tiết

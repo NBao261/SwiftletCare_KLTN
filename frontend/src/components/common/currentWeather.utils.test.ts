@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeWeather } from '@/components/common/currentWeather.utils'
+import { describeWeather, rainfallText } from '@/components/common/currentWeather.utils'
 import type { WeatherCondition } from '@/types'
 
 describe('describeWeather', () => {
@@ -19,5 +19,20 @@ describe('describeWeather', () => {
       expect(describeWeather({ condition, is_day: true }).tone).toBe('neutral')
     }
     expect(describeWeather({ condition: 'OTHER', is_day: true }).label).toBe('Chưa rõ tình trạng trời')
+  })
+})
+
+describe('rainfallText', () => {
+  it('đang mưa và có lượng mưa thì hiện số mm', () => {
+    expect(rainfallText({ is_raining: true, precipitation_mm: 0.7 })).toMatch(/0[.,]7 mm$/)
+  })
+
+  it('đang mưa mà lượng mưa là 0 hoặc chưa có thì không hiện', () => {
+    expect(rainfallText({ is_raining: true, precipitation_mm: 0 })).toBeNull()
+    expect(rainfallText({ is_raining: true, precipitation_mm: null })).toBeNull()
+  })
+
+  it('không mưa thì không hiện dù có lượng mưa', () => {
+    expect(rainfallText({ is_raining: false, precipitation_mm: 1.2 })).toBeNull()
   })
 })

@@ -1,7 +1,7 @@
 import { CloudSunIcon, DropIcon, ThermometerIcon } from '@phosphor-icons/react'
 import { Card } from '@/components/ui'
-import { WEATHER_TONE_CLASS, WeatherCredit, WeatherGlyph, rainfallText } from '@/components/common/CurrentWeather'
-import { describeWeather } from '@/components/common/currentWeather.utils'
+import { WEATHER_TONE_CLASS, WeatherCredit, WeatherGlyph } from '@/components/common/CurrentWeather'
+import { describeWeather, rainfallText } from '@/components/common/currentWeather.utils'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { NO_VALUE } from '@/constants/display'
 import { useTranslation } from '@/hooks/common/useTranslation'
@@ -12,9 +12,7 @@ import { t as translateSentence } from '@/i18n'
 
 const HOUR_MS = 3_600_000
 
-// Thời tiết ở ngoài nhà yến, theo toạ độ trang trại: trời đang nắng hay mưa ở trên, nhiệt độ và độ ẩm ở dưới.
-// Số hiện tại của Open-Meteo thay số theo giờ khi có, để cả khung chỉ có một nguồn và một giờ cập nhật; chưa có thì dùng số theo giờ.
-// Khung nét đứt, nền xám nhạt và nhãn "ngoài trời" để không lẫn với số đo cảm biến trong nhà
+// Khung thời tiết ngoài trời của nhà
 export default function OutdoorWeatherCard({ zoneId, houseId }: { zoneId?: string; houseId?: string }) {
   const { t, num, hourMinute } = useTranslation(dashboardDict)
   const current = useCurrentWeather(houseId)
@@ -22,8 +20,9 @@ export default function OutdoorWeatherCard({ zoneId, houseId }: { zoneId?: strin
   const weather = current.data?.weather ?? null
   const point = hourly.data
 
-  const temperature = weather?.temperature_c ?? point?.temperature
-  const humidity = weather?.humidity_pct ?? point?.humidity
+  // Có số hiện tại thì chỉ dùng số đó (số null là chưa có, không lấy số theo giờ thay), để cả khung cùng một giờ
+  const temperature = weather ? weather.temperature_c : point?.temperature
+  const humidity = weather ? weather.humidity_pct : point?.humidity
   const isLoading = (current.isLoading || hourly.isLoading) && !weather && !point
   const hasNumbers = (temperature !== undefined && temperature !== null) || (humidity !== undefined && humidity !== null)
 

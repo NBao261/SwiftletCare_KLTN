@@ -1,3 +1,4 @@
+import { intlLocale, t } from '@/i18n'
 import type { CurrentWeather } from '@/types'
 
 export type WeatherIconName = 'sun' | 'moon' | 'partly-cloudy' | 'cloud' | 'fog' | 'rain' | 'storm' | 'unknown'
@@ -18,4 +19,13 @@ export function describeWeather(weather: Pick<CurrentWeather, 'condition' | 'is_
     case 'THUNDERSTORM': return { label: 'Đang mưa dông', icon: 'storm', tone: 'rainy' }
     default: return { label: 'Chưa rõ tình trạng trời', icon: 'unknown', tone: 'neutral' }
   }
+}
+
+export const formatWeatherNumber = (value: number, digits = 1) => value.toLocaleString(intlLocale(), { maximumFractionDigits: digits })
+
+// "Mưa 0,7 mm" chỉ khi đang mưa và có lượng mưa
+export function rainfallText(weather: Pick<CurrentWeather, 'is_raining' | 'precipitation_mm'>): string | null {
+  return weather.is_raining && weather.precipitation_mm !== null && weather.precipitation_mm > 0
+    ? `${t('Mưa')} ${formatWeatherNumber(weather.precipitation_mm)} mm`
+    : null
 }
