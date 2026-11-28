@@ -298,7 +298,7 @@ A Farm Technician acts only on the houses assigned to them (AUTH-FR-013); the Do
 | Invite Farm Technicians, assign them to houses, set the duty roster | ✓ | read own roster | – | – |
 | View devices, their diagnostics and device alerts | ✓ | assigned houses | read | ✓ (every farm) ² |
 | Register a device from its label, assign it to a zone, move, remove or replace it | ✓ | assigned houses | – | – |
-| Enter the address of a bird-counting camera (FARM-FR-004b) | ✓ | – | – | – |
+| Enter the address of a bird-counting camera (FARM-FR-004b) | ✓ | assigned houses | – | – |
 | Print the QR code of a floor | ✓ | – | – | – |
 | Remote commands (restart, configuration push), OTA | restart | restart, assigned houses | – | ✓ (every farm) ² |
 | Maintain the provisioned-device stock: add devices and issue labels, re-issue or revoke an activation key | – | – | – | ✓ |

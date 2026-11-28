@@ -13,6 +13,7 @@ import { AuditLog } from '@/models/auditLog.model'
 import { CameraNode } from '@/models/device.model'
 import { Farm } from '@/models/farm.model'
 import { House, Zone } from '@/models/houseZone.model'
+import { Notification } from '@/models/notification.model'
 import { ProvisionedDevice } from '@/models/provisionedDevice.model'
 import { User } from '@/models/user.model'
 import { publishDeviceConfig } from '@/mqtt/mqtt.client'
@@ -51,7 +52,7 @@ afterAll(async () => {
 })
 beforeEach(() => { Object.assign(process.env, ENV) })
 afterEach(async () => {
-  await Promise.all([AuditLog, CameraNode, Farm, House, Zone, ProvisionedDevice, User].map(m => (m as typeof User).deleteMany({})))
+  await Promise.all([AuditLog, CameraNode, Farm, House, Notification, Zone, ProvisionedDevice, User].map(m => (m as typeof User).deleteMany({})))
   jest.clearAllMocks()
 })
 
@@ -73,7 +74,7 @@ async function seed() {
   const camera = await CameraNode.create({ device_id: 'cam-h1-01', house_id: house._id, status: 'ONLINE' })
   const entry = (await ProvisionedDevice.findOne({ device_id: 'cam-h1-01' }))!
   return {
-    camera, stock, entry, adminId: String(admin._id),
+    camera, stock, entry, adminId: String(admin._id), farmId: farm._id,
     tokens: {
       admin: tokenFor(admin._id, 'ADMIN'), owner: tokenFor(owner._id, 'FARM_OWNER'), expert: tokenFor(expert._id, 'DOMAIN_EXPERT'),
       technician: tokenFor(technician._id, 'FARM_TECHNICIAN'), stranger: tokenFor(stranger._id, 'FARM_OWNER'),
@@ -116,11 +117,11 @@ describe('cài đặt camera đếm chim từ web (FARM-FR-004b, FARM-FR-010)', 
     expect(await AuditLog.countDocuments({ action: 'AI_NODE_ENROLLED' })).toBe(1)
   })
 
-  it('địa chỉ camera: chỉ Farm Owner sửa; mật khẩu mã hoá, không bao giờ trả ra; nút AI lấy được đúng URL', async () => {
+  it('địa chỉ camera: Farm Owner sửa; mật khẩu mã hoá, không bao giờ trả ra; nút AI lấy được đúng URL', async () => {
     const { camera, stock, tokens } = await seed()
     const put = (token: string, body: object) => request(app).put(`/devices/camera-nodes/${camera._id}/source`).set('Authorization', `Bearer ${token}`).send(body)
 
-    for (const token of [tokens.expert, tokens.technician, tokens.admin]) await put(token, SOURCE).expect(403)
+    for (const token of [tokens.expert, tokens.admin]) await put(token, SOURCE).expect(403)
     await put(tokens.stranger, SOURCE).expect(403)
     await put(tokens.owner, { ...SOURCE, host: 'rtsp://x' }).expect(422)
     await put(tokens.owner, { ...SOURCE, path: 'stream1' }).expect(422)
@@ -197,6 +198,27 @@ describe('cài đặt camera đếm chim từ web (FARM-FR-004b, FARM-FR-010)', 
     const agent = await request(app).get('/agent/camera-source').set('Authorization', basic('cam-h1-01', stock.broker_secret))
     expect(agent.body.data).toEqual({ version: 1, rtsp_url: 'rtsp://admin:old%40pw@192.168.1.163:554/stream1' })
     expect(await migrateLegacyRtspUrls()).toEqual({ moved: 0, skipped: 0 })
+  })
+
+  it('Farm Technician của nhà được giao nhập và đọc được địa chỉ camera, báo Farm Owner không kèm địa chỉ; nhà khác thì 403', async () => {
+    const { camera, tokens, farmId } = await seed()
+    const path = `/devices/camera-nodes/${camera._id}/source`
+    await request(app).put(path).set('Authorization', `Bearer ${tokens.technician}`).send(SOURCE).expect(200)
+    const read = await request(app).get(path).set('Authorization', `Bearer ${tokens.technician}`).expect(200)
+    expect(read.body.data.source).toMatchObject({ host: '203.0.113.7', has_password: true, version: 1 })
+    expect(JSON.stringify(read.body)).not.toContain('p@ss')
+
+    expect(await AuditLog.countDocuments({ action: 'CAMERA_SOURCE_UPDATED' })).toBe(1)
+    const notices = await Notification.find({ title: 'Kỹ thuật viên đã đổi địa chỉ camera' }).lean()
+    expect(notices.length).toBeGreaterThan(0)
+    expect(JSON.stringify(notices)).not.toMatch(/203\.0\.113\.7|p@ss/)
+
+    // Kỹ thuật viên của farm nhưng chưa được giao nhà này
+    const other = await User.create({ email: 'tech2@test.vn', password_hash: 'password123', full_name: 'tech2', role: 'FARM_TECHNICIAN' })
+    await Farm.updateOne({ _id: farmId }, { $push: { members: { user_id: other._id, role: 'FARM_TECHNICIAN' } } })
+    const otherToken = tokenFor(other._id, 'FARM_TECHNICIAN')
+    await request(app).get(path).set('Authorization', `Bearer ${otherToken}`).expect(403)
+    await request(app).put(path).set('Authorization', `Bearer ${otherToken}`).send(SOURCE).expect(403)
   })
 
   it('địa chỉ camera không lộ cho Kỹ thuật viên, Chuyên gia, Administrator qua danh sách, tổng quan hệ thống, vòng đếm', async () => {

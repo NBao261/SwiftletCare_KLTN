@@ -17,6 +17,8 @@ export interface DeviceItem {
   registeredAt: string;
   bootedAt?: string;
   freeHeap?: number;
+  // Lý do khởi động lại gần nhất do ESP32 báo (FARM-FR-006)
+  resetReason?: string;
   ip?: string;
   // thiết bị của bộ giả lập
   simulated?: boolean;
@@ -58,7 +60,7 @@ export function sensorItem(sensor: SensorNode, houseId: string): DeviceItem {
   return {
     id: sensor._id, deviceId: sensor.device_id, type: 'sensor', status: sensor.status, houseId, zoneId: sensor.zone_id,
     rssi: sensor.rssi, version: sensor.firmware_version, lastHeartbeat: sensor.last_heartbeat, registeredAt: sensor.registered_at,
-    bootedAt: sensor.booted_at, freeHeap: sensor.free_heap, ip: sensor.ip, simulated: sensor.simulated,
+    bootedAt: sensor.booted_at, freeHeap: sensor.free_heap, resetReason: sensor.reset_reason, ip: sensor.ip, simulated: sensor.simulated,
   };
 }
 

@@ -109,8 +109,8 @@ router.put ('/camera-nodes/:id/counting-ring', requireRole('FARM_OWNER','DOMAIN_
   ...ringFields('', path => body(path).if(body('rings').not().exists())),
   validate, deviceController.updateCountingRing)
 // Địa chỉ camera IP của nút AI: chỉ Farm Owner (thiết lập thiết bị), mật khẩu không bao giờ trả ra
-router.get ('/camera-nodes/:id/source', requireRole('FARM_OWNER'), param('id').isMongoId(), validate, deviceController.getCameraSource)
-router.put ('/camera-nodes/:id/source', requireRole('FARM_OWNER'), param('id').isMongoId(),
+router.get ('/camera-nodes/:id/source', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(), validate, deviceController.getCameraSource)
+router.put ('/camera-nodes/:id/source', requireRole('FARM_OWNER','FARM_TECHNICIAN'), param('id').isMongoId(),
   body('host').isString().trim().matches(CAMERA_HOST_PATTERN),
   body('port').isInt({ min: 1, max: 65535 }).toInt(),
   body('username').isString().bail().trim().isLength({ max: 64 }),

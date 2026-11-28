@@ -1176,7 +1176,7 @@ Backend vẫn là chốt chặn thật (13.8) — bảng này chỉ nói giao di
 
 1. **Mỗi lớp quan tâm chia theo role ở cấp thư mục con.** `apis/`, `hooks/`, `components/features/`, `pages/`, `routes/`, `validations/` đều có các bucket `admin/` · `farm-owner/` · `domain-expert/` · `technician/` · `auth/` · `shared/` · `common/`. `domain-expert/` chứa các màn do chuyên gia sở hữu (kiểm chứng cảnh báo, viết kết luận, duyệt thay đổi của chủ farm, duyệt đề xuất hệ số, tham số phát hiện, vòng đếm, lịch đếm — farm chưa có chuyên gia thì Farm Owner mở cùng trang, BR-22); màn chuyên gia chỉ xem (dashboard, analytics, live stream, thu hoạch) là trang Farm Owner mở với nhóm role rộng hơn, không nhân bản sang `domain-expert/`. Không gom theo feature, không để file rải rác cạnh trang dùng nó.
 2. **Vào `shared/` chỉ khi từ 2 role trở lên thật sự dùng.** Một role dùng thì về thư mục role đó, dù file trông "chung chung" tới đâu. Đây là luật chống `shared/` phình thành bãi rác.
-3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** Ví dụ `/devices` là một URL nhưng mỗi role một trang (`DevicesIndexRoute` trong `routes/technician.routes.tsx`): Farm Owner và Domain Expert mở `FarmOwnerDevicesPage`, Admin `AdminDevicesPage`, Farm Technician `TechnicianDevicesPage`. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
+3. **Thư mục cho biết role SỞ HỮU nghiệp vụ, không phải danh sách quyền.** Ví dụ `/devices` là một URL nhưng mỗi role một trang (`DevicesIndexRoute` trong `routes/technician.routes.tsx`): Admin mở `AdminDevicesPage`, các role còn lại (Farm Owner, Domain Expert, Farm Technician) mở `FarmOwnerDevicesPage` với nút ẩn theo quyền. Quyền thật nằm ở `allow={...}` trong `routes/<role>.routes.tsx` — muốn biết ai vào được trang nào thì đọc `routes/`, không suy từ tên file.
 4. **Mọi import dùng alias `@/`**, không dùng đường dẫn tương đối `../`. Nhờ vậy dời file chỉ phải sửa đúng đường dẫn của chính nó.
 5. **Một tính năng = một thư mục.** Component/modal/hằng số riêng của một màn hình nằm cùng chỗ trong `components/features/<role>/<area>/`, kể cả khi chỉ một trang dùng.
 
@@ -1224,7 +1224,7 @@ frontend/src/
 │   ├── domain-expert/         (đích) DomainExpert<ChứcNăng>Page — kiểm chứng cảnh báo, báo cáo
 │   │                          sức khỏe Zone, duyệt thay đổi, duyệt đề xuất hệ số, tham số phát hiện,
 │   │                          vòng đếm, lịch đếm
-│   ├── technician/            TechnicianDevicesPage · TechnicianFarmsPage
+│   ├── technician/            TechnicianFarmsPage
 │   ├── auth/                  LoginPage · ForgotPasswordPage · InvitationPage (không có đăng ký công khai —
 │   │                          người được mời tạo tài khoản trên trang lời mời, G-02)
 │   └── (gốc)                  SettingsPage · ForbiddenPage
@@ -1289,8 +1289,8 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
 ### 12.4. `pages/` — quy ước đặt tên `[Role][Chức năng]Page`
 
-- Tên file **mang luôn tên role sở hữu**: `AdminUsersPage.tsx`, `FarmOwnerHarvestPage.tsx`, `TechnicianDevicesPage.tsx`.
-- **Tên hàm component trùng tên file** — `export default function TechnicianDevicesPage()`.
+- Tên file **mang luôn tên role sở hữu**: `AdminUsersPage.tsx`, `FarmOwnerHarvestPage.tsx`, `TechnicianFarmsPage.tsx`.
+- **Tên hàm component trùng tên file** — `export default function TechnicianFarmsPage()`.
 - `pages/` **không có** thư mục `shared/` hay `public/`. Trang nhiều role dùng chung đặt ở thư mục role sở hữu nghiệp vụ chính (Thiết bị/Cảnh báo → `technician/`; Trang trại/Dashboard/Analytics/Thu hoạch/Camera và **thiết lập thiết bị bằng QR (SF-01)** → `farm-owner/`; kiểm chứng/kết luận/duyệt thay đổi/đề xuất hệ số/tham số phát hiện/vòng đếm/lịch đếm → `domain-expert/`).
 - Trang không thuộc nghiệp vụ role nào để thẳng ở gốc `pages/`; màn đăng nhập/đăng ký/nhận lời mời ở `pages/auth/`.
 - **Trong `pages/` không được có gì ngoài `*Page.tsx`.** Modal, tab, cột bảng, hằng số riêng của trang đều nằm ở `components/features/<role>/<area>/`.
@@ -1361,7 +1361,7 @@ Trường hợp đặc biệt: hạ tầng không gắn nghiệp vụ nào (`use
 
 | Lớp | Quy tắc tên | Ví dụ |
 |---|---|---|
-| `pages/<role>/` | `[Role][ChứcNăng]Page.tsx` | `AdminUsersPage.tsx` · `FarmOwnerHarvestPage.tsx` · `TechnicianDevicesPage.tsx` |
+| `pages/<role>/` | `[Role][ChứcNăng]Page.tsx` | `AdminUsersPage.tsx` · `FarmOwnerHarvestPage.tsx` · `TechnicianFarmsPage.tsx` |
 | `pages/auth/` + 2 trang gốc `pages/` | `[ChứcNăng]Page.tsx` — không role | `LoginPage.tsx` · `SettingsPage.tsx` · `ForbiddenPage.tsx` |
 | `components/features/<role>/<area>/` | `[TênFeature].tsx` — không tiền tố role; cột bảng `<area>Columns.tsx` (camelCase, vì là hàm build cột chứ không phải component) | `CreateUserModal.tsx` · `CreateHarvestModal.tsx` · `RelayToggle.tsx` · `userColumns.tsx` |
 | `components/layouts/` | `App[Phần].tsx` cho khung dùng chung · `menuCatalog.ts` cho danh mục menu | `AppShell.tsx` · `AppSidebar.tsx` · `menuCatalog.ts` |

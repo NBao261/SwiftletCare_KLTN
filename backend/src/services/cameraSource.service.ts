@@ -1,6 +1,6 @@
 import { CameraNode, IN_SERVICE, type ICameraSource } from '@/models/device.model'
 import { logAction } from '@/services/auditLog.service'
-import { pushCameraConfig } from '@/services/device.service'
+import { notifyOwnersOfTechnicianAction, pushCameraConfig } from '@/services/device.service'
 import { verifyBrokerCredential } from '@/services/provisionedDevice.service'
 import { assertHouseAccess } from '@/utils/farmAccess.util'
 import { buildRtspUrl, parseRtspUrl, type CameraSourceFields } from '@/utils/cameraSource.util'
@@ -9,7 +9,7 @@ import { NotFoundError, ServiceUnavailableError, UnauthorizedError } from '@/uti
 import logger from '@/utils/logger.util'
 import type { CurrentUser } from '@/types'
 
-// Địa chỉ camera IP của một nút AI: Farm Owner nhập trên web, mật khẩu mã hoá, nút AI lấy qua /agent/camera-source
+// Địa chỉ camera IP của một nút AI: Farm Owner, hoặc Farm Technician ở nhà được giao, nhập trên web, mật khẩu mã hoá, nút AI lấy qua /agent/camera-source
 
 function sourceKey(): Buffer {
   const key = secretKeyFrom(process.env.CAMERA_SOURCE_KEY)
@@ -45,7 +45,7 @@ export interface CameraSourceInput extends CameraSourceFields {
 
 export async function updateCameraSource(user: CurrentUser, cameraId: string, input: CameraSourceInput) {
   const camera = await findCameraOrThrow(cameraId)
-  await assertHouseAccess(String(camera.house_id), user)
+  const { house, farm } = await assertHouseAccess(String(camera.house_id), user)
   const previous = camera.camera_source
   const passwordEncrypted = input.password === undefined
     ? previous?.password_encrypted
@@ -59,6 +59,11 @@ export async function updateCameraSource(user: CurrentUser, cameraId: string, in
   await logAction(user._id, 'CAMERA_SOURCE_UPDATED', 'camera_node', String(camera._id), {
     deviceId: camera.device_id, host: input.host, port: input.port, username: input.username, path: input.path,
     passwordChanged: input.password !== undefined,
+  })
+  // Không ghi địa chỉ hay mật khẩu vào thông báo
+  await notifyOwnersOfTechnicianAction(user, farm._id, camera._id, {
+    title: 'Kỹ thuật viên đã đổi địa chỉ camera',
+    body: `Địa chỉ camera ${camera.device_id} của nhà "${house.name}" đã được cập nhật.`,
   })
   // Nút AI thấy camera_source_version đổi thì lấy lại địa chỉ; broker chưa nối thì nút AI nhận khi kết nối lại
   await pushCameraConfig(camera).catch((err: Error) => logger.warn('Không gửi được cấu hình camera', { deviceId: camera.device_id, err: err.message }))
