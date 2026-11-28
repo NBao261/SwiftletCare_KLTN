@@ -47,8 +47,10 @@ const enExpert: Record<string, string> = {
   'Cảnh báo khác': 'Other alert',
   'độ ẩm': 'humidity',
   'nhiệt độ': 'temperature',
-  'Nhiệt độ max phải lớn hơn nhiệt độ min': 'Max temperature must be above the min',
-  'Độ ẩm max phải lớn hơn độ ẩm min': 'Max humidity must be above the min',
+  'Nhập từ {{min}} đến {{max}} {{unit}}': 'Enter a value from {{min}} to {{max}} {{unit}}',
+  'Phải nhỏ hơn mức tối đa ({{value}} {{unit}})': 'Must be below the maximum ({{value}} {{unit}})',
+  'Phải lớn hơn mức tối thiểu ({{value}} {{unit}})': 'Must be above the minimum ({{value}} {{unit}})',
+  'Sửa các ô báo lỗi rồi lưu lại': 'Fix the fields marked with an error, then save again',
   'Chưa nhập hoặc không phải số': 'Empty or not a number',
   'Ngưỡng của Zone sẽ về mặc định hệ thống do Quản trị viên đặt. Không hoàn tác được.':
     'The Zone thresholds go back to the system default set by the Administrator. This cannot be undone.',

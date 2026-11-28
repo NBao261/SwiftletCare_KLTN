@@ -2,6 +2,7 @@
 import { cn } from '@/lib/cn'
 import { t } from '@/i18n'
 import StepperValueInput from './StepperValueInput'
+import FieldError from '@/components/ui/FieldError'
 
 interface Props {
   label: string
@@ -14,12 +15,15 @@ interface Props {
   decimals?: number
   unit: string
   highlighted?: boolean // true khi vừa áp dụng gợi ý AI
+  // Giá trị sai luật (VD tối thiểu vượt tối đa): viền đỏ và câu lỗi ngay dưới ô, không đợi bấm Lưu
+  error?: string
 }
 
 export default function TuningStepperInput({
   label, subLabel, value, onChange, min, max,
-  step = 1, decimals = 0, unit, highlighted,
+  step = 1, decimals = 0, unit, highlighted, error,
 }: Props) {
+  const errorId = `${label}-error`.replace(/s+/g, '-')
   const clamp = (v: number) => {
     const rounded = Math.round(v * 10 ** decimals) / 10 ** decimals
     if (min !== undefined && rounded < min) return min
@@ -34,10 +38,8 @@ export default function TuningStepperInput({
   const atMax = max !== undefined && value >= max
 
   return (
-    <div className={cn(
-      'flex items-center justify-between gap-3 py-2.5 transition-colors duration-300',
-      highlighted && '-mx-2 rounded-lg bg-accent-50 px-2',
-    )}>
+    <div className={cn('py-2.5 transition-colors duration-300', highlighted && '-mx-2 rounded-lg bg-accent-50 px-2')}>
+    <div className="flex items-center justify-between gap-3">
       {/* "Phạm vi · Mặc định" ở nút (i) đầu khối (TuningRangeTip), ô chỉ còn nhãn và dòng phụ */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium leading-tight text-charcoal">{label}</p>
@@ -68,9 +70,11 @@ export default function TuningStepperInput({
           decimals={decimals}
           label={label}
           unit={unit}
+          invalid={Boolean(error)}
+          errorId={errorId}
           className={cn(
             'min-w-[80px] px-2 py-1 rounded-lg border text-sm font-semibold text-[#27231F] transition-colors duration-300',
-            highlighted ? 'border-[#B5D32C] bg-[#ECFFA9]' : 'border-neutral-200 bg-neutral-50',
+            error ? 'border-alertRed bg-alertRed/5' : highlighted ? 'border-[#B5D32C] bg-[#ECFFA9]' : 'border-neutral-200 bg-neutral-50',
           )}
         />
 
@@ -89,6 +93,8 @@ export default function TuningStepperInput({
           +
         </button>
       </div>
+    </div>
+    {error && <FieldError id={errorId} className="mt-1.5">{error}</FieldError>}
     </div>
   )
 }

@@ -7,7 +7,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
 import { t } from '@/i18n'
 import { THRESHOLD_KEYS, THRESHOLD_FIELDS, FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
-import { parseThresholdInput, validateThresholds, validateThresholdSource } from '@/validations/common/threshold.validation'
+import { hasMinMaxOrderError, parseThresholdInput, validateThresholds, validateThresholdSource } from '@/validations/common/threshold.validation'
 import type { ThresholdKey } from '@/components/features/admin/system/system.constants'
 import type { SystemDefaultThresholds } from '@/types'
 
@@ -43,7 +43,10 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
     if (open && data) { setForm(toThresholdForm(data)); setSource(''); setSubmitted(false); setShowResetConfirm(false) }
   }, [open, data])
 
-  const errors = form ? validateThresholds(parseThresholdForm(form)) : {}
+  const parsedForm = form ? parseThresholdForm(form) : undefined
+  const errors = parsedForm ? validateThresholds(parsedForm) : {}
+  // Cặp tối thiểu, tối đa bị đảo thì báo ngay khi gõ; lỗi chưa nhập hoặc ngoài khoảng đợi bấm Lưu
+  const isOrderError = (key: ThresholdKey) => Boolean(parsedForm && hasMinMaxOrderError(parsedForm, key))
   const sourceError = validateThresholdSource(source)
   const isValid = Object.keys(errors).length === 0 && !sourceError
 
@@ -114,8 +117,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
                         required
                         value={form[key]}
                         onChange={e => setField(key, e.target.value)}
-                        error={submitted ? errors[key] : undefined}
-                        errorInLabel
+                        error={submitted || isOrderError(key) ? errors[key] : undefined}
                       />
                     ))}
                   </div>
