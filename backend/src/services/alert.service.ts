@@ -6,7 +6,7 @@ import { SensorNode, CameraNode, IN_SERVICE } from '@/models/device.model'
 import { emitAlertNew, emitHouseAlertNew } from '@/socket'
 import { dispatchAlertNotification } from '@/services/notification.service'
 import { repeatRecipientIds, rerouteReconfirmedAlert, routeNewAlert } from '@/services/alertRouting.service'
-import { handleNewAlert, openWorkOrderForAlert } from '@/services/workOrder.service'
+import { handleAlertRejected, handleNewAlert, openWorkOrderForAlert } from '@/services/workOrder.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import {
   assertExpertDecision, assertFarmAccess, assertHouseAccess, assertNodeHouseAccess, assertZoneAccess, listAccessibleFarmIds,
@@ -586,6 +586,11 @@ export async function setAlertVerdict(
   }
   // đã có Work Order mở thì không thêm
   if (needsVisit) await openWorkOrderForAlert(alert, 'EXPERT', user._id)
+  // Kết luận đã lưu: lỗi ở phiếu chỉ ghi log
+  if (result === 'REJECTED' && trimmedNote) {
+    await handleAlertRejected(alert._id, user, trimmedNote).catch((err: Error) =>
+      logger.error('Xử lý Work Order của cảnh báo bị bác bỏ thất bại', { alertId: String(alert._id), err }))
+  }
   return presentAlert(alert)
 }
 

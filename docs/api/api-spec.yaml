@@ -3562,7 +3562,9 @@ paths:
         Thiết bị **đang ONLINE** phải gửi kèm `force: true` (409 nếu
         thiếu) — gỡ một thiết bị còn sống là mất giám sát cả Zone. Cảnh báo còn mở
         của nó được đóng theo, và trong **24 giờ** vẫn
-        khôi phục lại được qua `/restore`.
+        khôi phục lại được qua `/restore`. Trước đó Work Order sửa chữa còn mở của thiết bị được đánh dấu
+        `device_left` (`REMOVED`, hoặc `REPLACED` khi gỡ qua `/replace`), ghi diễn biến và báo người giữ phiếu
+        cùng Farm Owner: chúng không đóng "self-recovered" theo cảnh báo vừa đóng.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -4283,6 +4285,7 @@ paths:
         Đăng ký thiết bị mới (cần `secret_key` như onboarding, trạng thái PENDING)
         vào đúng Zone của thiết bị cũ, chép lịch loa/âm lượng, rồi gỡ thiết bị cũ
         với `replaced_by` trỏ sang node mới. Sai `secret_key` thì thiết bị cũ giữ nguyên.
+        Work Order sửa chữa còn mở của thiết bị cũ có `device_left.kind: REPLACED`, diễn biến ghi mã thiết bị mới.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
       requestBody:
         required: true
@@ -4318,7 +4321,8 @@ paths:
         thuộc nhà khác → 403, và việc dời được báo cho Farm Owner. Administrator → 403 (Report 3 §2.4).
         Chỉ đổi Zone trong cơ sở dữ liệu rồi publish lại `config` (retained) của Zone mới lên topic
         của thiết bị, thiết bị offline nhận khi kết nối lại; thiết bị không biết farm, house, zone (D3). Kiểm quyền trên cả Zone
-        nguồn lẫn Zone đích; cảnh báo còn mở của thiết bị ở Zone cũ được đóng; audit
+        nguồn lẫn Zone đích; cảnh báo còn mở của thiết bị ở Zone cũ được đóng; Work Order sửa chữa còn mở của
+        thiết bị có `device_left.kind: MOVED` (diễn biến ghi Zone cũ và mới, không đóng "self-recovered"); audit
         `DEVICE_REASSIGNED`. Dời về chính Zone đang ở trả 400.
         `meta.commandDelivered=false` khi backend chưa kết nối broker.
       parameters: [{ $ref: "#/components/parameters/NodeId" }]
@@ -4841,6 +4845,12 @@ paths:
         `needs_visit: true` cùng `CONFIRMED` (BR-39, OPS-FR-001): mở một Work Order sửa chữa cho cảnh báo,
         giao thợ đang trực của nhà (nhà không có thợ thì Farm Owner xử lý); cảnh báo đã có Work Order đang
         mở thì không mở thêm. `needs_visit` cùng `REJECTED` → 422.
+
+        `REJECTED` cũng xử lý Work Order sửa chữa còn mở của cảnh báo: Work Order do một lần `needs_visit` mở
+        (`origin: EXPERT`) ở `OPEN`, `IN_PROGRESS` hoặc `VERIFYING` bị huỷ với `cancel_reason` "Cảnh báo đã bị bác bỏ: <note>"
+        (audit `WORK_ORDER_CANCELLED`, báo người giữ phiếu); Work Order khác (thợ thấy hỏng tại chỗ, Farm Owner mở tay,
+        hoặc đã `AWAITING_APPROVAL`) vẫn mở, diễn biến ghi lý do bác bỏ, người giữ phiếu và Farm Owner được báo để quyết.
+        Lỗi ở bước này chỉ ghi log, kết luận vẫn lưu.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -5049,7 +5059,11 @@ paths:
     post:
       tags: [WorkOrders]
       summary: "Bắt đầu làm (OPS-FR-002) — FARM_TECHNICIAN ở nhà được giao, FARM_OWNER"
-      description: "`OPEN` → `IN_PROGRESS`. Trạng thái khác → 409; thợ nhà khác → 403."
+      description: |
+        `OPEN` → `IN_PROGRESS`. Trạng thái khác → 409; thợ nhà khác → 403.
+        Thợ bắt đầu Work Order đang giao cho thợ khác, hoặc chưa giao ai, thì thành người nhận (`assignee`, `assigned_at`
+        mới; diễn biến ghi "Nhận làm thay <tên>" hoặc "Nhận phiếu chưa giao ai"; audit `WORK_ORDER_REASSIGNED` với
+        `taken_over: true`; người nhận cũ được báo). Farm Owner bắt đầu thì người nhận giữ nguyên.
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -5084,7 +5098,11 @@ paths:
         `RS485_BUS_FAILURE`, `SPEAKER_FAILURE` (thiếu → 422); nguyên nhân và ảnh lưu cả vào cảnh báo
         (`site_cause`). Ảnh: `multipart/form-data`, field `photos`, JPEG/PNG/WebP, mỗi ảnh ≤ 5 MB, tối đa
         5 ảnh cho cả Work Order (tính cả ảnh của lần báo xong trước khi bị mở lại; vượt → 400). Trạng thái
-        khác → 409; thợ nhà khác → 403.
+        khác → 409; thợ nhà khác → 403. Thợ báo xong Work Order của thợ khác thì thành người nhận, như `start`.
+
+        Work Order có `device_left` (thiết bị đã bị gỡ, thay hoặc dời): cảnh báo đóng theo việc đó không phải dữ liệu
+        phục hồi, nên lượt kiểm kế tiếp chuyển `AWAITING_APPROVAL` kèm ghi chú "Thiết bị đã rời chỗ…", Farm Owner kiểm
+        tại chỗ khi duyệt; Work Order `OPEN` của nó không đóng "self-recovered".
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
@@ -5114,7 +5132,7 @@ paths:
     post:
       tags: [WorkOrders]
       summary: "Duyệt, đóng Work Order và cảnh báo của nó (OPS-FR-004) — chỉ FARM_OWNER"
-      description: "`AWAITING_APPROVAL` → `CLOSED`; cảnh báo còn mở được đóng. Work Order sửa chữa có kết quả `REPAIRED`. Work Order `PREVENTIVE` có kết quả `DONE` và là một lần ghi bảo trì (OPS-FR-008): bộ đếm của tải về 0 (kế hoạch theo giờ chạy hoặc số lần đóng cắt), điểm đến hạn kế tiếp = lúc duyệt + `interval` ngày (kế hoạch theo lịch; hiệu chuẩn là ngày hiệu chuẩn kế tiếp), một dòng trong `records` của kế hoạch, kế hoạch về `SCHEDULED` khi không còn Work Order phòng ngừa nào đang mở. Trạng thái khác → 409. Ghi audit `WORK_ORDER_APPROVED`."
+      description: "`AWAITING_APPROVAL` → `CLOSED`; cảnh báo còn mở được đóng, `acknowledgement_note` giữ ghi chú người xác nhận đã viết, chưa có thì \"Đã sửa, chủ nhà yến đã duyệt phiếu công việc\" (phòng ngừa: \"Đã bảo trì, chủ nhà yến đã duyệt phiếu bảo trì\"). Work Order sửa chữa có kết quả `REPAIRED`. Work Order `PREVENTIVE` có kết quả `DONE` và là một lần ghi bảo trì (OPS-FR-008): bộ đếm của tải về 0 (kế hoạch theo giờ chạy hoặc số lần đóng cắt), điểm đến hạn kế tiếp = lúc duyệt + `interval` ngày (kế hoạch theo lịch; hiệu chuẩn là ngày hiệu chuẩn kế tiếp), một dòng trong `records` của kế hoạch, kế hoạch về `SCHEDULED` khi không còn Work Order phòng ngừa nào đang mở. Trạng thái khác → 409. Ghi audit `WORK_ORDER_APPROVED`."
       parameters:
         [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
@@ -8728,6 +8746,13 @@ components:
         closed_at: { type: string, format: date-time, nullable: true }
         assigned_at: { type: string, format: date-time, nullable: true, description: "Lúc giao cho thợ hiện tại; quá hạn \"chưa ai bắt đầu\" tính từ đây (BR-40)" }
         escalated_at: { type: string, format: date-time, nullable: true, description: "Lúc báo Farm Owner vì chưa ai bắt đầu sau `escalation_min` kể từ lúc giao (BR-40)" }
+        device_left:
+          type: object
+          nullable: true
+          description: "Thiết bị của Work Order sửa chữa đã bị gỡ (`REMOVED`), thay (`REPLACED`) hoặc dời Zone (`MOVED`) khi Work Order còn mở: không còn tự kiểm phục hồi bằng dữ liệu, Farm Owner kiểm tại chỗ rồi duyệt hoặc huỷ. Giữ nguyên khi thiết bị được khôi phục"
+          properties:
+            kind: { type: string, enum: [REMOVED, REPLACED, MOVED] }
+            at: { type: string, format: date-time }
         history:
           type: array
           items:

@@ -22,6 +22,10 @@ export interface ChecklistItem {
   repair_work_order_id?: Types.ObjectId
 }
 
+// Thiết bị của phiếu bị gỡ, thay hay dời: cảnh báo đóng theo nó không phải dữ liệu phục hồi
+export const DEVICE_LEFT_KINDS = ['REMOVED', 'REPLACED', 'MOVED'] as const
+export type DeviceLeftKind = typeof DEVICE_LEFT_KINDS[number]
+
 export interface WorkOrderHistoryEntry {
   from?: WorkOrderStatus
   to: WorkOrderStatus
@@ -63,6 +67,7 @@ export interface IWorkOrder extends Document {
   closed_at?: Date
   assigned_at?: Date
   escalated_at?: Date
+  device_left?: { kind: DeviceLeftKind; at: Date }
   history: WorkOrderHistoryEntry[]
 }
 
@@ -106,6 +111,13 @@ const workOrderSchema = new Schema<IWorkOrder>(
     closed_at:   { type: Date },
     assigned_at: { type: Date },
     escalated_at: { type: Date },
+    device_left: {
+      type: {
+        kind: { type: String, enum: DEVICE_LEFT_KINDS, required: true },
+        at:   { type: Date, required: true },
+        _id: false,
+      },
+    },
     history: [{
       from: { type: String, enum: WORK_ORDER_STATUSES },
       to:   { type: String, enum: WORK_ORDER_STATUSES, required: true },
