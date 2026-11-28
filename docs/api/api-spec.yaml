@@ -2100,6 +2100,37 @@ paths:
         "409": { description: "Người trong ca không phải Farm Technician đang được giao nhà", content: { application/json: { schema: { $ref: "#/components/schemas/ApiError" } } } }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /farms/houses/{houseId}/weather/current:
+    parameters:
+      - { $ref: "#/components/parameters/HouseId" }
+    get:
+      tags: [Farms]
+      summary: "Trời đang nắng hay mưa ở ngoài nhà (ANALYTICS-FR-013) — FARM_OWNER, DOMAIN_EXPERT, FARM_TECHNICIAN của nhà"
+      description: |
+        Tình trạng trời hiện tại ở toạ độ của farm chứa nhà, lấy từ Open-Meteo (chỉ toạ độ rời hệ thống) và nhớ 10 phút.
+        `condition` gom từ mã thời tiết WMO: `CLEAR` (quang; kèm `is_day` để phân biệt nắng và đêm trời quang), `PARTLY_CLOUDY`,
+        `CLOUDY`, `FOG`, `DRIZZLE`, `RAIN`, `THUNDERSTORM`, `OTHER`; `is_raining` đúng với `DRIZZLE`, `RAIN`, `THUNDERSTORM`.
+        Farm chưa có toạ độ hoặc dịch vụ lỗi thì `weather` là null kèm `reason` (`NO_COORDINATES`, `UNAVAILABLE`), không bao giờ là số 0.
+        Số này chỉ để xem, không điều khiển thiết bị (C-6). Farm Technician chỉ xem nhà được giao; Administrator → 403.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiSuccess"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          house_id: { type: string }
+                          weather: { $ref: "#/components/schemas/CurrentWeather" }
+                          reason: { type: string, enum: [NO_COORDINATES, UNAVAILABLE], description: "Chỉ có khi weather là null" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /farms/houses/{houseId}/weather-rules:
     parameters:
       - { $ref: "#/components/parameters/HouseId" }
@@ -7438,6 +7469,20 @@ components:
         days: { type: integer, description: "Số ngày đủ 2 phiên trong kỳ" }
         mean_morning_exit: { type: number }
         change_pct: { type: number, nullable: true, description: "% đổi so với kỳ liền trước; null khi kỳ trước không có số" }
+    CurrentWeather:
+      type: object
+      nullable: true
+      description: "ANALYTICS-FR-013 — trời hiện tại ở toạ độ của farm"
+      required: [observed_at, condition, is_raining, is_day]
+      properties:
+        observed_at: { type: string, format: date-time }
+        condition: { type: string, enum: [CLEAR, PARTLY_CLOUDY, CLOUDY, FOG, DRIZZLE, RAIN, THUNDERSTORM, OTHER] }
+        is_raining: { type: boolean }
+        is_day: { type: boolean }
+        temperature_c: { type: number, nullable: true }
+        humidity_pct: { type: number, nullable: true }
+        precipitation_mm: { type: number, nullable: true }
+        cloud_cover_pct: { type: number, nullable: true }
     WeatherRule:
       type: object
       description: "ENV-FR-030, BR-38 — dự báo 2 giờ tới ≥ min thì cộng offset_pct vào nhu cầu phun, trong duration_min phút"
