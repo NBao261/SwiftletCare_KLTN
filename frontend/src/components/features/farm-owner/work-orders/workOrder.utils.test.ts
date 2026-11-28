@@ -16,6 +16,13 @@ describe('isRecoveryUnverified — phiếu chờ duyệt mà hệ thống chưa 
   it('cảnh báo cảm biến: dữ liệu đã được kiểm', () => {
     expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'SENSOR_FAULT' })).toBe(false);
     expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'MISTING_INEFFECTIVE' })).toBe(false);
+    expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'SENSOR_FAULT', device_left: null })).toBe(false);
+  });
+
+  it('thiết bị của phiếu đã bị gỡ, thay, dời: chưa kiểm được, dù loại cảnh báo kiểm được bằng dữ liệu', () => {
+    for (const kind of ['REMOVED', 'REPLACED', 'MOVED'] as const) {
+      expect(isRecoveryUnverified({ alert_id: 'a1', alert_type: 'SENSOR_FAULT', device_left: { kind, at: '2026-11-29T01:00:00Z' } })).toBe(true);
+    }
   });
 });
 
@@ -55,6 +62,12 @@ describe('approvalDescriptionKey — câu trong hộp duyệt', () => {
   it('sửa chữa: dữ liệu đã kiểm, hoặc chưa kiểm được', () => {
     expect(approvalDescriptionKey({ kind: 'REPAIR', alert_id: 'a1', alert_type: 'THRESHOLD_BREACH' })).toBe('approve.desc');
     expect(approvalDescriptionKey({ kind: 'REPAIR', alert_id: null, alert_type: null })).toBe('approve.descUnverified');
+  });
+
+  it('sửa chữa có thiết bị đã rời chỗ: không nói "dữ liệu đã phục hồi"', () => {
+    const deviceLeft = { kind: 'MOVED' as const, at: '2026-11-29T01:00:00Z' };
+    expect(approvalDescriptionKey({ kind: 'REPAIR', alert_id: 'a1', alert_type: 'MISTING_INEFFECTIVE', device_left: deviceLeft }))
+      .toBe('approve.descUnverified');
   });
 });
 

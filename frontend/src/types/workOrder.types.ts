@@ -42,6 +42,9 @@ export interface WorkOrderHistoryEntry {
   at: string;
 }
 
+// Thiết bị của phiếu đã bị gỡ, thay hay dời Zone khi phiếu còn mở: hệ thống không kiểm phục hồi bằng dữ liệu nữa
+export type WorkOrderDeviceLeftKind = 'REMOVED' | 'REPLACED' | 'MOVED';
+
 export interface WorkOrder {
   _id: string;
   farm_id: string;
@@ -79,6 +82,8 @@ export interface WorkOrder {
   assigned_at: string | null;
   closed_at: string | null;
   escalated_at: string | null;
+  // Không có ở phiếu cũ
+  device_left?: { kind: WorkOrderDeviceLeftKind; at: string } | null;
   history: WorkOrderHistoryEntry[];
 }
 
