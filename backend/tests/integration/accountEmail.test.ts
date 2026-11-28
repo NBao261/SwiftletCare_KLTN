@@ -50,7 +50,7 @@ async function account(role: Role) {
   const user = await User.create({ email: `acc${seq}@test.vn`, password_hash: 'password123', full_name: `${role}${seq}`, role })
   return { user, token: tokenFor(user._id, role) }
 }
-const sentMails = () => sendMailMock.mock.calls.map(([mail]) => mail as { to: string; subject: string; text: string })
+const sentMails = () => sendMailMock.mock.calls.map(([mail]) => mail as { to: string; subject: string; text: string; html: string })
 // Toàn bộ nội dung đã ghi log, để kiểm không lộ mã hay mật khẩu
 const loggedText = (spies: jest.SpyInstance[]) => JSON.stringify(spies.flatMap(s => s.mock.calls))
 
@@ -69,6 +69,10 @@ describe('Administrator tạo Farm Owner (AUTH-FR-005c)', () => {
     const temporaryPassword = /Mật khẩu tạm: (\S+)/.exec(mails[0].text)![1]
     expect(temporaryPassword).toHaveLength(12)
     expect(mails[0].text).toContain('https://app.test/login')
+    // Bản HTML cùng nội dung: tên người dùng nhập được thoát, nút đăng nhập trỏ đúng trang
+    expect(mails[0].html).toContain(temporaryPassword)
+    expect(mails[0].html).toContain('href="https://app.test/login"')
+    expect(mails[0].html).toContain('Chào Chủ Trại')
     expect(JSON.stringify(res.body)).not.toContain(temporaryPassword)
 
     const stored = (await User.findOne({ email: 'new.owner@test.vn' }))!
@@ -138,7 +142,7 @@ describe('mã đặt lại mật khẩu qua e-mail (AUTH-FR-009)', () => {
     const mails = sentMails()
     expect(mails).toHaveLength(1)
     expect(mails[0]).toMatchObject({ to: user.email, subject: 'Mã đặt lại mật khẩu SwiftletCare' })
-    const code = /Mã đặt lại mật khẩu của bạn: (\d{6})/.exec(mails[0].text)![1]
+    const code = /Mã đặt lại mật khẩu: (\d{6})/.exec(mails[0].text)![1]
 
     expect(consoleLog).not.toHaveBeenCalled()
     expect(loggedText(spies)).not.toContain(code)

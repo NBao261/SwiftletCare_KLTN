@@ -1,4 +1,7 @@
 import nodemailer, { type Transporter } from 'nodemailer'
+import { appPublicUrl } from '@/utils/appUrl.util'
+import { formatVnDateTime } from '@/utils/displayLabel.util'
+import { renderEmail } from '@/utils/emailTemplate.util'
 import logger from '@/utils/logger.util'
 
 // Chỉ thư tài khoản đi qua e-mail. Không ghi log nội dung. Chưa cấu hình SMTP thì chỉ cảnh báo
@@ -6,7 +9,9 @@ import logger from '@/utils/logger.util'
 export interface MailMessage {
   to: string
   subject: string
+  // Bản chữ thường, cho trình đọc thư không hiện HTML
   text: string
+  html?: string
 }
 
 // Giá trị mẫu của .env.example coi như chưa cấu hình
@@ -60,7 +65,7 @@ export async function sendMail(message: MailMessage): Promise<boolean> {
     return false
   }
   try {
-    await transport.sendMail({ from: smtpConfig()!.from, to: message.to, subject: message.subject, text: message.text })
+    await transport.sendMail({ from: smtpConfig()!.from, to: message.to, subject: message.subject, text: message.text, html: message.html })
     return true
   } catch (err) {
     logger.error('Gửi thư thất bại', { subject: message.subject, err: err instanceof Error ? err.message : String(err) })
@@ -68,44 +73,63 @@ export async function sendMail(message: MailMessage): Promise<boolean> {
   }
 }
 
-export function appPublicUrl(): string {
-  const configured = process.env.APP_PUBLIC_URL?.trim() || process.env.CORS_ORIGIN?.split(',')[0]?.trim()
-  return (configured || 'http://localhost:5173').replace(/\/+$/, '')
+// Thư tài khoản: cùng một khung (emailTemplate.util), mỗi thư chỉ nêu nội dung
+function accountMail(to: string, subject: string, spec: Parameters<typeof renderEmail>[0]): MailMessage {
+  const { html, text } = renderEmail(spec)
+  return { to, subject, text, html }
 }
-
-const SIGNATURE = '\n\n— SwiftletCare'
-const vnDateTime = (at: Date) => at.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
 
 export function invitationMail(input: {
   to: string; farmName: string; roleLabel: string; token: string; expiresAt: Date
 }): MailMessage {
   const link = `${appPublicUrl()}/invitations/${input.token}`
-  return {
-    to: input.to,
-    subject: `Lời mời tham gia trại ${input.farmName} trên SwiftletCare`,
-    text: `Bạn được mời tham gia trại "${input.farmName}" với vai trò ${input.roleLabel}.\n\n`
-      + `Mở link sau để nhận lời mời (chưa có tài khoản thì tạo tài khoản ngay từ link này):\n${link}\n\n`
-      + `Lời mời hết hạn lúc ${vnDateTime(input.expiresAt)}.${SIGNATURE}`,
-  }
+  return accountMail(input.to, `Lời mời tham gia ${input.farmName} trên SwiftletCare`, {
+    preheader: `Bạn được mời vào ${input.farmName} với vai trò ${input.roleLabel}. Lời mời hết hạn ${formatVnDateTime(input.expiresAt)}.`,
+    title: `Bạn được mời tham gia ${input.farmName}`,
+    paragraphs: [
+      `Bạn được mời vào trang trại "${input.farmName}" với vai trò ${input.roleLabel}.`,
+      'Bấm nút bên dưới để nhận lời mời. Chưa có tài khoản thì bạn tạo tài khoản ngay từ lời mời này.',
+    ],
+    details: [
+      { label: 'Trang trại', value: input.farmName },
+      { label: 'Vai trò', value: input.roleLabel },
+      { label: 'Hạn lời mời', value: formatVnDateTime(input.expiresAt) },
+    ],
+    button: { label: 'Nhận lời mời', url: link },
+    notes: ['Nếu bạn không biết lời mời này, cứ bỏ qua thư. Lời mời sẽ tự hết hạn.'],
+  })
 }
 
 export function resetCodeMail(input: { to: string; code: string; expiresAt: Date }): MailMessage {
-  return {
-    to: input.to,
-    subject: 'Mã đặt lại mật khẩu SwiftletCare',
-    text: `Mã đặt lại mật khẩu của bạn: ${input.code}\n\n`
-      + `Mã dùng được một lần, hết hạn lúc ${vnDateTime(input.expiresAt)}. `
-      + `Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua thư này.${SIGNATURE}`,
-  }
+  return accountMail(input.to, 'Mã đặt lại mật khẩu SwiftletCare', {
+    preheader: `Mã đặt lại mật khẩu của bạn là ${input.code}. Dùng được một lần, hết hạn ${formatVnDateTime(input.expiresAt)}.`,
+    title: 'Đặt lại mật khẩu',
+    paragraphs: ['Bạn vừa yêu cầu đặt lại mật khẩu. Nhập mã bên dưới vào màn hình đặt lại mật khẩu của SwiftletCare.'],
+    highlight: { label: 'Mã đặt lại mật khẩu', value: input.code },
+    details: [
+      { label: 'Hạn dùng', value: formatVnDateTime(input.expiresAt) },
+      { label: 'Số lần dùng', value: 'Một lần' },
+    ],
+    notes: [
+      'Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua thư này. Mật khẩu hiện tại của bạn vẫn giữ nguyên.',
+      'Không chia sẻ mã này cho ai, kể cả người tự nhận là SwiftletCare.',
+    ],
+  })
 }
 
 export function temporaryPasswordMail(input: { to: string; fullName: string; temporaryPassword: string }): MailMessage {
-  return {
-    to: input.to,
-    subject: 'Tài khoản SwiftletCare của bạn',
-    text: `Chào ${input.fullName},\n\nTài khoản chủ nhà yến của bạn trên SwiftletCare đã được tạo.\n`
-      + `Email đăng nhập: ${input.to}\nMật khẩu tạm: ${input.temporaryPassword}\n\n`
-      + `Đăng nhập tại ${appPublicUrl()}/login. Ở lần đăng nhập đầu, bạn phải đổi mật khẩu tạm này `
-      + `trước khi dùng được các chức năng khác.${SIGNATURE}`,
-  }
+  return accountMail(input.to, 'Tài khoản SwiftletCare của bạn', {
+    preheader: 'Tài khoản chủ nhà yến của bạn đã được tạo. Đăng nhập và đổi mật khẩu tạm ở lần đầu.',
+    title: `Chào ${input.fullName}, tài khoản của bạn đã sẵn sàng`,
+    paragraphs: [
+      'Tài khoản chủ nhà yến của bạn trên SwiftletCare đã được tạo.',
+      `Đăng nhập bằng email ${input.to} và mật khẩu tạm bên dưới.`,
+    ],
+    highlight: { label: 'Mật khẩu tạm', value: input.temporaryPassword },
+    button: { label: 'Đăng nhập', url: `${appPublicUrl()}/login` },
+    notes: [
+      'Ở lần đăng nhập đầu, bạn phải đổi mật khẩu tạm này trước khi dùng được các chức năng khác.',
+      'Không chia sẻ mật khẩu này cho ai. Nên xoá thư sau khi đã đổi mật khẩu.',
+    ],
+  })
 }
