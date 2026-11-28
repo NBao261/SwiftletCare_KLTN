@@ -298,6 +298,7 @@ def main() -> None:
     # Vòng vẽ trên web thắng vòng trong config.yaml và đổi được khi đang chạy
     ring_store = RingStore(Path(cfg["tracking"]["ring_override_file"]), device_id)
     drawn_rings: Optional[List[Ring]] = ring_store.load()
+    show_rings = bool(cfg.get("overlay", {}).get("show_rings", False))   # mặc định: người xem không thấy vòng đếm
     # Khung phiên của ngày theo lịch đếm của nhà; ngày backend chưa gửi thì dùng config.yaml
     schedule = ScheduleStore(Path(s["windows_override_file"]), device_id)
     schedule.load()
@@ -357,7 +358,7 @@ def main() -> None:
             day_date, day_base, day_mark = today, load_day_total(today) if live else 0, day_now
         day_total = day_base + day_now - day_mark
 
-        annotated = draw(frame.copy(), tracks, day_counter, day_total) if server.watching_boxes or pusher else None
+        annotated = draw(frame.copy(), tracks, day_counter, day_total, show_rings) if server.watching_boxes or pusher else None
         server.publish(annotated, frame)
         if pusher:
             pusher.update(annotated)

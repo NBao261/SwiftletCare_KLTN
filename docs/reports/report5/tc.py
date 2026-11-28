@@ -108,7 +108,7 @@ TC=[
 ('TC-F10-03','F-10','Same ring','Feed a track lost at the frame edge, and a slow circling bird lost near the ring','—','Nothing counted for either',
  [(Y,'test_counting','test_track_lost_at_the_frame_edge_counts_nothing'),(Y,'test_counting','test_slow_circling_bird_lost_near_the_ring_counts_nothing')]),
 # F-11
-('TC-F11-01','F-11','Pipeline running on a recorded clip','Process frames and read the published frames','Clip with tracked birds','Every published frame shows the ring and a box with a track ID on each tracked bird',
+('TC-F11-01','F-11','Pipeline running on a recorded clip','Process frames and read the published frames','Clip with tracked birds','Every published frame shows a box with a track ID on each tracked bird and no counting ring',
  [(Y,'test_annotate','test_every_published_frame_has_the_ring_and_a_box_with_id_per_tracked_bird'),(Y,'test_annotate','test_bird_at_the_top_edge_keeps_its_id_inside_the_frame')]),
 ('TC-F11-02','F-11','Camera of a farm; its Farm Owner and Domain Expert','GET stream-token as each','—','Token valid 60 s for path `cam-<device_id>` only',
  (J,I+'streamAuth.test.ts','Farm Owner và Domain Expert của farm nhận token 60 giây')),
