@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { PlusIcon } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useSensorNodes, useSendNodeCommand } from "@/hooks/shared/useDevices";
@@ -22,7 +23,6 @@ import { devicesDict } from "@/constants/devices.i18n";
 import { useTranslation } from "@/hooks/common/useTranslation";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useToastStore } from "@/stores/toastStore";
-import { getApiErrorMessage } from "@/lib/helpers";
 
 const SEARCH_FROM = 6;
 
@@ -53,6 +53,7 @@ export default function TechnicianDevicesPage() {
   const [rebootUnsupportedIds, setRebootUnsupportedIds] = useState<Set<string>>(new Set());
   const sendCommand = useSendNodeCommand();
   const push = useToastStore((s) => s.push);
+  const apiErrorMessage = useApiErrorMessage();
   const [rebootNodeId, setRebootNodeId] = useState<string | null>(null);
   // Dời, thay, gỡ bộ điều khiển của nhà được giao (FARM-FR-007b, 008)
   const [moveDevice, setMoveDevice] = useState<DeviceItem>();
@@ -86,7 +87,7 @@ export default function TechnicianDevicesPage() {
             setRebootUnsupportedIds(prev => new Set(prev).add(nodeId));
             push(t("tech.restartUnsupported"), "error");
           } else {
-            push(getApiErrorMessage(err, t("tech.restartFailed")), "error");
+            push(apiErrorMessage(err, t("tech.restartFailed")), "error");
           }
           setRebootNodeId(null);
         },

@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { Button, Input, Modal } from '@/components/ui'
 import { useCreateZone } from '@/hooks/shared/useFarms'
 import { useToastStore } from '@/stores/toastStore'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { farmDict } from '@/constants/farmStructure.i18n'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { STRUCTURE_NAME_MAX_LENGTH } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { isNameTaken } from '@/components/features/farm-owner/farms/farmStructure'
 
@@ -13,6 +13,7 @@ import { isNameTaken } from '@/components/features/farm-owner/farms/farmStructur
 export default function AddZoneModal({ open, onClose, houseId, existingNames = [] }: { open: boolean; onClose: () => void; houseId: string; existingNames?: string[] }) {
   const { t } = useTranslation(farmDict)
   const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
   const createZone = useCreateZone(houseId)
   const [name, setName] = useState('')
   const trimmed = name.trim()
@@ -23,7 +24,7 @@ export default function AddZoneModal({ open, onClose, houseId, existingNames = [
     if (!trimmed || isDuplicate) return
     createZone.mutate({ name: trimmed }, {
       onSuccess: () => { push(t('toast.zoneCreated')); setName(''); onClose() },
-      onError: err => push(getApiErrorMessage(err, t('toast.zoneCreateFailed')), 'error'),
+      onError: err => push(apiErrorMessage(err, t('toast.zoneCreateFailed'), { 409: t('addZone.errorDuplicate') }), 'error'),
     })
   }
 

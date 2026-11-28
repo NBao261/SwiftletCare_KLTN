@@ -1,5 +1,6 @@
 // Nhật ký hệ thống: lọc ở server, tìm và sắp ở client trên toàn bộ kết quả
 import { useEffect } from 'react'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useSearchParams } from 'react-router-dom'
 import { USER_AUDIT_ACTIONS } from '@/constants/auditActions'
 import { Button, SectionCard } from '@/components/ui'
@@ -9,7 +10,6 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import Pagination from '@/components/ui/Pagination'
 import { WarningCircleIcon } from '@phosphor-icons/react'
 import { IconSearch } from '@/components/ui/icons'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { AuditLogCard, buildAuditLogColumns } from '@/components/features/admin/audit-log/auditLogColumns'
 import LoginFailedNotice from '@/components/features/admin/audit-log/LoginFailedNotice'
 import AuditLogFilters from '@/components/features/admin/audit-log/AuditLogFilters'
@@ -20,6 +20,7 @@ const PAGE_SIZE = 10
 const ROW_HEIGHT = 60
 
 export default function AdminAuditLogPage() {
+  const apiErrorMessage = useApiErrorMessage()
   // ?action= và ?q= chỉ đọc làm giá trị khởi tạo; riêng q được ghi ngược lên URL để giữ khi reload/chia sẻ link.
   const [searchParams, setSearchParams] = useSearchParams()
   const table = useAuditLogTable(PAGE_SIZE, {
@@ -55,7 +56,7 @@ export default function AdminAuditLogPage() {
           <EmptyState
             icon={<WarningCircleIcon size={28} />}
             title="Không tải được nhật ký"
-            description={getApiErrorMessage(table.error, 'Kiểm tra kết nối tới máy chủ rồi thử lại.')}
+            description={apiErrorMessage(table.error)}
             action={<Button variant="secondary" size="sm" onClick={() => table.refetch()}>Thử lại</Button>}
           />
         )}

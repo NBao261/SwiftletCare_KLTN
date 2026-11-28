@@ -4,6 +4,7 @@ import { Sparkles, ArrowRight } from 'lucide-react';
 import { useZoneStore } from '@/stores/zoneStore';
 import { useToastStore } from '@/stores/toastStore';
 import { t } from '@/i18n';
+import LoadError from '@/components/ui/LoadError';
 import { Button } from '@/components/ui/Button';
 import ThresholdColumn from '@/components/features/domain-expert/tuning/ThresholdColumn';
 import FuzzyTuningColumn from '@/components/features/domain-expert/tuning/FuzzyTuningColumn';
@@ -26,6 +27,19 @@ import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecision
 import { usePermission } from '@/hooks/common/usePermission';
 
 // Ngưỡng & hệ số mờ: nơi duy nhất sửa ngưỡng và hệ số mờ của một Zone trên web
+// Câu mở đầu của lỗi theo từng thao tác lưu: người dùng biết thao tác nào vừa thất bại
+const FAILED_MESSAGE: Record<string, string> = {
+  'Đã lưu ngưỡng môi trường': 'Lưu ngưỡng môi trường thất bại',
+  'Đã khôi phục ngưỡng mặc định': 'Khôi phục ngưỡng mặc định thất bại',
+  'Đã lưu hệ số mờ': 'Lưu hệ số mờ thất bại',
+  'Đã lưu tham số phát hiện': 'Lưu tham số phát hiện thất bại',
+  'Đã khôi phục tham số phát hiện mặc định': 'Khôi phục tham số phát hiện thất bại',
+  'Đã áp dụng gợi ý hệ số cho Zone': 'Áp dụng gợi ý hệ số thất bại',
+  'Đã gửi gợi ý hệ số cho chuyên gia duyệt': 'Gửi gợi ý hệ số thất bại',
+  'Đã lưu mức giảm tỷ lệ chim về của nhà': 'Lưu mức giảm tỷ lệ chim về thất bại',
+  'Đã khôi phục mức giảm tỷ lệ chim về mặc định': 'Khôi phục mức giảm tỷ lệ chim về thất bại',
+}
+
 export default function DomainExpertZoneTuningPage() {
   const { selectedFarmId, selectedZoneId } = useZoneStore();
   const zoneId = selectedZoneId ?? undefined;
@@ -97,7 +111,7 @@ export default function DomainExpertZoneTuningPage() {
   // Mọi thao tác lưu báo kết quả, kể cả lỗi (FE_Design 13.5); thay đổi của Farm Owner ở farm có chuyên gia mở mục duyệt
   function notify(action: Promise<unknown>, doneMessage: string, reviewed = true) {
     const message = ownerNeedsExpert && reviewed ? `${t(doneMessage)}. ${t('Chuyên gia sẽ xem lại thay đổi này.')}` : t(doneMessage);
-    action.then(() => push(message)).catch(error => push(apiErrorMessage(error), 'error'));
+    action.then(() => push(message)).catch(error => push(apiErrorMessage(error, t(FAILED_MESSAGE[doneMessage] ?? 'Lưu thất bại')), 'error'));
   }
 
   // Gợi ý hệ số: người được quyết thì áp ngay, Farm Owner ở farm có chuyên gia thì gửi chuyên gia duyệt
@@ -115,6 +129,18 @@ export default function DomainExpertZoneTuningPage() {
       loading: submitProposal.isPending,
       onClick: () => notify(submitProposal.mutateAsync(zoneId), 'Đã gửi gợi ý hệ số cho chuyên gia duyệt', false),
     };
+  }
+
+  // Tải thông số lỗi thì báo lỗi, không để các ô trống như Zone chưa có số liệu
+  const loadError = [thresholds, fuzzy, detection].find(query => query.isError)
+  if (loadError) {
+    return (
+      <LoadError
+        title={t('Không tải được thông số của Zone')}
+        error={loadError.error}
+        onRetry={() => void Promise.all([thresholds.refetch(), fuzzy.refetch(), detection.refetch()])}
+      />
+    )
   }
 
   return (

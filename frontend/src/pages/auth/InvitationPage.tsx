@@ -1,12 +1,12 @@
 // Người được mời chưa có tài khoản thì tạo ngay tại đây
 import { useState, type FormEvent } from 'react'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useInvitationPreview, useAcceptInvitation, useDeclineInvitation, useCreateAccountFromInvitation } from '@/hooks/auth/useInvitations'
 import { Button, Card, Input } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { INVITE_ROLE_LABEL } from '@/constants/roles'
 import { getRoleHomePath } from '@/constants/roles'
 import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
@@ -22,6 +22,7 @@ export default function InvitationPage() {
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
   const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
   const { user, isAuthenticated } = useAuthStore()
   const { data, isLoading, isError } = useInvitationPreview(token)
   const accept = useAcceptInvitation()
@@ -57,7 +58,7 @@ export default function InvitationPage() {
     accept.mutate(token, {
       // Chấp nhận không đổi role nên về trang nhà của role hiện tại
       onSuccess: () => { push('Đã chấp nhận lời mời'); navigate(getRoleHomePath(user?.role)) },
-      onError: (err) => push(getApiErrorMessage(err, 'Chấp nhận thất bại'), 'error'),
+      onError: (err) => push(apiErrorMessage(err, t('Chấp nhận thất bại')), 'error'),
     })
   }
 
@@ -77,7 +78,7 @@ export default function InvitationPage() {
         navigate(`/login?email=${encodeURIComponent(invitation.invited_email)}`)
       },
       // 409 lời mời đã dùng/hết hạn hoặc email đã có tài khoản, 404 farm đã xoá: backend trả message tiếng Việt
-      onError: (err) => push(getApiErrorMessage(err, 'Tạo tài khoản thất bại'), 'error'),
+      onError: (err) => push(apiErrorMessage(err, t('Tạo tài khoản thất bại')), 'error'),
     })
   }
 
@@ -85,7 +86,7 @@ export default function InvitationPage() {
     if (!token) return
     decline.mutate(token, {
       onSuccess: () => push('Đã từ chối lời mời'),
-      onError: (err) => push(getApiErrorMessage(err, 'Từ chối thất bại'), 'error'),
+      onError: (err) => push(apiErrorMessage(err, t('Từ chối thất bại')), 'error'),
     })
   }
 
