@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
-import { Button, Input } from '@/components/ui';
+import { Button, ErrorNotice, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/auth/useAuth';
-import { getApiErrorMessage } from '@/lib/helpers';
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
+import { getApiErrorCode, getApiErrorReason } from '@/lib/apiError';
 import { useDocumentTitle } from '@/hooks/common/useDocumentTitle'
 import { t } from '@/i18n'
 
@@ -11,6 +12,7 @@ import { t } from '@/i18n'
 export default function LoginPage(): JSX.Element {
   useDocumentTitle(t('Đăng nhập'))
   const { login } = useAuth();
+  const apiErrorMessage = useApiErrorMessage();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo') ?? undefined;
   const [email, setEmail] = useState(searchParams.get('email') ?? '');
@@ -21,7 +23,11 @@ export default function LoginPage(): JSX.Element {
     login.mutate({ email, password, returnTo });
   }
 
-  const errorMessage = login.isError ? getApiErrorMessage(login.error, 'Đăng nhập thất bại') : undefined;
+  // 401 ở đây là sai email hoặc mật khẩu, không phải phiên hết hạn; tài khoản bị khoá kèm lý do Administrator đã ghi
+  const lockReason = login.isError && getApiErrorCode(login.error) === 'ACCOUNT_DISABLED' ? getApiErrorReason(login.error) : undefined;
+  const errorMessage = login.isError
+    ? `${apiErrorMessage(login.error, t('Đăng nhập thất bại'), { 401: t('Sai email hoặc mật khẩu. Kiểm tra lại hoặc đặt lại mật khẩu.') })}${lockReason ? ` ${t('Lý do:')} ${lockReason}` : ''}`
+    : undefined;
 
   return (
     <>
@@ -53,9 +59,7 @@ export default function LoginPage(): JSX.Element {
         >
           Quên mật khẩu?
         </Link>
-        {errorMessage && (
-          <p role="alert" className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">{errorMessage}</p>
-        )}
+        {errorMessage && <ErrorNotice>{errorMessage}</ErrorNotice>}
         <Button type="submit" size="lg" loading={login.isPending} className="mt-2 w-full">
           Đăng nhập
         </Button>

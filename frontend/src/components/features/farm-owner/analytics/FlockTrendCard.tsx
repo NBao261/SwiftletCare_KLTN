@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
-import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { ChartEmptyFrame, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import StatStrip from '@/components/common/StatStrip';
 import { BAR_MARK, SERIES_COLORS, X_AXIS_TICKS } from '@/components/features/farm-owner/analytics/analytics.constants';
@@ -12,6 +12,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHousesBirdCountTrends } from '@/hooks/farm-owner/useAnalytics';
 import { baseChartOptions } from '@/lib/chartTheme';
 import type { FlockPeriod } from '@/types';
+import LoadError from '@/components/ui/LoadError'
 
 type Granularity = 'weekly' | 'monthly';
 // 90 ngày để đủ vài tháng trọn (api-spec flock_trend)
@@ -28,7 +29,7 @@ function periodLabel(period: string, granularity: Granularity): string {
 export default function FlockTrendCard({ houseId, houseName }: { houseId: string; houseName: string }): JSX.Element {
   const { t, num, date } = useTranslation(analyticsDict);
   const [granularity, setGranularity] = useState<Granularity>('weekly');
-  const { single, isLoading, isError, refetch } = useHousesBirdCountTrends([houseId], TREND_DAYS);
+  const { single, isLoading, isError, error, refetch } = useHousesBirdCountTrends([houseId], TREND_DAYS);
   const periods = single?.flock_trend?.[granularity] ?? NO_PERIODS;
   const latest = periods[periods.length - 1];
 
@@ -53,10 +54,7 @@ export default function FlockTrendCard({ houseId, houseName }: { houseId: string
   let body = <LoadingSkeleton className="h-72 w-full" />;
   if (!isLoading && isError) {
     body = (
-      <EmptyState
-        title={t('common.loadError')}
-        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={error} onRetry={() => void refetch()} />
     );
   }
   if (!isLoading && !isError) {

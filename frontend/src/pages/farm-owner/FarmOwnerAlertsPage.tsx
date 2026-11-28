@@ -9,12 +9,11 @@ import AcknowledgeAlertModal from '@/components/features/farm-owner/alerts/Ackno
 import AlertDetailDrawer from '@/components/features/farm-owner/alerts/AlertDetailDrawer';
 import OnsiteCheckModal from '@/components/features/farm-owner/alerts/OnsiteCheckModal';
 import AlertTable, { type AlertAction } from '@/components/features/farm-owner/alerts/AlertTable';
-import { Button, ClearFiltersButton, EmptyState, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
+import { ClearFiltersButton, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
 import { alertsDict } from '@/constants/alerts.i18n';
 import { alertTypeDict } from '@/constants/enumLabels.i18n';
 import { NO_VALUE } from '@/constants/display';
 import { LEVELS, severityQueryOf } from '@/constants/severity';
-import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useCameraNodes } from '@/hooks/farm-owner/useFarmOwnerDashboard';
@@ -26,6 +25,7 @@ import { nodeLocation } from '@/lib/deviceLocation';
 import { lastPage } from '@/lib/helpers';
 import type { Alert, AlertStatus, AlertType, SeverityLevel } from '@/types';
 import type { InferredAlertType } from '@/types/expert/alerts.types';
+import LoadError from '@/components/ui/LoadError'
 
 // 'open' = còn hiệu lực (ACTIVE, ACKNOWLEDGED), hiện tách khỏi DISMISSED và RESOLVED
 type StatusFilter = 'open' | 'all' | AlertStatus;
@@ -45,7 +45,6 @@ const isInferred = (type: AlertType) => (INFERRED_TYPES as AlertType[]).includes
 // Mặc định chỉ cảnh báo còn hiệu lực; Admin chỉ xem cảnh báo thiết bị
 export default function FarmOwnerAlertsPage(): JSX.Element {
   const { t } = useTranslation(alertsDict);
-  const apiErrorMessage = useApiErrorMessage();
   const canAcknowledge = usePermission('FARM_OWNER', 'FARM_TECHNICIAN');
   const isAdmin = usePermission('ADMIN');
   const isTechnician = usePermission('FARM_TECHNICIAN');
@@ -205,11 +204,7 @@ export default function FarmOwnerAlertsPage(): JSX.Element {
         {isLoading ? (
           <LoadingSkeleton count={5} className="h-14 w-full" />
         ) : isError ? (
-          <EmptyState
-            title={t('list.errorTitle')}
-            description={apiErrorMessage(error)}
-            action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-          />
+          <LoadError title={t('list.errorTitle')} error={error} onRetry={() => void refetch()} />
         ) : alerts.length === 0 ? (
           // Khung viền đứt tới gần đáy thẻ; đệm trên dày hơn 40px vì vòng tròn minh hoạ tràn lên trên khung hình 40px
           <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 pb-10 pt-20">

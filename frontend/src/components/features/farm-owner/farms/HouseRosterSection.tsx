@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import FieldError from '@/components/ui/FieldError'
 import { PlusIcon } from '@phosphor-icons/react'
 import { Badge, Button, FilterChip, Input, Modal, SelectMenu } from '@/components/ui'
 import ActionsMenu from '@/components/ui/ActionsMenu'
@@ -237,9 +238,9 @@ function ShiftModal({ title, initial, options, others, saving, onClose, onSave }
           <Input label={t('roster.end')} type="time" value={end} onChange={event => setEnd(event.target.value)} />
         </div>
         {error && (
-          <p className="text-xs text-alertRed">
+          <FieldError>
             {error === 'roster.errOverlap' ? t(error, { role: t(ROLE_LABEL[role]).toLowerCase() }) : t(error)}
-          </p>
+          </FieldError>
         )}
         <div className="flex justify-end border-t border-gray-200 pt-4">
           <Button type="submit" className="min-w-[8rem]" loading={saving}>{t('roster.save')}</Button>

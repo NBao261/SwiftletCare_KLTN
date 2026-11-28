@@ -1,13 +1,13 @@
 import { useState, useEffect, FormEvent } from 'react'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useDefaultThresholds, useUpdateDefaultThresholds } from '@/hooks/admin/useSystem'
 import { Button, Input, Modal, ModalHeader, ModalSection, ModalSummaryRow } from '@/components/ui'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 import { THRESHOLD_KEYS, THRESHOLD_FIELDS, FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
-import { parseThresholdInput, validateThresholds, validateThresholdSource } from '@/validations/common/threshold.validation'
+import { hasMinMaxOrderError, parseThresholdInput, validateThresholds, validateThresholdSource } from '@/validations/common/threshold.validation'
 import type { ThresholdKey } from '@/components/features/admin/system/system.constants'
 import type { SystemDefaultThresholds } from '@/types'
 
@@ -31,6 +31,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
   const { data } = useDefaultThresholds()
   const updateThresholds = useUpdateDefaultThresholds()
   const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
   const [form, setForm] = useState<ThresholdFormState | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
@@ -42,7 +43,10 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
     if (open && data) { setForm(toThresholdForm(data)); setSource(''); setSubmitted(false); setShowResetConfirm(false) }
   }, [open, data])
 
-  const errors = form ? validateThresholds(parseThresholdForm(form)) : {}
+  const parsedForm = form ? parseThresholdForm(form) : undefined
+  const errors = parsedForm ? validateThresholds(parsedForm) : {}
+  // Cặp tối thiểu, tối đa bị đảo thì báo ngay khi gõ; lỗi chưa nhập hoặc ngoài khoảng đợi bấm Lưu
+  const isOrderError = (key: ThresholdKey) => Boolean(parsedForm && hasMinMaxOrderError(parsedForm, key))
   const sourceError = validateThresholdSource(source)
   const isValid = Object.keys(errors).length === 0 && !sourceError
 
@@ -56,8 +60,8 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
     if (!form || !isValid) return
     updateThresholds.mutate({ ...parseThresholdForm(form), source: source.trim() }, {
       onSuccess: () => { push('Đã lưu ngưỡng mặc định hệ thống'); onClose() },
-      // 400 từ assertValidThresholds (min ≥ max, ngoài khoảng đo...): backend trả message tiếng Việt sẵn
-      onError: (err) => push(getApiErrorMessage(err, 'Lưu ngưỡng mặc định thất bại'), 'error'),
+      // Lỗi từng ô do validateThresholds báo trước khi gửi; ở đây chỉ còn lỗi mạng, quyền hoặc máy chủ
+      onError: (err) => push(apiErrorMessage(err, t('Lưu ngưỡng mặc định thất bại')), 'error'),
     })
   }
 
@@ -65,7 +69,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
   function handleReset() {
     updateThresholds.mutate({ ...FACTORY_DEFAULT_THRESHOLDS, source: source.trim() }, {
       onSuccess: () => { setShowResetConfirm(false); push('Đã khôi phục về mặc định gốc'); onClose() },
-      onError: (err) => push(getApiErrorMessage(err, 'Khôi phục mặc định gốc thất bại'), 'error'),
+      onError: (err) => push(apiErrorMessage(err, t('Khôi phục mặc định gốc thất bại')), 'error'),
     })
   }
 
@@ -113,8 +117,7 @@ export default function ThresholdsEditModal({ open, onClose }: { open: boolean; 
                         required
                         value={form[key]}
                         onChange={e => setField(key, e.target.value)}
-                        error={submitted ? errors[key] : undefined}
-                        errorInLabel
+                        error={submitted || isOrderError(key) ? errors[key] : undefined}
                       />
                     ))}
                   </div>

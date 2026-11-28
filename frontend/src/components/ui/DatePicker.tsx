@@ -3,6 +3,7 @@ import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icon
 
 import { intlLocale, t } from '@/i18n';
 import { cn } from '@/lib/cn';
+import FieldError from '@/components/ui/FieldError';
 
 const DAYS_PER_WEEK = 7;
 // 1 thứ Hai bất kỳ (01/01/2024) để lấy tên thứ theo ngôn ngữ, tuần bắt đầu từ thứ Hai
@@ -145,6 +146,7 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
           value={text}
           onChange={handleTyping}
           aria-invalid={Boolean(error)}
+          aria-describedby={error && id ? `${id}-error` : undefined}
           // Đã có ngày hợp lệ: viền xanh như các ô chọn đã chọn trong cùng form
           className={cn('input pr-11 tabular-nums', error ? 'border-alertRed focus:border-alertRed' : value && 'border-accent-600 focus:border-accent-600')}
         />
@@ -158,7 +160,7 @@ export default function DatePicker({ id, label, value, onChange, min = '', max, 
           <CalendarBlankIcon size={18} />
         </button>
       </div>
-      {error && <span className="text-xs text-alertRed">{error}</span>}
+      {error && <FieldError id={id ? `${id}-error` : undefined}>{error}</FieldError>}
 
       {/* Lịch nổi dưới ô, rộng bằng ô (tối đa 20rem); nút ngày co theo cột nên ô hẹp không đè nhau */}
       {isOpen && (

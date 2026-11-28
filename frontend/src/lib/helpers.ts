@@ -129,8 +129,3 @@ export function alertBreach(alert: Pick<Alert, 'details' | 'metadata'>): AlertBr
 // Format return rate
 export const formatReturnRate = (rate: number) => `${rate.toFixed(1)}%`
 
-// Message lỗi từ envelope chuẩn
-export function getApiErrorMessage(err: unknown, fallback: string): string {
-  const message = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
-  return message ?? fallback
-}

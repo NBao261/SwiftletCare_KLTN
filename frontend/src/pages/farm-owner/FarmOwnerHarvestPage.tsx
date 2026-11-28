@@ -28,6 +28,7 @@ import { useToastStore } from '@/stores/toastStore';
 import type { HarvestGroup } from '@/components/features/farm-owner/harvest/harvestMetrics';
 import type { Farm, HarvestBatch, User } from '@/types';
 import { NO_VALUE } from '@/constants/display';
+import LoadError from '@/components/ui/LoadError'
 
 // Ký tự BOM để Excel mở file CSV tiếng Việt đúng bảng mã
 const CSV_BYTE_ORDER_MARK = String.fromCharCode(0xfeff);
@@ -148,11 +149,7 @@ export default function FarmOwnerHarvestPage(): JSX.Element {
 
   if (isError) {
     return (
-      <EmptyState
-        title={t('page.errorTitle')}
-        description={apiErrorMessage(error)}
-        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-      />
+      <LoadError title={t('page.errorTitle')} error={error} onRetry={() => void refetch()} />
     );
   }
 

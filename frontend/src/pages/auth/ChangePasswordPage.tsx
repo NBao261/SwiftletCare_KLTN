@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 
-import { Button, Input } from '@/components/ui';
+import { Button, ErrorNotice, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useAuthStore } from '@/stores/authStore';
@@ -69,9 +69,7 @@ export default function ChangePasswordPage(): JSX.Element {
           onChange={event => setConfirmPassword(event.target.value)}
           error={submitted ? errors.confirmPassword : undefined}
         />
-        {submitError && (
-          <p role="alert" className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">{submitError}</p>
-        )}
+        {submitError && <ErrorNotice>{submitError}</ErrorNotice>}
         <Button type="submit" size="lg" loading={changePassword.isPending} className="mt-2 w-full">
           Đổi mật khẩu
         </Button>

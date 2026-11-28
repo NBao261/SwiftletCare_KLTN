@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ErrorNotice from '@/components/ui/ErrorNotice'
 import { WarningCircleIcon } from '@phosphor-icons/react'
 import { Button, Input, Modal } from '@/components/ui'
 import { farmDict } from '@/constants/farmStructure.i18n'
@@ -72,7 +73,7 @@ export default function StructureEditModal({ kind, mode, id, name, deviceCount, 
             {t('structure.deleteBlocked', { target, n: num(deviceCount) })}
           </p>
         )}
-        {mutation.isError && <p role="alert" className="text-sm text-alertRed">{errorText}</p>}
+        {mutation.isError && <ErrorNotice>{errorText}</ErrorNotice>}
         <div className="flex justify-end gap-2 border-t border-warmGray/10 pt-4">
           <Button type="button" variant="secondary" className="min-w-[8rem]" onClick={onClose}>{t('structure.cancel')}</Button>
           <Button

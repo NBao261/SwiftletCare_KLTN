@@ -19,6 +19,7 @@ import { useZoneRelayOverrides } from '@/hooks/farm-owner/useAnalytics';
 import { useLiveZoneTelemetry } from '@/hooks/farm-owner/useLiveZoneTelemetry';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useSensorNodes } from '@/hooks/shared/useDevices';
+import LoadError from '@/components/ui/LoadError'
 
 // Điều khiển tay: mỗi Zone một thẻ, bật hoặc tắt rơ-le có thời hạn rồi tự về tự động
 export default function FarmOwnerScadaPage(): JSX.Element {
@@ -34,7 +35,7 @@ export default function FarmOwnerScadaPage(): JSX.Element {
     () => new Map(scopedZones.map(item => [item._id, houseId ? item.name : t('scada.zoneOption', { house: item.houseName, zone: item.name })])),
     [scopedZones, houseId, t],
   );
-  const { data: allNodes, isLoading: isLoadingNodes, isError, refetch } = useSensorNodes();
+  const { data: allNodes, isLoading: isLoadingNodes, isError, error, refetch } = useSensorNodes();
   const live = useLiveZoneTelemetry(zoneIds);
 
   // Bộ điều khiển trong phạm vi theo thứ tự Zone, trạng thái rơ-le mới nhất qua socket đè lên dữ liệu đã tải
@@ -73,7 +74,7 @@ export default function FarmOwnerScadaPage(): JSX.Element {
   // Danh sách theo trạng thái tải, lỗi, chưa có bộ điều khiển; mỗi bộ điều khiển chưa kết nối là một thẻ riêng
   let devices = <LoadingSkeleton count={2} className="h-48 w-full" />;
   if (!isLoadingNodes && isError) {
-    devices = <EmptyState title={t('scada.loadError')} action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('log.retry')}</Button>} />;
+    devices = <LoadError title={t('scada.loadError')} error={error} onRetry={() => void refetch()} />;
   }
   if (!isLoadingNodes && !isError && nodes.length === 0) devices = <EmptyState title={t('scada.noDevice')} />;
   if (!isLoadingNodes && !isError && nodes.length > 0) {

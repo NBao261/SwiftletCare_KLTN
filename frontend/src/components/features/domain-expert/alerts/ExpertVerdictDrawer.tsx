@@ -10,7 +10,8 @@ import { useZoneStore } from '@/stores/zoneStore'
 import MultimodalEvidenceCharts from './MultimodalEvidenceCharts'
 import VerdictForm from './VerdictForm'
 import SeverityBadge from '@/components/common/SeverityBadge'
-import { Badge, Button, type BadgeTone } from '@/components/ui'
+import { Badge, Button, ErrorNotice, type BadgeTone } from '@/components/ui'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useRemindExpert } from '@/hooks/shared/useRemindExpert'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
 import { t } from '@/i18n'
@@ -36,6 +37,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   const [verdict, setVerdict] = useState<'CONFIRMED' | 'REJECTED' | null>(null)
   const [note, setNote] = useState('')
   const mutation = useSubmitAlertVerdict()
+  const apiErrorMessage = useApiErrorMessage()
   // Farm Owner kết luận thay khi farm chưa có chuyên gia; farm có chuyên gia thì xem bằng chứng và nhắc chuyên gia
   const { canDecide, ownerNeedsExpert } = useExpertDecisionRights()
   const reminder = useRemindExpert('alert', alert?._id, alert?.expert_reminded_at)
@@ -51,12 +53,15 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
   const alertId = alert?._id
   const savedResult = alert?.expert_verdict?.result ?? null
   const savedNote = alert?.expert_verdict?.note ?? ''
+  const { reset: resetMutation } = mutation
   useEffect(() => {
     if (isOpen && alertId) {
       setVerdict(savedResult)
       setNote(savedNote)
+      // Lỗi của cảnh báo trước không được còn lại khi mở cảnh báo khác
+      resetMutation()
     }
-  }, [isOpen, alertId, savedResult, savedNote])
+  }, [isOpen, alertId, savedResult, savedNote, resetMutation])
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : ''
@@ -67,7 +72,12 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
 
   const handleSave = async () => {
     if (!alert || !verdict) return
-    await mutation.mutateAsync({ alertId: alert._id, result: verdict, note: note.trim() || undefined })
+    // Lỗi hiện ngay trong drawer (mutation.isError), drawer không đóng để ghi chú đang gõ không mất
+    try {
+      await mutation.mutateAsync({ alertId: alert._id, result: verdict, note: note.trim() || undefined })
+    } catch {
+      return
+    }
     onVerdictSaved?.(alert._id, verdict)
     onClose()
   }
@@ -123,6 +133,7 @@ export default function ExpertVerdictDrawer({ alert, isOpen, onClose, onVerdictS
           {canDecide ? (
             <>
               <VerdictForm alert={alert} verdict={verdict} note={note} onVerdictChange={setVerdict} onNoteChange={setNote} />
+              {mutation.isError && <ErrorNotice>{apiErrorMessage(mutation.error, t('Lưu kết luận thất bại'))}</ErrorNotice>}
               <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={!canSave} loading={mutation.isPending}>
                   {mutation.isPending ? t('Đang lưu...') : t('Lưu kết luận')}

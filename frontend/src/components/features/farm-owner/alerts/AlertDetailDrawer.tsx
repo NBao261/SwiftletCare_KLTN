@@ -3,15 +3,15 @@ import AlertDetailsLine from '@/components/common/AlertDetailsLine';
 import OnsiteCheckSection from '@/components/common/OnsiteCheckSection';
 import SeverityBadge from '@/components/common/SeverityBadge';
 import { STATUS_BADGE_CLASS } from '@/components/features/farm-owner/dashboard/dashboardMetrics';
-import { Badge, Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { Badge, Button, LoadingSkeleton } from '@/components/ui';
 import { Drawer } from '@/components/ui/Drawer';
 import { alertsDict } from '@/constants/alerts.i18n';
 import { isAlertFinished } from '@/constants/severity';
-import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useAlert } from '@/hooks/shared/useAlerts';
 import type { Alert } from '@/types';
 import SimulatedBadge from '@/components/common/SimulatedBadge';
+import LoadError from '@/components/ui/LoadError'
 
 interface AlertDetailDrawerProps {
   // null = đóng
@@ -47,7 +47,6 @@ function DetailSection({ title, children }: { title: string; children: ReactNode
 // Chi tiết cảnh báo
 export default function AlertDetailDrawer({ alertId, locationOf, canAcknowledge, onAcknowledge, onAnswerOnsiteCheck, onClose }: AlertDetailDrawerProps): JSX.Element {
   const { t, dateTime } = useTranslation(alertsDict);
-  const apiErrorMessage = useApiErrorMessage();
   const { data: alert, isLoading, isError, error, refetch } = useAlert(alertId);
   const place = alert ? locationOf(alert) : null;
   const verdict = alert?.status === 'DISMISSED' ? alert.expert_verdict : undefined;
@@ -60,11 +59,7 @@ export default function AlertDetailDrawer({ alertId, locationOf, canAcknowledge,
       {isLoading ? (
         <LoadingSkeleton count={4} className="h-10 w-full" />
       ) : isError || !alert || !place ? (
-        <EmptyState
-          title={t('detail.loadFailed')}
-          description={apiErrorMessage(error)}
-          action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-        />
+        <LoadError title={t('detail.loadFailed')} error={error} onRetry={() => void refetch()} />
       ) : (
         <div className="flex flex-col gap-6">
           <dl className="flex flex-col gap-3">

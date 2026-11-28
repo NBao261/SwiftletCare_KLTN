@@ -24,6 +24,7 @@ import { useDownloadHealthCsv, useHealthDays } from '@/hooks/shared/useHealthDay
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
 import type { HouseHealthDay } from '@/types';
+import LoadError from '@/components/ui/LoadError'
 
 // Khoảng ngày xem được (thêm hôm nay, tối đa 31 ngày một lần đọc)
 const RANGE_DAYS = [7, 14, 30] as const;
@@ -192,11 +193,7 @@ export default function FarmOwnerHealthPage(): JSX.Element {
           {isLoading || scope.isLoading ? (
             <LoadingSkeleton count={5} className="h-14 w-full" />
           ) : isError ? (
-            <EmptyState
-              title={t('page.errorTitle')}
-              description={apiErrorMessage(error)}
-              action={<Button variant="secondary" size="sm" onClick={refetch}>{t('page.retry')}</Button>}
-            />
+            <LoadError title={t('page.errorTitle')} error={error} onRetry={() => void refetch()} />
           ) : days.length === 0 ? (
             <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12">
               <TableEmptyState title={t('table.emptyTitle')} description={t('table.emptyHint')} />

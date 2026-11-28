@@ -6,6 +6,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useWorkOrderActions } from '@/hooks/farm-owner/useWorkOrders';
 import { useToastStore } from '@/stores/toastStore';
+import FieldError from '@/components/ui/FieldError'
 
 // Giới hạn của POST /work-orders (api-spec)
 const TITLE_MAX_LENGTH = 200;
@@ -78,7 +79,7 @@ export default function WorkOrderCreateModal({ open, house, onClose }: WorkOrder
               { value: 'OTHER', label: t('create.job.OTHER') },
             ]}
           />
-          {jobError && <p className="text-xs text-alertRed">{jobError}</p>}
+          {jobError && <FieldError>{jobError}</FieldError>}
         </div>
         {job === 'OTHER' && (
           <Input

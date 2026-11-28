@@ -5,6 +5,7 @@ import { Button } from '@/components/ui';
 import { harvestDict } from '@/constants/harvest.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { HARVEST_PHOTO_TYPES, validateHarvestPhoto } from '@/validations/farm-owner/harvestPhoto.validation';
+import FieldError from '@/components/ui/FieldError'
 
 interface HarvestPhotoFieldProps {
   photo: File | null;
@@ -75,7 +76,7 @@ export default function HarvestPhotoField({ photo, savedUrl, onChange, disabled 
           </Button>
         )}
       </div>
-      {error && <p className="text-xs text-alertRed">{error}</p>}
+      {error && <FieldError>{error}</FieldError>}
     </div>
   );
 }

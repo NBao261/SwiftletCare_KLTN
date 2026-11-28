@@ -77,6 +77,10 @@ export function useAlertsWithFilters(farmId?: string, zoneId?: string) {
     pageSize: PAGE_SIZE,
     isLoading: list.isLoading || stats.isLoading,
     isFetching: list.isFetching,
+    // Danh sách tải lỗi: để trang báo lỗi thay vì hiện bảng trống như "không có cảnh báo"
+    isError: list.isError,
+    error: list.error,
+    refetch: list.refetch,
   }
 }
 

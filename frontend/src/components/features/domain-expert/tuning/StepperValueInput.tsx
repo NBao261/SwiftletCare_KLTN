@@ -19,9 +19,12 @@ interface Props {
   label: string
   unit: string
   className?: string
+  // Giá trị đang sai luật: trình đọc màn hình đọc là ô lỗi, id của câu lỗi để aria-describedby trỏ tới
+  invalid?: boolean
+  errorId?: string
 }
 
-export default function StepperValueInput({ value, onChange, clamp, decimals, label, unit, className }: Props) {
+export default function StepperValueInput({ value, onChange, clamp, decimals, label, unit, className, invalid, errorId }: Props) {
   const shown = value.toFixed(decimals)
   const [draft, setDraft] = useState(shown)
   useEffect(() => setDraft(shown), [shown])
@@ -47,6 +50,8 @@ export default function StepperValueInput({ value, onChange, clamp, decimals, la
         onBlur={commit}
         onKeyDown={handleKeyDown}
         aria-label={label}
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? errorId : undefined}
         className="w-14 bg-transparent text-center outline-none"
       />
       <span className="text-xs font-normal text-warmGray">{t(unit)}</span>

@@ -6,6 +6,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useAnswerOnsiteCheck } from '@/hooks/shared/useAlerts';
 import { useToastStore } from '@/stores/toastStore';
 import type { Alert, OnsiteObservation } from '@/types';
+import FieldError from '@/components/ui/FieldError'
 
 const OBSERVATIONS: OnsiteObservation[] = ['BIRDS_DISTURBED', 'WORK_OR_PEOPLE_NEARBY', 'RAIN', 'SENSOR_DIRTY_OR_FAULTY', 'NOTHING_UNUSUAL', 'OTHER'];
 // Theo api-spec: 1 ảnh tối đa 5 MB, ghi chú tối đa 1000 ký tự
@@ -82,7 +83,7 @@ export default function OnsiteCheckModal({ alert, onClose }: { alert: Alert | nu
             className="text-sm"
             onChange={event => setPhoto(event.target.files?.[0])}
           />
-          {badPhoto && <p className="text-xs text-alertRed">{t('onsite.photoInvalid')}</p>}
+          {badPhoto && <FieldError>{t('onsite.photoInvalid')}</FieldError>}
         </div>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose} disabled={answer.isPending}>{t('onsite.cancel')}</Button>

@@ -10,6 +10,7 @@ import { useToastStore } from '@/stores/toastStore'
 import { FARM_ADDRESS_MAX_LENGTH, STRUCTURE_NAME_MAX_LENGTH } from '@/components/features/farm-owner/farms/farmStructure.constants'
 import { parseFarmLocation, validateFarmLocation } from '@/validations/farm-owner/farm.validation'
 import type { Coordinates, Farm } from '@/types'
+import FieldError from '@/components/ui/FieldError'
 
 // Leaflet chỉ tải khi mở form, không vào gói chính
 const FarmLocationMap = lazy(() => import('@/components/features/farm-owner/farms/FarmLocationMap'))
@@ -160,7 +161,7 @@ export default function FarmFormModal({ farm, onClose }: FarmFormModalProps) {
           </div>
           <p className="text-xs text-warmGray">{t('farmForm.locationHint')}</p>
         </div>
-        {error && <p className="text-xs text-alertRed">{t(error)}</p>}
+        {error && <FieldError>{t(error)}</FieldError>}
         <div className="flex justify-end gap-2 border-t border-warmGray/10 pt-4">
           <Button type="button" variant="secondary" className="min-w-[8rem]" onClick={onClose}>{t('farmForm.cancel')}</Button>
           <Button type="submit" className="min-w-[8rem]" loading={isSaving}>{isEdit ? t('farmForm.save') : t('createFarm.submit')}</Button>
