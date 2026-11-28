@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect } from 'react'
 import { LoadingSkeleton, SectionCard, Toggle } from '@/components/ui'
 import InfoTip from '@/components/ui/InfoTip'
 import { DEFAULT_FUZZY_TUNING } from '@/constants/thresholds'
@@ -7,7 +7,7 @@ import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation
 import FuzzySuggestionBox, { type SuggestionAction } from '@/components/features/domain-expert/tuning/FuzzySuggestionBox'
 import { TuningRangeList } from './TuningRangeTip'
 import TuningStepperInput from './TuningStepperInput'
-import type { TuningBlockHandle } from './tuning.utils'
+import TuningSaveBar from './TuningSaveBar'
 import type { ExpertFuzzyTuning, FuzzySuggestionResponse } from '@/types/expert.types'
 
 interface Props {
@@ -20,8 +20,6 @@ interface Props {
   suggestionAction?: SuggestionAction
   // Kỹ thuật viên không đọc gợi ý hệ số (backend 403) nên ẩn hẳn khung
   showSuggestion?: boolean
-  // Báo số hệ số đang khác bản đã lưu lên thanh lưu dính đáy của trang
-  onDirtyChange?: (count: number) => void
 }
 
 type NumericKey = Exclude<keyof ExpertFuzzyTuning, 'fuzzy_input_filter'>
@@ -35,9 +33,7 @@ const ROWS: Array<{ key: NumericKey; label: string; step: number; decimals: numb
 ]
 
 // Hệ số mờ của Zone và gợi ý từ dữ liệu; chỉ gửi hệ số đã đổi để lịch sử ghi đúng phần thay đổi
-const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTuningColumn(
-  { data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction, showSuggestion = true, onDirtyChange }, ref,
-) {
+export default function FuzzyTuningColumn({ data, isLoading, isSaving, onSave, suggestion, isSuggestionLoading = false, suggestionAction, showSuggestion = true }: Props) {
   const [form, setForm] = useState<ExpertFuzzyTuning>(DEFAULT_FUZZY_TUNING)
   const [suggestionDismissed, setSuggestionDismissed] = useState(false)
 
@@ -47,7 +43,6 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
   // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
   const dirtyCount = !data ? 0 : ROWS.filter(row => form[row.key] !== base[row.key]).length
     + (form.fuzzy_input_filter !== base.fuzzy_input_filter ? 1 : 0)
-  useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
   function handleSave() {
     if (!data) return
@@ -58,11 +53,6 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
     if (form.fuzzy_input_filter !== base.fuzzy_input_filter) changed.fuzzy_input_filter = form.fuzzy_input_filter
     if (Object.keys(changed).length > 0) onSave(changed)
   }
-
-  useImperativeHandle(ref, () => ({
-    save: handleSave,
-    cancel: () => setForm(base),
-  }))
 
   if (isLoading) return <LoadingSkeleton count={5} className="h-12 w-full" />
 
@@ -86,7 +76,6 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
         />
       )}
 
-      {/* Nút Lưu chung ở thanh dính đáy của trang */}
       <fieldset disabled={isSaving} className="divide-y divide-warmGray/10">
         {ROWS.map(row => (
           <TuningStepperInput
@@ -119,8 +108,7 @@ const FuzzyTuningColumn = forwardRef<TuningBlockHandle, Props>(function FuzzyTun
           />
         </div>
       </fieldset>
+      <TuningSaveBar changedCount={dirtyCount} isSaving={isSaving} onSave={handleSave} onCancel={() => setForm(base)} />
     </SectionCard>
   )
-})
-
-export default FuzzyTuningColumn
+}

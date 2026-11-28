@@ -28,7 +28,7 @@ test.describe('Trang quyết định của chuyên gia cho Farm Owner (BR-22)', 
     await page.goto('/domain-expert/tuning');
     await openBadgeExplanation(page, 'Quyết định thay');
     await expect(page.getByText('Trang trại chưa có chuyên gia', { exact: false })).toBeVisible();
-    // Nút Lưu riêng từng khối đã gộp vào thanh lưu dính đáy, nên kiểm nút +/- của tham số phát hiện
+    // Nút Lưu của khối chỉ sáng khi có thay đổi, nên kiểm nút +/- của tham số phát hiện
     await expect(page.getByRole('button', { name: 'Tăng Mức ồn vượt nền' })).toBeEnabled();
   });
 
