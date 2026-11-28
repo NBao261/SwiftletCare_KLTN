@@ -5,6 +5,7 @@ import SimulatedBadge from '@/components/common/SimulatedBadge';
 import { ActionsMenu, Badge, type ActionsMenuItem } from '@/components/ui';
 import StatusDot from '@/components/common/StatusDot';
 import { uptimeParts, type DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
+import { isUnexpectedReset, resetReasonKey } from '@/components/features/farm-owner/devices/resetReason';
 import { CAMERA_STATUS_TONE } from '@/components/features/farm-owner/devices/CameraSourceModal';
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants';
 import { NO_VALUE } from '@/constants/display';
@@ -36,6 +37,7 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
   const isSensor = device.type === 'sensor';
   const quality = wifiQuality(device.rssi);
   const uptime = isSensor ? uptimeParts(device.bootedAt) : undefined;
+  const resetKey = isSensor ? resetReasonKey(device.resetReason) : undefined;
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5">
@@ -105,6 +107,7 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
           />
           <InfoRow label={t('detail.bootedAt')} value={device.bootedAt ? dateTime(device.bootedAt) : NO_VALUE} />
           <InfoRow label={t('detail.uptime')} value={uptime ? t('detail.uptimeValue', uptime) : NO_VALUE} />
+          <InfoRow label={t('detail.lastReset')} value={resetKey ? t(resetKey) : NO_VALUE} warn={isUnexpectedReset(device.resetReason)} />
           <InfoRow
             label={t('detail.freeHeap')}
             value={device.freeHeap !== undefined ? t('detail.freeHeapValue', { kb: num(device.freeHeap / BYTES_PER_KILOBYTE) }) : NO_VALUE}
@@ -133,12 +136,12 @@ function InfoSection({ title, children }: { title: string; children: ReactNode }
 }
 
 // Hàng không có số (chỉ "_") thì không vẽ, trừ hàng luôn cần thấy (vị trí, phiên bản, kết nối cuối)
-function InfoRow({ label, value, sub, keep = false }: { label: string; value: ReactNode; sub?: string; keep?: boolean }): JSX.Element | null {
+function InfoRow({ label, value, sub, keep = false, warn = false }: { label: string; value: ReactNode; sub?: string; keep?: boolean; warn?: boolean }): JSX.Element | null {
   if (value === NO_VALUE && !sub && !keep) return null;
   return (
     <div>
       <dt className="text-small text-warmGray">{label}</dt>
-      <dd className={cn('text-body font-semibold', value === NO_VALUE ? 'text-warmGray' : 'text-charcoal')}>{value}</dd>
+      <dd className={cn('text-body font-semibold', value === NO_VALUE ? 'text-warmGray' : warn ? 'text-climateOrange' : 'text-charcoal')}>{value}</dd>
       {sub && <dd className="text-small text-warmGray">{sub}</dd>}
     </div>
   );
