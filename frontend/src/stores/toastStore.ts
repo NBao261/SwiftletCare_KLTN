@@ -10,12 +10,17 @@ interface ToastState {
 
 let nextId = 1
 
-export const useToastStore = create<ToastState>((set) => ({
+// Lỗi ở lâu hơn thành công: câu lỗi dài hơn và người dùng cần đọc kịp để biết làm gì tiếp
+export const TOAST_DURATION_MS: Record<ToastItem['tone'], number> = { success: 4000, error: 8000 }
+
+export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
   push: (message, tone = 'success') => {
+    // Cùng một câu đang hiện thì không chồng thêm (bấm liên tục một nút lỗi)
+    if (get().toasts.some(toast => toast.message === message && toast.tone === tone)) return
     const id = nextId++
     set(s => ({ toasts: [...s.toasts, { id, message, tone }] }))
-    setTimeout(() => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })), 4000)
+    setTimeout(() => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })), TOAST_DURATION_MS[tone])
   },
   dismiss: (id) => set(s => ({ toasts: s.toasts.filter(t => t.id !== id) })),
 }))

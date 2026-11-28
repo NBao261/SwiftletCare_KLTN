@@ -1,5 +1,6 @@
 import { SelectHTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/lib/cn'
+import FieldError from '@/components/ui/FieldError'
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
@@ -10,6 +11,7 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, className, id, children, ...props }, ref) => {
     const selectId = id ?? props.name
+    const errorId = `${selectId ?? 'field'}-error`
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -23,10 +25,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           className={cn('input', error && 'border-alertRed focus:border-alertRed', className)}
           {...props}
+          aria-invalid={error ? true : props['aria-invalid']}
+          aria-describedby={error ? errorId : props['aria-describedby']}
         >
           {children}
         </select>
-        {error && <span className="text-xs text-alertRed">{error}</span>}
+        {error && <FieldError id={errorId}>{error}</FieldError>}
       </div>
     )
   },
