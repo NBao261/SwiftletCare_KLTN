@@ -8,7 +8,7 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.38 (Review 2, final scope) |
+| Document version | 4.2.39 (Review 2, final scope) |
 | Date | 29/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
@@ -401,7 +401,7 @@ Where a zone needs flock data it reads the figures of its house: the correlation
 
 | ID | Actor / component | Requirement | Acceptance criteria | Pri. |
 | --- | --- | --- | --- | :---: |
-| ENV-FR-016 | Farm Owner, Farm Technician (assigned houses) | Switch one relay (misting, fan, speaker) ON or OFF by hand for a limited duration. While the zone has an open `SENSOR_FAULT`, `RS485_BUS_FAILURE` or `MISTING_INEFFECTIVE`, the application shows these alerts and a pump ON is sent only after the user confirms it. A Farm Technician request on a house not assigned to them is rejected with 403. | The command is applied by the target controller and the relay reports `MANUAL`; a duration outside BR-08 is rejected with 422 (a pump ON of 31 min included); a pump ON request without the confirmation while one of those alerts is open is rejected with 409; a command that reaches the controller later than BR-35 after it was issued is not applied; an Administrator or a Domain Expert request is rejected with 403. | M |
+| ENV-FR-016 | Farm Owner, Farm Technician (assigned houses) | Switch one relay (misting, fan, speaker) ON or OFF by hand for a limited duration. While the zone has an open `SENSOR_FAULT`, `RS485_BUS_FAILURE` or `MISTING_INEFFECTIVE`, the application shows these alerts and a pump ON is sent only after the user confirms it. A Farm Technician request on a house not assigned to them is rejected with 403; a Farm Technician's override, and its early end, is notified in the app to the Farm Owners of the farm, as its other device actions are. | The command is applied by the target controller and the relay reports `MANUAL`; a duration outside BR-08 is rejected with 422 (a pump ON of 31 min included); a pump ON request without the confirmation while one of those alerts is open is rejected with 409; a command that reaches the controller later than BR-35 after it was issued is not applied; an Administrator or a Domain Expert request is rejected with 403. | M |
 | ENV-FR-017 | Controller, Backend | Suspend automatic control of an overridden relay and show it clearly; the precedence of BR-19 applies. | While in `MANUAL`, neither the fuzzy output, the misting latch nor the sensor safe state changes that relay, while `MISTING_INEFFECTIVE` and `SENSOR_FAULT` are still raised; the dashboard shows a manual-mode banner for it. | M |
 | ENV-FR-018 | Backend, Controller | End an override automatically when its duration expires, or early on request, and return to automatic control (BR-20). | At its expiry (default 30 min) an overridden relay returns to `AUTO` within one control cycle while the other relays keep their own expiry; an early cancel of one relay, or of all relays of the controller, does the same immediately. | M |
 | ENV-FR-019 | Backend | Log every override and show the history. | Each record holds user, role, relay, state, start, end, end reason (`EXPIRED`; `CLEARED_EARLY` when cancelled before its expiry, also when the controller is moved or removed; `REPLACED` when a new override of the same relay takes its place) and whether an open alert was confirmed, and is listed in the zone history; the history is shown to the Farm Owners and the Domain Expert of the farm, and an Administrator request is rejected with 403. | M |
@@ -1190,6 +1190,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.39 | 29/11/2026 | ENV-FR-016: a Farm Technician's manual override and its early end are notified in the app to the Farm Owners, like its other device actions |
 | 4.2.38 | 29/11/2026 | ENV-FR-019 names the end reasons the system stores (`EXPIRED`, `CLEARED_EARLY`, `REPLACED`) instead of `CANCELLED` |
 | 4.2.37 | 29/11/2026 | Section 6.19: a Work Order whose device is removed, replaced or moved while open no longer closes as self-recovered and is verified on site; rejecting an inferred alert cancels the Work Order its "needs a visit" verdict opened; a technician who starts or completes another's or an unassigned Work Order becomes its assignee (PR #301) |
 | 4.2.36 | 28/11/2026 | FARM-FR-005, 006: the Farm Technician of the assigned houses is an actor, as the permission row of Section 2.4 already says; FARM-FR-015 (new): each device shows its open device alerts and Work Orders and what to do for its state, and a restart that cannot be sent says why instead of disappearing; SF-02 and the registration traceability follow (plan `docs/reports/todo-device-pages-by-role-1128.md`, gap G-36) |

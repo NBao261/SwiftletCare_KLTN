@@ -3107,7 +3107,8 @@ paths:
       summary: "Tắt Manual Override sớm của 1 relay hoặc mọi relay (ENV-FR-018, BR-20) — FARM_OWNER, FARM_TECHNICIAN (nhà được giao)"
       description: |
         Không có `relayName`: đặt mọi mục của `relays` về `AUTO`, publish lệnh `CLEAR_OVERRIDE` lên `cmd`
-        để ESP32 trả mọi relay về điều khiển tự động; đóng mọi lịch sử còn mở.
+        để ESP32 trả mọi relay về điều khiển tự động; đóng mọi lịch sử còn mở. Farm Technician tắt sớm thì
+        Farm Owner được báo trong app (ENV-FR-016).
         Có `relayName`: chỉ đóng lịch sử của relay đó và publish `CLEAR_OVERRIDE` với `payload.relayName`;
         thiết bị còn relay khác đang can thiệp tay thì vẫn `MANUAL`. Gọi khi thiết bị đang AUTO, hoặc relay
         được chọn không đang can thiệp tay, thì không làm gì (200, không publish, không ghi audit).
@@ -3340,7 +3341,8 @@ paths:
       description: |
         Publish lệnh `RELAY` lên `swiftletcare/dev/{deviceId}/cmd` (phong bì `commandId`, `type`, `issuedAt`, `payload`, BR-35), đặt relay đó trong
         `relays` thành `MANUAL` với hạn `now + durationMs`; các relay khác giữ hạn của chúng (BR-20).
-        Farm Technician chỉ ở nhà được giao, nhà khác → 403 (ENV-FR-016, AUTH-FR-004). Administrator,
+        Farm Technician chỉ ở nhà được giao, nhà khác → 403 (ENV-FR-016, AUTH-FR-004); lệnh của Farm Technician
+        được báo trong app cho Farm Owner của farm (relay, bật/tắt, số phút). Administrator,
         Domain Expert → 403 (Report 3 §2.4). Gọi lại cùng trạng thái
         để gia hạn override (Flow 13 case 4a).
 
@@ -6000,7 +6002,14 @@ paths:
     get:
       tags: [Harvests]
       summary: "Danh sách Harvest Batch (farm mình sở hữu/thành viên, hoặc lọc theo farmId); Farm Technician chỉ lô của nhà được giao"
-      parameters: [{ name: farmId, in: query, schema: { type: string } }]
+      description: |
+        Mới nhất trước (`harvest_date`, rồi `_id`). Gửi `page` hoặc `limit` thì trả một trang kèm
+        `meta: { total, page, limit }` (`limit` mặc định 20, tối đa 100); không gửi cả hai thì trả cả danh sách, không có
+        `meta` (web và mobile hiện đọc kiểu này).
+      parameters:
+        - { name: farmId, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
       responses:
         "200":
           {
