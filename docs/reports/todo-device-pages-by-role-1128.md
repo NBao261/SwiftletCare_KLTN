@@ -156,7 +156,7 @@ Số cảnh báo mở của từng thiết bị cho danh sách (tab "Cần xử 
 | --- | --- | --- | --- |
 | D-1 | Tài liệu: Report 3 thêm Kỹ thuật viên vào FARM-FR-005 và FARM-FR-006 (hiện chỉ Farm Owner, Domain Expert / Farm Owner, Administrator), thêm yêu cầu "cảnh báo và phiếu việc đang mở của thiết bị" (FARM-FR-015 mới), nhắc BR-27 và BR-10 trong tiêu chí; Report 4 cập nhật mô tả trang; `report5/tc.py` thêm ca (TC thiết bị vai kỹ thuật viên); dòng mới ở `project-tracking.md` §6 (G-36) | `docs/reports/` | Bảo |
 | B-1 | `GET /alerts?nodeId=`, `GET /work-orders?nodeId=`, ghi chú khi thay thiết bị; spec; test. **Xong: PR #296** | `backend/` | Bảo |
-| W-1 | Web: tab "Cần xử lý", khối "Việc đang mở", dải trạng thái §6, `reset_reason`, nút khởi động lại khoá kèm lý do; test thuần cho hàm "cần xử lý" và "việc cần làm"; e2e T4 cập nhật | `frontend/` (Nhi duyệt `farm-owner/`) | Bảo |
+| W-1 | Web: tab "Cần xử lý", khối "Việc đang mở", dải trạng thái §6, `reset_reason`, nút khởi động lại khoá kèm lý do; test thuần cho hàm "cần xử lý" và "việc cần làm"; e2e T4 cập nhật. **Xong: PR #297** (không dùng `nodeId` của #296: một lượt gọi mỗi nhà rồi gom theo `node_id`; `reset_reason` đã làm ở #294) | `frontend/` (Nhi duyệt `farm-owner/`) | Bảo |
 | M-1 | Mobile: cùng tab, khối và câu §6 | `mobile/` | Len |
 | X-1 | Xoá dòng G-36 khỏi §6 khi xong; cập nhật `CLAUDE.md` các module | docs | Bảo |
 
