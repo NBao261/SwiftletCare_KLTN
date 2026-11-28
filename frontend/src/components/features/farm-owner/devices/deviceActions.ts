@@ -11,12 +11,12 @@ export function canManageController(role: Role | undefined, device: Pick<DeviceI
   return (role === 'FARM_OWNER' || role === 'FARM_TECHNICIAN') && device.type === 'sensor'
 }
 
-// Địa chỉ camera IP là việc thiết lập thiết bị của Farm Owner (SF-01)
+// Địa chỉ camera IP là việc thiết lập thiết bị của Farm Owner và Farm Technician nhà được giao (SF-01, FARM-FR-004b)
 export function canSetCameraSource(role: Role | undefined, device: Pick<DeviceItem, 'type'>): boolean {
-  return role === 'FARM_OWNER' && device.type === 'camera'
+  return (role === 'FARM_OWNER' || role === 'FARM_TECHNICIAN') && device.type === 'camera'
 }
 
-// Farm Owner khởi động lại bộ điều khiển của farm; chỉ khi đang ONLINE (lệnh đi qua MQTT)
+// Farm Owner và Farm Technician (nhà được giao) khởi động lại bộ điều khiển; chỉ khi đang ONLINE (lệnh đi qua MQTT)
 export function canRestartController(role: Role | undefined, device: Pick<DeviceItem, 'type' | 'status'>): boolean {
-  return role === 'FARM_OWNER' && device.type === 'sensor' && device.status === 'ONLINE'
+  return (role === 'FARM_OWNER' || role === 'FARM_TECHNICIAN') && device.type === 'sensor' && device.status === 'ONLINE'
 }

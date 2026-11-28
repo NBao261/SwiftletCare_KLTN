@@ -100,7 +100,7 @@ async function retireDeviceId(Model: typeof SensorNode, nodeId: unknown, deviceI
 }
 
 // Không throw: thông báo hỏng không được làm hỏng thao tác thiết bị
-async function notifyOwnersOfTechnicianAction(
+export async function notifyOwnersOfTechnicianAction(
   user: CurrentUser, farmId: unknown, deviceId: unknown, message: UserNotification,
 ): Promise<void> {
   if (user.role !== 'ADMIN' && user.role !== 'FARM_TECHNICIAN') return

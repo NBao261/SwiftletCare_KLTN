@@ -4,6 +4,12 @@ import { Check, Loader2, AlertTriangle, Circle, RotateCcw, XCircle, CheckCircle2
 import { useDeviceStatusEvents, useSensorNode } from '@/hooks/shared/useDevices'
 import { useHouseCameras } from '@/hooks/farm-owner/useHouseCameras'
 import { Button } from '@/components/ui'
+import CameraSourceHelp from '@/components/features/farm-owner/devices/CameraSourceHelp'
+import CameraSourceModal from '@/components/features/farm-owner/devices/CameraSourceModal'
+import { canSetCameraSource } from '@/components/features/farm-owner/devices/deviceActions'
+import { devicesDict } from '@/constants/devices.i18n'
+import { useTranslation } from '@/hooks/common/useTranslation'
+import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/cn'
 import { formatDateTime, formatHourMinute } from '@/lib/i18n'
 import { SETUP_TIMEOUT_MS, evaluateSetup, type ProgressStep } from './setupProgress'
@@ -78,6 +84,9 @@ export function Step5WaitOnline({ data, onSuccess, onRetry, leaveLabel = 'Về d
   const [socketOnline, setSocketOnline] = useState(false)
   const isCamera = data.deviceType === 'CAMERA_NODE'
   const startedAt = useRef(Date.now())
+  const { t: cameraText } = useTranslation(devicesDict)
+  const role = useAuthStore(state => state.user?.role)
+  const [sourceOpen, setSourceOpen] = useState(false)
 
   // Thiết bị đã ONLINE từ trước thì socket không còn sự kiện nào: đọc trạng thái từ API
   const { data: sensor } = useSensorNode(isCamera ? undefined : data.deviceDbId, CONFIG_POLL_MS)
@@ -132,7 +141,17 @@ export function Step5WaitOnline({ data, onSuccess, onRetry, leaveLabel = 'Về d
           {facts.length > 0 && <p className="mt-1 text-sm text-warmGray">{facts.join(' · ')}</p>}
         </div>
         <StepList steps={steps} />
+        {isCamera && (
+          <CameraSourceHelp
+            status={camera?.camera_status}
+            className="w-full max-w-sm text-left"
+            action={canSetCameraSource(role, { type: 'camera' })
+              ? <Button variant="secondary" size="sm" className="self-start" onClick={() => setSourceOpen(true)}>{cameraText('help.open')}</Button>
+              : undefined}
+          />
+        )}
         <Button onClick={onSuccess} className="w-full max-w-xs justify-center">{leaveLabel}</Button>
+        <CameraSourceModal camera={sourceOpen && camera ? { id: camera._id, deviceId: camera.device_id } : undefined} onClose={() => setSourceOpen(false)} />
       </div>
     )
   }
