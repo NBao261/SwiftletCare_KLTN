@@ -22,10 +22,19 @@ const TONE_CLASS: Record<WeatherTone, string> = {
 const number = (value: number, digits = 1) => value.toLocaleString(intlLocale(), { maximumFractionDigits: digits })
 
 // Trời đang nắng hay mưa ở ngoài nhà yến, theo toạ độ của farm. Chỉ để xem: không điều khiển thiết bị
-export default function CurrentWeather({ houseId, className }: { houseId?: string; className?: string }): JSX.Element | null {
+interface CurrentWeatherProps {
+  houseId?: string
+  className?: string
+  // Một dòng gọn cho khung đã có số nhiệt độ, độ ẩm bên cạnh (Tổng quan, Phân tích)
+  compact?: boolean
+  // Bỏ chữ "Ngoài nhà yến" khi khung chứa nó đã ghi rõ là ngoài trời
+  showPlace?: boolean
+}
+
+export default function CurrentWeather({ houseId, className, compact = false, showPlace = true }: CurrentWeatherProps): JSX.Element | null {
   const { data, isLoading, isError } = useCurrentWeather(houseId)
   if (!houseId) return null
-  if (isLoading) return <LoadingSkeleton count={1} className="h-14 w-full rounded-2xl" />
+  if (isLoading) return <LoadingSkeleton count={1} className={compact ? 'h-10 w-full rounded-2xl' : 'h-14 w-full rounded-2xl'} />
 
   const weather = data?.weather
   if (isError || !weather) {
@@ -42,10 +51,26 @@ export default function CurrentWeather({ houseId, className }: { houseId?: strin
 
   const { label, icon, tone } = describeWeather(weather)
   const WeatherIcon = ICON[icon]
+  const rainfall = weather.is_raining && weather.precipitation_mm !== null && weather.precipitation_mm > 0 ? `${t('Mưa')} ${number(weather.precipitation_mm)} mm` : null
+
+  if (compact) {
+    return (
+      <div className={cn('flex flex-col gap-1', className)}>
+        <div className={cn('flex flex-wrap items-center gap-x-2.5 gap-y-0.5 rounded-2xl px-3.5 py-2.5', TONE_CLASS[tone])}>
+          <WeatherIcon size={24} weight="duotone" aria-hidden className="shrink-0" />
+          <p className="text-body font-semibold">
+            {showPlace && `${t('Ngoài nhà yến')}: `}{t(label)}{rainfall && <span className="font-normal text-graphite"> · {rainfall}</span>}
+          </p>
+          <span className="ml-auto text-small text-warmGray">{t('Cập nhật {{time}}', { time: formatHourMinute(weather.observed_at) })}</span>
+        </div>
+        <WeatherSource />
+      </div>
+    )
+  }
   const details = [
     weather.temperature_c !== null && `${number(weather.temperature_c)} °C`,
     weather.humidity_pct !== null && `${t('Độ ẩm ngoài trời')} ${number(weather.humidity_pct, 0)} %`,
-    weather.is_raining && weather.precipitation_mm !== null && weather.precipitation_mm > 0 && `${t('Mưa')} ${number(weather.precipitation_mm)} mm`,
+    rainfall,
   ].filter(Boolean)
 
   return (

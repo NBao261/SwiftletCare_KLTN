@@ -25,7 +25,7 @@ export default function HouseDetailPanels({ scope }: { scope: ScopeFilterState }
         {/* Cột phải: trong nhà ở trên, ngoài trời gọn ngay dưới; camera giãn cao bằng cột này */}
         <div className="flex flex-col gap-5">
           <EnvSensorPanel zone={zone} env={env} />
-          <OutdoorWeatherCard zoneId={zone?._id} />
+          <OutdoorWeatherCard zoneId={zone?._id} houseId={houseId} />
         </div>
       </div>
 

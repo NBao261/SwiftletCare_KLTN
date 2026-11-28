@@ -5,11 +5,13 @@ import { NO_VALUE } from '@/constants/display'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useOutdoorWeatherNow } from '@/hooks/farm-owner/useAnalytics'
 import { cn } from '@/lib/cn'
+import CurrentWeather from '@/components/common/CurrentWeather'
 
 const HOUR_MS = 3_600_000
 
 // Nhiệt độ, độ ẩm ngoài trời của trang trại chứa Zone. Khung nét đứt, nền xám nhạt và nhãn "ngoài trời" để không lẫn với số đo cảm biến trong nhà
-export default function OutdoorWeatherCard({ zoneId }: { zoneId?: string }) {
+// houseId: nhà chứa Zone, để hỏi trời đang nắng hay mưa
+export default function OutdoorWeatherCard({ zoneId, houseId }: { zoneId?: string; houseId?: string }) {
   const { t, num, hourMinute } = useTranslation(dashboardDict)
   const { data: point, isLoading, isError } = useOutdoorWeatherNow(zoneId)
 
@@ -35,6 +37,9 @@ export default function OutdoorWeatherCard({ zoneId }: { zoneId?: string }) {
         </h2>
         {period && <Badge tone="info">{period}</Badge>}
       </div>
+
+      {/* Trời đang nắng hay mưa: câu trả lời nhìn một cái là biết, đứng trước các số */}
+      <CurrentWeather houseId={houseId} compact showPlace={false} />
 
       <div className="grid grid-cols-2 gap-3">
         {stats.map(stat => {
