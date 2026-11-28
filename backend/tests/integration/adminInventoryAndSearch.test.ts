@@ -181,10 +181,10 @@ describe('nạp thiết bị từ màn kho qua USB (FARM-FR-010)', () => {
   it('ghi MAC của chip, trả địa chỉ broker để nạp; một chip chỉ một mã trong kho', async () => {
     const admin = await mkUser('admin@test.vn', 'ADMIN')
     const token = tokenFor(admin._id, 'ADMIN')
-    process.env.DEVICE_BROKER_HOST = 'mqtt.swiftletcare.vn'
+    process.env.DEVICE_BROKER_HOST = 'mqtt.swiftletcare.io.vn'
     try {
       const created = await post(token, { device_id: 'ctl-a1b2c3', kind: 'SENSOR', chip_mac: 'a1b2c3d4e5f6' }).expect(201)
-      expect(created.body.data).toMatchObject({ chip_mac: 'A1B2C3D4E5F6', broker_host: 'mqtt.swiftletcare.vn' })
+      expect(created.body.data).toMatchObject({ chip_mac: 'A1B2C3D4E5F6', broker_host: 'mqtt.swiftletcare.io.vn' })
       expect(created.body.data.broker_secret).toEqual(expect.any(String))
 
       // Cùng chip thêm lần nữa dưới mã khác: 409, chỉ cho nạp lại mã cũ
@@ -204,7 +204,7 @@ describe('nạp thiết bị từ màn kho qua USB (FARM-FR-010)', () => {
 
       const rotated = await request(app).post(`/admin/provisioned-devices/${found.body.data[0]._id}/rotate-broker-secret`)
         .set('Authorization', `Bearer ${token}`).expect(200)
-      expect(rotated.body.data.broker_host).toBe('mqtt.swiftletcare.vn')
+      expect(rotated.body.data.broker_host).toBe('mqtt.swiftletcare.io.vn')
 
       // Mục đã thu hồi nhả MAC: chính bo đó vào kho lại được với mã mới
       await request(app).put(`/admin/provisioned-devices/${found.body.data[0]._id}/revoke`)

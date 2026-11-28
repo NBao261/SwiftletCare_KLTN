@@ -30,7 +30,7 @@ jest.mock('@/services/notification.service', () => ({
 }))
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret'
-process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.vn'
+process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.io.vn'
 
 const app = express()
 app.use(express.json())
@@ -403,7 +403,7 @@ describe('gỡ bỏ / thay thế thiết bị (FARM-FR-008)', () => {
 })
 
 describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () => {
-  const OTA = { version: '1.4.1', url: 'https://fw.swiftletcare.vn/esp32-1.4.1.bin', sha256: 'a'.repeat(64) }
+  const OTA = { version: '1.4.1', url: 'https://fw.swiftletcare.io.vn/esp32-1.4.1.bin', sha256: 'a'.repeat(64) }
   const send = (token: string, id: unknown, body: object) =>
     request(app).post(`/devices/sensor-nodes/${id}/commands`).set('Authorization', `Bearer ${token}`).send(body)
 
@@ -459,7 +459,7 @@ describe('POST /devices/sensor-nodes/:id/commands (TICKET-FR-008, Flow 15)', () 
 
   it('OTA chỉ nhận HTTPS từ host trong OTA_ALLOWED_HOSTS', async () => {
     const { adminToken, node } = await onlineNode()
-    await send(adminToken, node._id, { command: 'OTA', ota: { ...OTA, url: 'http://fw.swiftletcare.vn/a.bin' } }).expect(422)
+    await send(adminToken, node._id, { command: 'OTA', ota: { ...OTA, url: 'http://fw.swiftletcare.io.vn/a.bin' } }).expect(422)
     const res = await send(adminToken, node._id, { command: 'OTA', ota: { ...OTA, url: 'https://evil.example.com/a.bin' } }).expect(400)
     expect(res.body.error.message).toContain('OTA_ALLOWED_HOSTS')
     expect(publishDeviceCommand).not.toHaveBeenCalled()
