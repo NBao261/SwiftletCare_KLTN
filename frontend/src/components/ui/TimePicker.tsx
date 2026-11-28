@@ -3,6 +3,7 @@ import { ClockIcon } from '@phosphor-icons/react';
 
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
+import FieldError from '@/components/ui/FieldError';
 
 const pad = (value: number): string => String(value).padStart(2, '0');
 const HOURS = Array.from({ length: 24 }, (_, index) => pad(index));
@@ -98,6 +99,7 @@ export default function TimePicker({ id, label, value, onChange, disabled = fals
           disabled={disabled}
           onChange={handleTyping}
           aria-invalid={Boolean(error)}
+          aria-describedby={error && id ? `${id}-error` : undefined}
           className={cn('input pr-11 tabular-nums', error && 'border-alertRed focus:border-alertRed')}
         />
         <button
@@ -111,7 +113,7 @@ export default function TimePicker({ id, label, value, onChange, disabled = fals
           <ClockIcon size={18} />
         </button>
       </div>
-      {error && <span className="text-xs text-alertRed">{error}</span>}
+      {error && <FieldError id={id ? `${id}-error` : undefined}>{error}</FieldError>}
 
       {/* Bảng nổi dưới ô: cột giờ 00–23 và cột phút 00–59, cuộn riêng từng cột */}
       {isOpen && (

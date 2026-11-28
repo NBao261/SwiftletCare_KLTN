@@ -7,6 +7,7 @@ import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useReassignZone } from '@/hooks/shared/useDevices';
 import { useToastStore } from '@/stores/toastStore';
+import FieldError from '@/components/ui/FieldError'
 
 interface MoveControllerModalProps {
   device: DeviceItem;
@@ -44,7 +45,7 @@ export default function MoveControllerModal({ device, onClose }: MoveControllerM
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <p className="text-sm text-warmGray">{t('move.desc')}</p>
         <FarmHouseZonePicker value={target} onChange={setTarget} />
-        {zoneError && <p className="text-xs text-alertRed">{zoneError}</p>}
+        {zoneError && <FieldError>{zoneError}</FieldError>}
         <div className="flex gap-3">
           <Button type="button" variant="secondary" className="flex-1" onClick={onClose} disabled={reassign.isPending}>{t('form.cancel')}</Button>
           <Button type="submit" className="flex-1" loading={reassign.isPending}>{t('move.submit')}</Button>

@@ -15,6 +15,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useZoneComponents } from '@/hooks/farm-owner/useZoneComponents';
 import { cn } from '@/lib/cn';
 import type { Thresholds } from '@/types';
+import FieldError from '@/components/ui/FieldError'
 
 // Icon của thiết bị chấp hành; cảm biến dùng icon chỉ số chung của màn Trang trại
 const ACTUATOR_ICON: Partial<Record<ComponentKind, Icon>> = { speaker: SpeakerHighIcon, misting: CloudRainIcon, ventilation: FanIcon };
@@ -71,7 +72,7 @@ export default function ZoneComponentLog({ zoneId, nodes, thresholds }: ZoneComp
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2.5">
         <div className="min-w-0">
           <p className="text-xs text-graphite">{checkText}</p>
-          {isError && <p className="text-xs text-alertRed">{t('check.failed')}</p>}
+          {isError && <FieldError>{t('check.failed')}</FieldError>}
         </div>
         <Button size="sm" variant="secondary" className="h-8 text-xs" loading={isChecking} onClick={runCheck}>
           <ArrowsClockwiseIcon size={14} weight="bold" />

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { WORK_ORDER_STATUS_TONE, workOrderActions, type OwnerAction, type WorkOrderActor } from '@/components/features/farm-owner/work-orders/workOrder.utils';
-import { Badge, Button, EmptyState, LoadingSkeleton, type BadgeTone } from '@/components/ui';
+import { Badge, Button, LoadingSkeleton, type BadgeTone } from '@/components/ui';
 import { Drawer } from '@/components/ui/Drawer';
 import { NO_VALUE } from '@/constants/display';
 import { workOrderDict } from '@/constants/workOrders.i18n';
@@ -10,6 +10,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useWorkOrder, useWorkOrderActions } from '@/hooks/farm-owner/useWorkOrders';
 import { useToastStore } from '@/stores/toastStore';
 import type { ChecklistResult, WorkOrder } from '@/types';
+import LoadError from '@/components/ui/LoadError'
 
 // Một dòng nhãn: giá trị
 function Field({ label, children }: { label: string; children: ReactNode }): JSX.Element {
@@ -69,11 +70,7 @@ export default function WorkOrderDetailDrawer({
         {isLoading ? (
           <LoadingSkeleton count={4} className="h-16 w-full" />
         ) : isError || !workOrder ? (
-          <EmptyState
-            title={t('detail.loadFailed')}
-            description={apiErrorMessage(error)}
-            action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-          />
+          <LoadError title={t('detail.loadFailed')} error={error} onRetry={() => void refetch()} />
         ) : (
           <>
             {/* Việc cần làm + trạng thái */}

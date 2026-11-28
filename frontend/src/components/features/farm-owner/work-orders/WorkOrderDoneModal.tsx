@@ -9,6 +9,7 @@ import { useTranslation } from '@/hooks/common/useTranslation';
 import { useWorkOrder, useWorkOrderActions } from '@/hooks/farm-owner/useWorkOrders';
 import { useToastStore } from '@/stores/toastStore';
 import type { SiteCause, WorkOrder } from '@/types';
+import FieldError from '@/components/ui/FieldError'
 
 // Giới hạn ảnh và ghi chú theo api-spec
 const MAX_PHOTOS = 5;
@@ -102,7 +103,7 @@ export default function WorkOrderDoneModal({ workOrder, onClose }: { workOrder: 
             onChange={event => setPhotos(Array.from(event.target.files ?? []).slice(0, photoSlots))}
           />
           {workOrder?.kind === 'PREVENTIVE' && <p className={needsPhoto ? 'text-xs font-semibold text-alertRed' : 'text-xs text-warmGray'}>{t('done.photoRequired')}</p>}
-          {badPhoto && <p className="text-xs text-alertRed">{t('done.photoInvalid')}</p>}
+          {badPhoto && <FieldError>{t('done.photoInvalid')}</FieldError>}
         </div>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose} disabled={complete.isPending}>{t('form.cancel')}</Button>

@@ -20,6 +20,7 @@ import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useToastStore } from '@/stores/toastStore';
 import type { MaintenancePlan } from '@/types';
 import { COMMENT_MAX_LENGTH } from '@/validations/farm-owner/maintenancePlan.validation';
+import LoadError from '@/components/ui/LoadError'
 
 // Tab: kế hoạch cần làm trước (đến hạn, quá hạn), rồi theo lịch, mọi kế hoạch đang dùng, đã xoá
 const TABS = ['due', 'SCHEDULED', 'active', 'RETIRED'] as const;
@@ -100,11 +101,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
   if (scope.farms.length === 0 && scope.isLoading) return <LoadingSkeleton count={5} className="h-14 w-full" />;
   if (scope.farms.length === 0 && scope.isError) {
     return (
-      <EmptyState
-        title={t('page.loadFailed')}
-        description={apiErrorMessage(undefined)}
-        action={<Button variant="secondary" size="sm" onClick={scope.refetch}>{t('page.retry')}</Button>}
-      />
+      <LoadError title={t('page.loadFailed')} error={undefined} onRetry={() => void scope.refetch()} />
     );
   }
   if (scope.farms.length === 0) {
@@ -154,11 +151,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
           due.isLoading ? (
             <LoadingSkeleton count={3} className="h-14 w-full" />
           ) : due.isError ? (
-            <EmptyState
-              title={t('due.errorTitle')}
-              description={apiErrorMessage(due.error)}
-              action={<Button variant="secondary" size="sm" onClick={() => void due.refetch()}>{t('page.retry')}</Button>}
-            />
+            <LoadError title={t('due.errorTitle')} error={due.error} onRetry={() => void due.refetch()} />
           ) : !due.data?.length ? (
             <EmptyFrame title={t('due.emptyTitle')} hint={t('due.emptyHint')} />
           ) : (
@@ -174,11 +167,7 @@ export default function FarmOwnerMaintenancePage(): JSX.Element {
         ) : isLoading ? (
           <LoadingSkeleton count={5} className="h-14 w-full" />
         ) : isError ? (
-          <EmptyState
-            title={t('list.errorTitle')}
-            description={apiErrorMessage(error)}
-            action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-          />
+          <LoadError title={t('list.errorTitle')} error={error} onRetry={() => void refetch()} />
         ) : plans.length === 0 ? (
           <EmptyFrame title={t('list.emptyTitle')} hint={t('list.emptyHint')} />
         ) : (

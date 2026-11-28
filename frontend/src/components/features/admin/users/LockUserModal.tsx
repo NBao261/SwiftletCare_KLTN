@@ -1,7 +1,7 @@
 import { useSetUserStatus } from '@/hooks/admin/useUsers'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import NoteActionModal from '@/components/ui/NoteActionModal'
 import { useToastStore } from '@/stores/toastStore'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 import type { User } from '@/types'
 
@@ -9,6 +9,7 @@ import type { User } from '@/types'
 export default function LockUserModal({ user, onClose }: { user: User | null; onClose: () => void }) {
   const setStatus = useSetUserStatus()
   const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
 
   return (
     <NoteActionModal
@@ -33,7 +34,7 @@ export default function LockUserModal({ user, onClose }: { user: User | null; on
             push('Đã khoá tài khoản')
             onClose()
           },
-          onError: (err) => push(getApiErrorMessage(err, 'Khoá tài khoản thất bại'), 'error'),
+          onError: (err) => push(apiErrorMessage(err, t('Khoá tài khoản thất bại')), 'error'),
         })
       }}
     />

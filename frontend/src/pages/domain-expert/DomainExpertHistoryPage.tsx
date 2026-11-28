@@ -17,6 +17,7 @@ import type { CountingSchedule, ExpertActivityEntry } from '@/types/expert.types
 import { formatHourMinute, formatStandardDate } from '@/lib/i18n'
 import { t, translated } from '@/i18n'
 import { useLanguageStore } from '@/stores/languageStore'
+import LoadError from '@/components/ui/LoadError'
 
 const ACTION_OPTIONS: SelectMenuOption<string>[] = [
   { value: 'ALL', label: 'Tất cả hành động' },
@@ -203,7 +204,7 @@ export default function DomainExpertHistoryPage() {
   const [page, setPage] = useState(1)
   const pageSize = 10
 
-  const { data, isLoading } = useExpertActivity({
+  const { data, isLoading, isError, error, refetch } = useExpertActivity({
     farmId: selectedFarmId ?? undefined,
     // Lọc tới nhà vì quyết định cấp nhà không có zone_id
     houseId: selectedHouseId || undefined,
@@ -266,14 +267,17 @@ export default function DomainExpertHistoryPage() {
     <p className="py-6 text-center text-sm text-warmGray">{t('Chọn trang trại ở thanh trên.')}</p>
   )
   if (selectedFarmId && isLoading) body = <LoadingSkeleton count={4} className="h-14 w-full rounded-xl" />
-  if (selectedFarmId && !isLoading && records.length === 0) {
+  if (selectedFarmId && isError) {
+    body = <LoadError title={t('Không tải được lịch sử quyết định')} error={error} onRetry={() => void refetch()} />
+  }
+  if (selectedFarmId && !isLoading && !isError && records.length === 0) {
     body = (
       <p className="py-6 text-center text-sm text-warmGray">
         {isFiltered ? t('Không có bản ghi nào khớp bộ lọc.') : t('Chưa có bản ghi hoạt động nào.')}
       </p>
     )
   }
-  if (selectedFarmId && !isLoading && records.length > 0) {
+  if (selectedFarmId && !isLoading && !isError && records.length > 0) {
     body = (
       <>
         <DataTable columns={columns} rows={records} getRowKey={item => item._id} minTableWidth={1000} />

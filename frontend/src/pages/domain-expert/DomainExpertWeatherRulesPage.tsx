@@ -1,9 +1,11 @@
 // luật phun sương theo thời tiết của nhà; Farm Owner ở farm có chuyên gia gửi đề xuất
 import { useState, useEffect } from 'react'
-import { CloudRain, AlertTriangle } from 'lucide-react'
+import { CloudRain } from 'lucide-react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { Badge, Button } from '@/components/ui'
 import EmptyState from '@/components/ui/EmptyState'
+import ErrorNotice from '@/components/ui/ErrorNotice'
+import LoadError from '@/components/ui/LoadError'
 import SectionCard from '@/components/ui/SectionCard'
 import { Modal } from '@/components/ui/Modal'
 import NoteActionModal from '@/components/ui/NoteActionModal'
@@ -50,7 +52,7 @@ export default function DomainExpertWeatherRulesPage() {
   const { canEditParameters, ownerNeedsExpert, isExpert } = useExpertDecisionRights()
   const { selectedHouseId } = useZoneStore()
   const houseId = selectedHouseId ?? undefined
-  const { data, isLoading, isError } = useWeatherRules(houseId)
+  const { data, isLoading, isError, error: loadError, refetch } = useWeatherRules(houseId)
   // Farm Owner trên farm có chuyên gia: bộ luật soạn ở đây gửi thành đề xuất, luật đang chạy giữ nguyên
   const update = useUpdateWeatherRules(houseId)
   const propose = useProposeWeatherRules(houseId)
@@ -100,7 +102,7 @@ export default function DomainExpertWeatherRulesPage() {
       setLocalRules(null)
       pushToast(ownerNeedsExpert ? t('Đã gửi chuyên gia duyệt. Luật đang chạy giữ nguyên tới khi được duyệt.') : t('Đã lưu luật phun sương theo thời tiết.'), 'success')
     } catch (error) {
-      setSaveError(getErrorMessage(error))
+      setSaveError(getErrorMessage(error, t('Lưu luật thất bại')))
     }
   }
 
@@ -109,7 +111,7 @@ export default function DomainExpertWeatherRulesPage() {
       .then(() => { pushToast(t(doneMessage), 'success'); setRejectingAt(null) })
       // 409: đề xuất vừa đổi hoặc đã có người xử lý, đóng ô để chuyên gia xem bản mới; lỗi khác giữ lý do đã gõ
       .catch(error => {
-        pushToast(getErrorMessage(error), 'error')
+        pushToast(getErrorMessage(error, t('Xử lý đề xuất thất bại')), 'error')
         if ((error as { response?: { status?: number } }).response?.status === 409) setRejectingAt(null)
       })
   }
@@ -222,10 +224,7 @@ export default function DomainExpertWeatherRulesPage() {
         <div className="flex flex-col gap-4">
           {/* Lỗi tải dữ liệu */}
           {isError && !isLoading && (
-            <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3.5 py-2.5 text-sm text-alertRed">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{t('Không tải được luật phun sương theo thời tiết. Thử lại.')}</span>
-            </div>
+            <LoadError title={t('Không tải được luật phun sương theo thời tiết')} error={loadError} onRetry={() => void refetch()} />
           )}
 
           {/* Lần chỉnh gần nhất */}
@@ -249,12 +248,7 @@ export default function DomainExpertWeatherRulesPage() {
         <WeatherRuleAddForm onAdd={handleAdd} disabled={mutation.isPending} />
       </Modal>
 
-      {saveError && (
-        <div className="flex items-start gap-2 rounded-xl bg-alertRed/10 px-3.5 py-2.5 text-sm text-alertRed">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{saveError}</span>
-        </div>
-      )}
+      {saveError && <ErrorNotice>{saveError}</ErrorNotice>}
 
       {isDirty && (
         <div className="flex items-center justify-end gap-2">

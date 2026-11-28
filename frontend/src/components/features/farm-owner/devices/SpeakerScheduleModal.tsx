@@ -8,6 +8,7 @@ import { useUpdateSpeakerSchedule } from '@/hooks/shared/useDevices';
 import { useToastStore } from '@/stores/toastStore';
 import { MAX_SPEAKER_WINDOWS, hourLabel, validateSpeakerWindows } from '@/validations/common/speakerSchedule.validation';
 import type { SensorNode, SpeakerWindow } from '@/types';
+import FieldError from '@/components/ui/FieldError'
 
 // Mặc định firmware (Config.h SPEAKER_WINDOW_*): dùng khi thiết bị chưa từng được cấu hình lịch
 const FIRMWARE_DEFAULT_WINDOWS: SpeakerWindow[] = [{ start: '05:00', end: '07:00' }, { start: '17:00', end: '19:00' }];
@@ -105,7 +106,7 @@ export default function SpeakerScheduleModal({ node, onClose }: { node: SensorNo
 
         <Input label={t('sch.volume')} type="number" min={0} max={MAX_VOLUME} value={volume} onChange={event => setVolume(event.target.value)} />
 
-        {error && <p className="text-xs text-alertRed">{error}</p>}
+        {error && <FieldError>{error}</FieldError>}
         <p className="text-xs text-warmGray">{t('sch.hint')}</p>
         <div className="flex justify-end gap-2 border-t border-warmGray/10 pt-4">
           <Button type="button" variant="secondary" className="min-w-[8rem]" onClick={onClose}>{t('sch.cancel')}</Button>

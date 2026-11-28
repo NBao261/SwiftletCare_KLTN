@@ -12,6 +12,7 @@ import { FUZZY_TUNING_LIMITS } from '@/validations/common/fuzzyTuning.validation
 import {
   RULE_NAME_MAX_LENGTH, RULE_SOURCE_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULE_VALUE_LIMITS, RULE_WINDOW_MAX_DAYS, RULE_WINDOW_MIN_DAYS, draftOfRule, ruleInputOf, validateRuleDraft, type RuleDraft,
 } from '@/validations/common/recommendationRule.validation'
+import FieldError from '@/components/ui/FieldError'
 
 const INDICATORS = Object.keys(RULE_VALUE_LIMITS) as RecommendationIndicator[]
 const FUZZY_KEYS = Object.keys(FUZZY_TUNING_LIMITS) as FuzzyNumericKey[]
@@ -192,7 +193,7 @@ export default function RecommendationRuleFormModal({ open, farmId, rule, onClos
                     ...paramKeys.map(key => ({ value: key, label: t(`param.${key}` as RecommendationsKey) })),
                   ]}
                 />
-                {errorText('key') && <span className="text-caption text-alertRed">{errorText('key')}</span>}
+                {errorText('key') && <FieldError>{errorText('key')}</FieldError>}
               </div>
               <Input
                 id="rule-action-value"

@@ -11,7 +11,7 @@ import { Avatar, Button, Input, TimePicker, Toggle } from '@/components/ui'
 import StatusTabs from '@/components/common/StatusTabs'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useToastStore } from '@/stores/toastStore'
-import { formatDate, getApiErrorMessage } from '@/lib/helpers'
+import { formatDate } from '@/lib/helpers'
 import { formatHourMinute } from '@/lib/i18n'
 import { qrDataUrl } from '@/lib/qrCode'
 import { cn } from '@/lib/cn'
@@ -303,6 +303,7 @@ function SecurityCard() {
   const { forgotPassword, resetPassword } = useAuth()
   const user = useAuthStore(s => s.user)
   const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
   const [sent, setSent] = useState(false)
   const [token, setToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -314,6 +315,7 @@ function SecurityCard() {
     if (!user?.email) return
     forgotPassword.mutate(user.email, {
       onSuccess: () => { setSent(true); push('Đã gửi mã đặt lại tới email của bạn') },
+      onError: (err) => push(apiErrorMessage(err, t('Gửi mã thất bại')), 'error'),
     })
   }
 
@@ -323,7 +325,7 @@ function SecurityCard() {
     if (!user?.email || Object.keys(resetErrors).length > 0) return
     resetPassword.mutate({ email: user.email, token: token.trim(), newPassword }, {
       onSuccess: () => { push('Đã đổi mật khẩu. Đăng nhập lại trên các thiết bị khác.'); setSent(false); setToken(''); setNewPassword(''); setConfirmPassword(''); setSubmitted(false) },
-      onError: (err) => push(getApiErrorMessage(err, 'Đặt lại mật khẩu thất bại'), 'error'),
+      onError: (err) => push(apiErrorMessage(err, t('Đặt lại mật khẩu thất bại')), 'error'),
     })
   }
 
@@ -453,7 +455,7 @@ function DeletionCard() {
   function handleConfirm() {
     requestDeletion.mutate(undefined, {
       onSuccess: () => { push('Đã gửi yêu cầu xoá tài khoản'); setShowConfirm(false) },
-      onError: (err) => push(getApiErrorMessage(err, 'Gửi yêu cầu thất bại'), 'error'),
+      onError: (err) => push(apiErrorMessage(err, t('Gửi yêu cầu thất bại')), 'error'),
     })
   }
 

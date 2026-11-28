@@ -26,13 +26,14 @@ import { trackParameterChange, type ReviewApplyOptions } from '@/services/parame
 import { getDefaultThresholds } from '@/services/system.service'
 import { assertValidThresholds, pickThresholds } from '@/utils/thresholds.util'
 import { applyThresholdUpdate, THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
+import { isUnchanged } from '@/utils/parameterChange.util'
 import {
   assertOnlyKeys, assertValidBirdCountTuning, assertValidDetectionTuning, pickBirdCountTuning,
   pickDetectionTuning, resolveBirdCountTuning, resolveDetectionTuning,
   BIRD_COUNT_TUNING_KEYS, DEFAULT_BIRD_COUNT_TUNING, DEFAULT_DETECTION_TUNING, DETECTION_TUNING_KEYS,
   DEFAULT_HEALTH_LEVELS, assertValidHealthLevels, pickHealthLevels, resolveHealthLevels,
 } from '@/utils/detectionTuning.util'
-import { assertValidFuzzyTuning, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
+import { assertValidFuzzyTuning, FUZZY_TUNING_KEYS, pickFuzzyTuning } from '@/utils/fuzzyTuning.util'
 import { publishZoneConfig } from '@/services/deviceConfig.service'
 import { AppError, NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '@/utils/appError.util'
 import { HOUSE_STAGE_LABEL, ROLE_LABEL } from '@/utils/displayLabel.util'
@@ -674,6 +675,8 @@ export async function applyFuzzyTuning(
   const oldValues = { ...zone.fuzzy_tuning }
   const merged = { ...oldValues, ...picked }
   assertValidFuzzyTuning(merged)
+  // Hệ số không đổi thì không ghi, không phát lại, không báo ai và không bỏ đề xuất đang chờ
+  if ([...FUZZY_TUNING_KEYS, 'fuzzy_input_filter' as const].every(key => oldValues[key] === merged[key])) return zone
 
   zone.fuzzy_tuning = merged
   zone.fuzzy_tuning_history.push({
@@ -716,6 +719,7 @@ export async function updateZoneDetectionTuning(
   const oldValues = resolveDetectionTuning(zone.detection_tuning)
   const merged = { ...oldValues, ...picked }
   assertValidDetectionTuning(merged)
+  if (isUnchanged(oldValues, merged)) return zone
 
   zone.detection_tuning = merged
   zone.detection_tuning_history.push({
@@ -764,6 +768,9 @@ export async function updateHouseHealthLevels(
   const oldValues = resolveHealthLevels(house.health_levels)
   const merged = { ...oldValues, ...picked }
   assertValidHealthLevels(merged)
+  if (isUnchanged(oldValues, merged)) {
+    return { house_id: String(house._id), health_levels: merged, defaults: DEFAULT_HEALTH_LEVELS, can_edit: true }
+  }
 
   house.health_levels = merged
   await house.save()
@@ -813,6 +820,7 @@ export async function updateHouseBirdCountTuning(
   const oldValues = resolveBirdCountTuning(house.bird_count_tuning)
   const merged = { ...oldValues, ...picked }
   assertValidBirdCountTuning(merged)
+  if (isUnchanged(oldValues, merged)) return presentHouse(house, user)
 
   house.bird_count_tuning = merged
   house.bird_count_tuning_history.push({

@@ -1,10 +1,11 @@
 import { Suspense, useLayoutEffect, useRef, useState } from 'react'
-import { Outlet, Link } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useBreadcrumbStore } from '@/stores/breadcrumbStore'
 import AppSidebar, { type MenuItem, type MenuSection } from '@/components/layouts/AppSidebar'
 import AppHeader from '@/components/layouts/AppHeader'
 import Toast from '@/components/common/Toast'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import SectionTabs from '@/components/common/SectionTabs'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { useAlertNotifications } from '@/hooks/shared/useAlertNotifications'
@@ -24,6 +25,8 @@ export default function AppShell({
   // thông báo trong ứng dụng mới: làm mới hộp thư và hiện toast ở mọi trang
   useInAppNotificationListener()
   const back = useBreadcrumbStore(s => s.back)
+  // Chuyển trang thì ErrorBoundary tự hồi phục
+  const { pathname } = useLocation()
   // Đổi ngôn ngữ thì remount nội dung để t() trong hàm thường ra đúng ngôn ngữ
   const { i18n } = useI18next()
   const [scrolled, setScrolled] = useState(false)
@@ -69,7 +72,9 @@ export default function AppShell({
             <SectionTabs menuSections={menuSections} />
             {/* Suspense sát Outlet để lần tải chunk đầu không làm sidebar/header nháy */}
             <Suspense key={i18n.language} fallback={<LoadingSkeleton className="h-40 w-full" />}>
-              <Outlet />
+              <ErrorBoundary resetKey={pathname}>
+                <Outlet />
+              </ErrorBoundary>
             </Suspense>
           </div>
         </main>

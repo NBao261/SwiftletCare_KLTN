@@ -1,7 +1,7 @@
 // Ngăn kéo kết luận mùa vụ của Chuyên gia (Farm Owner không viết, kể cả khi farm chưa có chuyên gia —)
 import { useState, useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Button, ErrorNotice } from '@/components/ui'
 import { Drawer } from '@/components/ui/Drawer'
 import { cn } from '@/lib/cn'
 import type { HarvestCycle } from '@/types/harvest.types'
@@ -223,11 +223,7 @@ export default function CycleConclusionDrawer({ cycle, onClose }: Props) {
           </div>
 
           {/* Lỗi */}
-          {errorMsg && (
-            <p className="text-xs text-alertRed bg-alertRed/5 border border-alertRed/20 rounded-xl px-4 py-2.5">
-              {errorMsg}
-            </p>
-          )}
+          {errorMsg && <ErrorNotice>{errorMsg}</ErrorNotice>}
         </div>
 
         {/* Footer */}

@@ -18,6 +18,8 @@ import {
   MAX_SCHEDULE_PROFILES, MAX_TEMPORARY_WINDOWS, PROFILE_NAME_MAX_LENGTH, validateCountingSchedule, type ScheduleError,
 } from '@/validations/domain-expert/countingSchedule.validation'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
+import FieldError from '@/components/ui/FieldError'
+import LoadError from '@/components/ui/LoadError'
 
 // "05:30–07:00"
 const span = (window: TimeWindow) => `${window.start}–${window.end}`
@@ -38,7 +40,7 @@ const SOURCE_TONE: Record<CountingWindowSource, BadgeTone> = { TEMPORARY: 'warni
 function RowError({ error }: { error: ScheduleError | null }) {
   const { t } = useTranslation(countingScheduleDict)
   if (!error) return null
-  return <p className="text-xs text-alertRed">{t(`error.${error}` as CountingScheduleKey)}</p>
+  return <FieldError>{t(`error.${error}` as CountingScheduleKey)}</FieldError>
 }
 
 export default function DomainExpertCountingSchedulePage() {
@@ -60,11 +62,7 @@ export default function DomainExpertCountingSchedulePage() {
   if (view.isLoading) return <LoadingSkeleton count={4} className="h-24 w-full rounded-2xl" />
   if (view.isError || !view.data) {
     return (
-      <EmptyState
-        title={t('page.loadError')}
-        description={apiErrorMessage(view.error)}
-        action={<Button variant="secondary" size="sm" onClick={() => void view.refetch()}>{t('page.retry')}</Button>}
-      />
+      <LoadError title={t('page.loadError')} error={view.error} onRetry={() => void view.refetch()} />
     )
   }
 
