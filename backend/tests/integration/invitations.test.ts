@@ -6,6 +6,7 @@ import authRoutes from '@/routes/auth.route'
 import invitationRoutes from '@/routes/invitations.route'
 import { errorHandler } from '@/middlewares/errorHandler.middleware'
 import { migrateRemoveOtpLogin } from '@/scripts/migrate-remove-otp-login.script'
+import { AuditLog } from '@/models/auditLog.model'
 import { Farm } from '@/models/farm.model'
 import { Invitation } from '@/models/invitation.model'
 import { User } from '@/models/user.model'
@@ -34,7 +35,7 @@ afterAll(async () => {
 })
 
 afterEach(async () => {
-  await Promise.all([Farm.deleteMany({}), Invitation.deleteMany({}), User.deleteMany({})])
+  await Promise.all([AuditLog.deleteMany({}), Farm.deleteMany({}), Invitation.deleteMany({}), User.deleteMany({})])
 })
 
 async function seed(role: 'FARM_OWNER', email = 'invitee@test.vn') {
@@ -129,6 +130,34 @@ describe('acceptInvitation', () => {
     expect((await Invitation.findById(invitation._id))!.status).toBe('ACCEPTED')
   })
 
+  it('ghi nhật ký FARM_MEMBER_JOINED theo farm, cùng chỗ với lúc mời và lúc gỡ', async () => {
+    const { owner, farm, invitation } = await seed('FARM_OWNER')
+    const invitee = await User.create({ email: 'invitee@test.vn', password_hash: 'password123', full_name: 'Invitee', role: 'FARM_OWNER' })
+
+    await acceptInvitation(invitation.token, { _id: String(invitee._id), email: invitee.email, role: 'FARM_OWNER' } as never)
+
+    expect(await AuditLog.find({ action: 'FARM_MEMBER_JOINED' }).lean()).toEqual([expect.objectContaining({
+      actor_id: invitee._id, target_type: 'farm', target_id: farm._id, farm_id: farm._id,
+      metadata: { user_id: String(invitee._id), role: 'FARM_OWNER', invitation_id: String(invitation._id), invited_by: String(owner._id) },
+    })])
+  })
+
+  it('farm của lời mời không còn: báo lỗi và lời mời vẫn chờ, không bị tiêu mất', async () => {
+    const { farm, invitation } = await seed('FARM_OWNER')
+    const invitee = await User.create({ email: 'invitee@test.vn', password_hash: 'password123', full_name: 'Invitee', role: 'FARM_OWNER' })
+    await Farm.deleteOne({ _id: farm._id })
+
+    await expect(acceptInvitation(invitation.token, { _id: String(invitee._id), email: invitee.email, role: 'FARM_OWNER' } as never))
+      .rejects.toMatchObject({ statusCode: 404 })
+    expect((await Invitation.findById(invitation._id))!.status).toBe('PENDING')
+    expect(await AuditLog.countDocuments({ action: 'FARM_MEMBER_JOINED' })).toBe(0)
+  })
+
+  it('tạo tài khoản từ link cũng ghi FARM_MEMBER_JOINED', async () => {
+    const { farm, invitation } = await seed('FARM_OWNER')
+    const user = await createAccountFromInvitation(invitation.token, { full_name: 'Invitee', password: 'password123' })
+    expect(await AuditLog.exists({ action: 'FARM_MEMBER_JOINED', target_id: farm._id, 'metadata.user_id': String(user._id) })).toBeTruthy()
+  })
 })
 
 describe('inviteMember', () => {

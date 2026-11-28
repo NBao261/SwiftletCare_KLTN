@@ -235,18 +235,27 @@ export async function acceptInvitation(token: string, user: CurrentUser): Promis
     throw ConflictError(`Lời mời dành cho ${ROLE_LABEL[invitation.invited_role]} nhưng tài khoản này là ${ROLE_LABEL[user.role]}. Hãy dùng email khác`)
   }
 
+  // Farm không còn thì báo lỗi mà lời mời vẫn chờ, không bị tiêu mất
+  const farm = await findFarmOrThrow(String(invitation.farm_id))
   invitation.status = 'ACCEPTED'
   invitation.responded_at = new Date()
   await invitation.save()
 
-  const farm = await findFarmOrThrow(String(invitation.farm_id))
   if (!farm.members.some(m => String(m.user_id) === user._id)) {
     farm.members.push({
       user_id: user._id, is_primary: false, role: invitation.invited_role, joined_at: new Date(),
     } as never)
     await farm.save()
+    await logMemberJoined(farm, user._id, invitation)
   }
   return farm
+}
+
+// Đổi thành viên phải có nhật ký như lúc mời và lúc gỡ
+async function logMemberJoined(farm: IFarm, userId: string, invitation: IInvitation): Promise<void> {
+  await logAction(userId, 'FARM_MEMBER_JOINED', 'farm', String(farm._id), {
+    user_id: userId, role: invitation.invited_role, invitation_id: String(invitation._id), invited_by: String(invitation.invited_by),
+  }, { farmId: String(farm._id) })
 }
 
 // Không có → 404; đã trả lời hoặc hết hạn → 409
@@ -296,6 +305,7 @@ export async function createAccountFromInvitation(token: string, input: CreateAc
   await logAction(String(user._id), 'ACCOUNT_CREATED_FROM_INVITATION', 'user', String(user._id), {
     farm_id: String(farm._id), role: invitation.invited_role,
   })
+  await logMemberJoined(farm, String(user._id), invitation)
   return user
 }
 

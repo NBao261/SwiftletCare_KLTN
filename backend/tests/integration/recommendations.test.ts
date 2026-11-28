@@ -312,6 +312,24 @@ describe('EXPERT-FR-018 — decision of the Farm Owner', () => {
     expect((await Recommendation.findById(rec._id).lean())!.status).toBe('OPEN')
   })
 
+  it('a failure after some zones changed puts them back, so the reopened recommendation changed nothing and opens no review', async () => {
+    const s = await seed()
+    const zone2 = await Zone.create({ house_id: s.house._id, name: 'Tầng 2' })
+    const rec = await openRecommendation(s, {
+      ...NH3_RULE, action: { type: 'PARAMETER_CHANGE', group: 'thresholds', key: 'humidity_min', value: 80 },
+    })
+    const save = jest.spyOn(Recommendation.prototype, 'save').mockRejectedValueOnce(new Error('ghi lỗi'))
+
+    expect((await s.call('post', `/${rec._id}/accept`, s.t.owner)).status).toBe(500)
+    save.mockRestore()
+
+    for (const id of [s.zone._id, zone2._id]) {
+      expect((await Zone.findById(id).lean())!.thresholds.humidity_min).toBe(DEFAULT_THRESHOLDS.humidity_min)
+    }
+    expect((await Recommendation.findById(rec._id).lean())!.status).toBe('OPEN')
+    expect(await ParameterReview.countDocuments({ status: 'PENDING_REVIEW' })).toBe(0)
+  })
+
   it('reopens after a failure and reuses the Work Order already opened on retry; accepts the rule as it was when raised', async () => {
     const s = await seed()
     const rule = await s.call('post', '/rules', s.t.expert, { farm_id: s.farm._id, ...NH3_RULE })

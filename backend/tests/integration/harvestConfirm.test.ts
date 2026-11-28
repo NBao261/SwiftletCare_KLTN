@@ -129,6 +129,42 @@ describe('sửa, xoá, xem theo nhà được giao (HARVEST-FR-005, AUTH-FR-013)
   })
 })
 
+describe('nhật ký thao tác của lô thu hoạch', () => {
+  const rows = (action: string) => AuditLog.find({ action, target_type: 'harvest_batch' }).lean()
+
+  it('tạo, sửa (kèm trước/sau), xoá đều ghi nhật ký theo farm, kể cả lô đã xác nhận', async () => {
+    const { farm, owner, zone, owner$, a, a$ } = await seed()
+    const draft = (await a$.post('/harvests', batch(zone._id)).expect(201)).body.data
+    const created = await rows('HARVEST_CREATED')
+    expect(created).toHaveLength(1)
+    expect(created[0]).toMatchObject({
+      actor_id: a.user._id, farm_id: farm._id, target_id: new mongoose.Types.ObjectId(draft._id),
+      metadata: { zone_id: String(zone._id), status: 'DRAFT', nest_count: 120, weight_grams: 950, nest_type: 'RAW' },
+    })
+
+    await owner$.post(`/harvests/${draft._id}/confirm`).expect(200)
+    await owner$.put(`/harvests/${draft._id}`, { nest_count: 90 }).expect(200)
+    const updated = await rows('HARVEST_UPDATED')
+    expect(updated).toHaveLength(1)
+    expect(updated[0]).toMatchObject({
+      actor_id: owner._id, metadata: { status: 'CONFIRMED' },
+      before: expect.objectContaining({ nest_count: 120 }), after: expect.objectContaining({ nest_count: 90 }),
+    })
+
+    await owner$.delete(`/harvests/${draft._id}`).expect(200)
+    expect(await rows('HARVEST_DELETED')).toEqual([expect.objectContaining({
+      actor_id: owner._id, metadata: expect.objectContaining({ status: 'CONFIRMED', nest_count: 90 }),
+    })])
+  })
+
+  it('gửi lại đúng số cũ thì không ghi nhật ký sửa', async () => {
+    const { zone, owner$ } = await seed()
+    const created = (await owner$.post('/harvests', batch(zone._id)).expect(201)).body.data
+    await owner$.put(`/harvests/${created._id}`, { nest_count: 120, nest_type: 'RAW' }).expect(200)
+    expect(await rows('HARVEST_UPDATED')).toHaveLength(0)
+  })
+})
+
 describe('ảnh của lô (HARVEST-FR-001)', () => {
   it('Farm Owner và thợ (lô DRAFT của mình) đặt được ảnh; chuyên gia, thợ khác, file không phải ảnh bị từ chối', async () => {
     const { zone, token, owner$, a, b } = await seed()
