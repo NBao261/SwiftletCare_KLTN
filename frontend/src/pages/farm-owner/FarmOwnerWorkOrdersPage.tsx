@@ -27,6 +27,7 @@ import { lastPage } from '@/lib/helpers';
 import { useFarmDetails } from '@/hooks/shared/useFarms';
 import { useToastStore } from '@/stores/toastStore';
 import type { WorkOrder } from '@/types';
+import LoadError from '@/components/ui/LoadError'
 
 // Ghi chú mở lại, lý do huỷ tối đa 1.000 ký tự (api-spec)
 const NOTE_MAX_LENGTH = 1000;
@@ -111,11 +112,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
   if (scope.farms.length === 0 && scope.isLoading) return <LoadingSkeleton count={5} className="h-14 w-full" />;
   if (scope.farms.length === 0 && scope.isError) {
     return (
-      <EmptyState
-        title={t('page.loadFailed')}
-        description={apiErrorMessage(undefined)}
-        action={<Button variant="secondary" size="sm" onClick={scope.refetch}>{t('page.retry')}</Button>}
-      />
+      <LoadError title={t('page.loadFailed')} error={undefined} onRetry={() => void scope.refetch()} />
     );
   }
   if (scope.farms.length === 0) {
@@ -166,11 +163,7 @@ export default function FarmOwnerWorkOrdersPage(): JSX.Element {
         {isLoading ? (
           <LoadingSkeleton count={5} className="h-14 w-full" />
         ) : isError ? (
-          <EmptyState
-            title={t('list.errorTitle')}
-            description={apiErrorMessage(error)}
-            action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-          />
+          <LoadError title={t('list.errorTitle')} error={error} onRetry={() => void refetch()} />
         ) : workOrders.length === 0 ? (
           <div className="flex items-center justify-center rounded-2xl border border-dashed border-warmGray/30 px-6 py-12">
             <TableEmptyState title={t('list.emptyTitle')} description={t(emptyHintKey)} />

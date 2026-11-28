@@ -82,6 +82,9 @@ export function useUsersList(query: ListUsersQuery) {
     page,
     limit,
     isLoading: result.isLoading,
+    isError: result.isError,
+    error: result.error,
+    refetch: result.refetch,
   }
 }
 

@@ -1,6 +1,7 @@
 import { InputHTMLAttributes, ReactNode, forwardRef, useId } from 'react'
 import { cn } from '@/lib/cn'
 import { tr } from '@/i18n'
+import FieldError from '@/components/ui/FieldError'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -18,6 +19,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id ?? props.name ?? generatedId
     // Nhãn/lỗi/placeholder tự dịch theo VI/EN (chuỗi không có bản dịch giữ nguyên)
     const label = tr(rawLabel), error = tr(rawError)
+    const errorId = `${inputId}-error`
+    const describedBy = [props['aria-describedby'], error ? errorId : undefined].filter(Boolean).join(' ') || undefined
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -26,7 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               {label}
               {props.required && <span className="ml-0.5 text-alertRed" aria-hidden="true">*</span>}
             </label>
-            {errorInLabel && error && <span className="min-w-0 truncate text-xs text-alertRed" title={error}>{error}</span>}
+            {errorInLabel && error && <span title={error} className="min-w-0"><FieldError id={errorId} inline>{error}</FieldError></span>}
           </div>
         )}
         <div className="relative">
@@ -41,9 +44,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={cn('input', icon && 'pl-10', error && 'border-alertRed focus:border-alertRed', className)}
             placeholder={tr(placeholder)}
             {...props}
+            aria-invalid={error ? true : props['aria-invalid']}
+            aria-describedby={describedBy}
           />
         </div>
-        {!(errorInLabel && label) && error && <span className="text-xs text-alertRed">{error}</span>}
+        {!(errorInLabel && label) && error && <FieldError id={errorId}>{error}</FieldError>}
       </div>
     )
   },

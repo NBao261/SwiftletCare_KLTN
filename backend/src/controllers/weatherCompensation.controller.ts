@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import * as weatherCompensationService from '@/services/weatherCompensation.service'
+import * as weatherService from '@/services/weather.service'
 import { asyncHandler } from '@/utils/asyncHandler.util'
 
 export const getRules = asyncHandler(async (req: Request, res: Response) => {
@@ -20,4 +21,8 @@ export const rejectProposal = asyncHandler(async (req: Request, res: Response) =
 
 export const setRules = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: await weatherCompensationService.setWeatherRules(req.params.houseId, req.user, req.body.rules) })
+})
+
+export const getCurrentWeather = asyncHandler(async (req: Request, res: Response) => {
+  res.json({ success: true, data: await weatherService.getCurrentWeatherOfHouse(req.params.houseId, req.user) })
 })

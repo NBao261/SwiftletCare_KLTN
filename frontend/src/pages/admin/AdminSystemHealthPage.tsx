@@ -1,5 +1,6 @@
 // Tổng quan hệ thống: 4 ô chỉ số chỉ để xem, thiết bị cần chú ý và nhật ký gần đây
 import { CpuIcon, HouseIcon, UsersIcon, WarningIcon } from '@phosphor-icons/react'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useSystemHealth } from '@/hooks/admin/useSystem'
 import { useAlertsList } from '@/hooks/shared/useAlerts'
 import KpiTile from '@/components/common/KpiTile'
@@ -7,13 +8,13 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import AttentionDevicesCard from '@/components/features/admin/dashboard/AttentionDevicesCard'
 import RecentActivityCard from '@/components/features/admin/dashboard/RecentActivityCard'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { t as i18nT } from '@/i18n'
 
 // Màu vòng icon theo ReadingTile (Dashboard Farm Owner): xám nhạt, không đổi đỏ theo trạng thái
 const ICON_NORMAL = 'bg-warmGray/10 text-charcoal'
 
 export default function AdminSystemHealthPage() {
+  const apiErrorMessage = useApiErrorMessage()
   const { data, isLoading, error } = useSystemHealth()
   // Quản trị viên chỉ thấy cảnh báo thiết bị; chỉ đếm, không mở từng cảnh báo
   // open: còn hiệu lực = ACTIVE và ACKNOWLEDGED (đã xác nhận mà thiết bị vẫn hỏng vẫn là cảnh báo đang mở)
@@ -26,7 +27,7 @@ export default function AdminSystemHealthPage() {
       <EmptyState
         icon={<WarningIcon size={28} />}
         title="Không tải được số liệu hệ thống"
-        description={getApiErrorMessage(error, 'Thử tải lại trang.')}
+        description={apiErrorMessage(error)}
       />
     )
   }

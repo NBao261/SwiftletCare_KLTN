@@ -4,12 +4,12 @@ import HouseComparisonTable from '@/components/features/farm-owner/overview/Hous
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import TableEmptyState from '@/components/common/TableEmptyState';
-import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { EmptyState, LoadingSkeleton } from '@/components/ui';
 import { farmOverviewDict } from '@/constants/farmOverview.i18n';
-import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useHouseComparison } from '@/hooks/farm-owner/useFarmOverview';
 import type { ComparisonSortKey } from '@/types';
+import LoadError from '@/components/ui/LoadError'
 
 // Khoảng so sánh; mặc định 30 ngày như backend
 const PERIOD_DAYS = [7, 30, 90] as const;
@@ -20,7 +20,6 @@ const DAY_MS = 86_400_000;
 // So sánh các nhà của 1 trang trại trong 1 kỳ (nhóm thứ tư của Phân tích); farmId rỗng thì nhắc chọn trang trại
 export default function HouseComparisonSection({ farmId }: { farmId: string }): JSX.Element {
   const { t, date } = useTranslation(farmOverviewDict);
-  const apiErrorMessage = useApiErrorMessage();
   const [periodDays, setPeriodDays] = useState<PeriodDays>(DEFAULT_PERIOD);
   const [sort, setSort] = useState<ComparisonSortKey>('name');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
@@ -50,11 +49,7 @@ export default function HouseComparisonSection({ farmId }: { farmId: string }): 
   let body = <LoadingSkeleton count={4} className="h-16 w-full" />;
   if (comparison.isError) {
     body = (
-      <EmptyState
-        title={t('comparison.errorTitle')}
-        description={apiErrorMessage(comparison.error)}
-        action={<Button variant="secondary" size="sm" onClick={() => void comparison.refetch()}>{t('page.retry')}</Button>}
-      />
+      <LoadError title={t('comparison.errorTitle')} error={comparison.error} onRetry={() => void comparison.refetch()} />
     );
   } else if (comparison.data && comparison.data.rows.length === 0) {
     body = (

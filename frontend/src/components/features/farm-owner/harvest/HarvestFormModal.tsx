@@ -16,6 +16,7 @@ import { useToastStore } from '@/stores/toastStore';
 import type { ScopeFilterState } from '@/hooks/shared/useScopeFilter';
 import type { HarvestBatch, NestType } from '@/types';
 import { NO_VALUE } from '@/constants/display';
+import FieldError from '@/components/ui/FieldError'
 
 const GRAMS_PER_KILOGRAM = 1000;
 // Mốc sớm nhất của ngày thu: chặn năm gõ nhầm (vd 0023); backend chỉ kiểm định dạng ngày
@@ -265,7 +266,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
                     invalid={isHouseWithoutZone}
                     onChange={setHouseId}
                   />
-                  {isHouseWithoutZone && <span className="text-xs text-alertRed">{t('form.houseNoZone')}</span>}
+                  {isHouseWithoutZone && <FieldError>{t('form.houseNoZone')}</FieldError>}
                 </div>
               )}
               {/* Người nhập: người đang đăng nhập, backend tự ghi người tạo */}
@@ -332,7 +333,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
                       className={cn(AMOUNT_INPUT_CLASS, rowError && 'border-alertRed focus:border-alertRed')}
                     />
                   </div>
-                  {rowError && <p className="mt-1 text-right text-xs text-alertRed">{rowError}</p>}
+                  {rowError && <FieldError>{rowError}</FieldError>}
                 </div>
               );
             })}
@@ -344,7 +345,7 @@ export default function HarvestFormModal({ scope, onClose, group, houseName, cre
               </span>
             </div>
           </div>
-          {isSubmitted && isEmpty && !hasRowError && <p className="text-xs text-alertRed">{t('form.errorEmpty')}</p>}
+          {isSubmitted && isEmpty && !hasRowError && <FieldError>{t('form.errorEmpty')}</FieldError>}
         </div>
 
         {/* Hàng 3: link ảnh sản phẩm dùng chung cho các loại */}

@@ -89,6 +89,9 @@ const weatherRulesBody = [
 ]
 router.get('/houses/:houseId/weather-rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'),
   param('houseId').isMongoId(), validate, weatherCompensationController.getRules)
+// Trời đang nắng hay mưa ở ngoài nhà (Open-Meteo, theo toạ độ farm); Administrator không xem dữ liệu vận hành
+router.get('/houses/:houseId/weather/current', requireRole('FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN'),
+  param('houseId').isMongoId(), validate, weatherCompensationController.getCurrentWeather)
 router.put('/houses/:houseId/weather-rules', requireRole('FARM_OWNER', 'DOMAIN_EXPERT'), param('houseId').isMongoId(),
   ...weatherRulesBody,
   validate, weatherCompensationController.setRules)

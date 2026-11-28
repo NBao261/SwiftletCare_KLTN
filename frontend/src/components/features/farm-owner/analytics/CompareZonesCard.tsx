@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { Button, DataTable, EmptyState, FilterChip, LoadingSkeleton, type DataTableColumn } from '@/components/ui';
+import { DataTable, FilterChip, LoadingSkeleton, type DataTableColumn } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import {
@@ -17,6 +17,7 @@ import { useEnvCompare } from '@/hooks/farm-owner/useAnalytics';
 import type { FlatZone } from '@/hooks/shared/useFarms';
 import { cn } from '@/lib/cn';
 import type { AnalyticsRange, EnvCompareZone } from '@/apis/farm-owner/analytics.api';
+import LoadError from '@/components/ui/LoadError'
 
 // Bảng 6 cột trong khung rộng toàn trang
 const TABLE_MIN_WIDTH = 760;
@@ -43,7 +44,7 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
     return source.filter(zoneId => zoneLabelById.has(zoneId));
   }, [pickedZoneIds, zones, zoneLabelById]);
   const selectedSet = useMemo(() => new Set(selectedZoneIds), [selectedZoneIds]);
-  const { data, isLoading, isError, refetch } = useEnvCompare(selectedZoneIds, range);
+  const { data, isLoading, isError, error, refetch } = useEnvCompare(selectedZoneIds, range);
 
   const rangeOptions = ANALYTICS_RANGES.map(value => ({ value, label: t(`range.${value}`) }));
 
@@ -130,10 +131,7 @@ export default function CompareZonesCard({ zones }: CompareZonesCardProps): JSX.
   if (selectedZoneIds.length > 0 && isLoading) body = <LoadingSkeleton count={3} className="h-12 w-full" />;
   if (selectedZoneIds.length > 0 && isError) {
     body = (
-      <EmptyState
-        title={t('common.loadError')}
-        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={error} onRetry={() => void refetch()} />
     );
   }
 

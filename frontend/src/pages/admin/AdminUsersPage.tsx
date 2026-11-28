@@ -4,6 +4,7 @@ import { getUserStatus, useAllUsers, useUsersList, type UsersSortKey } from '@/h
 import { Button, ClearFiltersButton, SearchInput, SectionCard } from '@/components/ui'
 import StatusTabs from '@/components/common/StatusTabs'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import LoadError from '@/components/ui/LoadError'
 import Pagination from '@/components/ui/Pagination'
 import DataTable from '@/components/ui/DataTable'
 import SelectMenu from '@/components/ui/SelectMenu'
@@ -39,7 +40,7 @@ export default function AdminUsersPage() {
   const [unlockTarget, setUnlockTarget] = useState<User | null>(null)
   const [creatingOwner, setCreatingOwner] = useState(false)
 
-  const { records, total, limit, isLoading } = useUsersList({
+  const { records, total, limit, isLoading, isError, error, refetch } = useUsersList({
     status, role: role || undefined, search: search || undefined, sortBy, sortDir, page, limit: PAGE_SIZE,
   })
 
@@ -124,6 +125,8 @@ export default function AdminUsersPage() {
 
         {isLoading ? (
           <LoadingSkeleton count={4} className="h-14 w-full" />
+        ) : isError ? (
+          <LoadError title={t('Không tải được danh sách tài khoản')} error={error} onRetry={() => void refetch()} />
         ) : (
           <DataTable
             columns={columns}

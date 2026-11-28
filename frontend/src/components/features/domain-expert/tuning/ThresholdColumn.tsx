@@ -9,6 +9,7 @@ import type { ExpertThresholds } from '@/types/expert.types'
 import { t } from '@/i18n'
 import { FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
 import { THRESHOLD_LIMITS, validateThresholds } from '@/validations/common/threshold.validation'
+import ErrorNotice from '@/components/ui/ErrorNotice'
 
 interface Props {
   data: ExpertThresholds | undefined
@@ -38,7 +39,8 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
 ) {
   const [form, setForm] = useState<ExpertThresholds>(FACTORY_DEFAULT_THRESHOLDS)
   const [resetOpen, setResetOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Đã bấm Lưu khi còn ô sai: hiện câu nhắc cuối khối, vì thanh Lưu nằm xa các ô
+  const [saveAttempted, setSaveAttempted] = useState(false)
 
   useEffect(() => { if (data) setForm(data) }, [data])
 
@@ -47,22 +49,25 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
   const dirtyCount = !data ? 0 : FIELDS.filter(field => form[field.key] !== base[field.key]).length
   useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
+  // Kiểm ngay khi gõ: ô sai có viền đỏ và câu lỗi dưới ô, không đợi bấm Lưu
+  const errors = validateThresholds(form)
+  const hasErrors = Object.keys(errors).length > 0
+
   const set = (key: keyof ExpertThresholds) => (v: number) => {
     setForm(f => ({ ...f, [key]: v }))
-    setError(null)
+    setSaveAttempted(false)
   }
 
   const handleSave = () => {
     if (!data) return
-    const firstError = Object.values(validateThresholds(form))[0]
-    if (firstError) { setError(t(firstError)); return }
-    setError(null)
+    if (hasErrors) { setSaveAttempted(true); return }
+    setSaveAttempted(false)
     onSave(form)
   }
 
   useImperativeHandle(ref, () => ({
     save: handleSave,
-    cancel: () => { setForm(base); setError(null) },
+    cancel: () => { setForm(base); setSaveAttempted(false) },
   }))
 
   if (isLoading) return <LoadingSkeleton count={7} className="h-12 w-full" />
@@ -87,13 +92,13 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
             const limit = THRESHOLD_LIMITS[field.key]
             return (
               <TuningStepperInput key={field.key} label={t(field.label)} subLabel={field.subLabel} value={form[field.key]} onChange={set(field.key)}
-                min={limit.min} max={limit.max} step={field.step} decimals={field.decimals} unit={limit.unit} />
+                min={limit.min} max={limit.max} step={field.step} decimals={field.decimals} unit={limit.unit} error={errors[field.key]} />
             )
           })}
         </fieldset>
 
-        {/* Lỗi kiểm ngưỡng; nút Lưu chung ở thanh dính đáy của trang */}
-        {error && <p className="text-xs text-alertRed">{error}</p>}
+        {/* Nút Lưu chung ở thanh dính đáy của trang: bấm khi còn ô sai thì nhắc ở đây */}
+        {saveAttempted && hasErrors && <ErrorNotice className="mt-3">{t('Sửa các ô báo lỗi rồi lưu lại')}</ErrorNotice>}
       </SectionCard>
 
       <ConfirmModal

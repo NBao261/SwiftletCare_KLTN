@@ -1,14 +1,16 @@
 // ADMIN: Yêu cầu tài khoản: xoá tài khoản, API thật /admin/delete-requests.
 import { useState, useEffect } from 'react'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import RejectDeletionModal from '@/components/features/admin/users/RejectDeletionModal'
 import { useDeleteRequestsList, useCompleteDeleteRequest } from '@/hooks/admin/useAccountRequests'
 import { Button, Badge, SectionCard } from '@/components/ui'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import LoadError from '@/components/ui/LoadError'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import Pagination from '@/components/ui/Pagination'
 import { useToastStore } from '@/stores/toastStore'
-import { formatRelativeTime, getApiErrorMessage } from '@/lib/helpers'
+import { formatRelativeTime } from '@/lib/helpers'
 // `t` là biến lặp TABS trong file này: hàm dịch đặt tên khác
 import { t as i18nT, tr } from '@/i18n'
 import type { User } from '@/types'
@@ -61,21 +63,23 @@ function daysRemaining(requestedAt: string): number {
 
 function DeleteRequestsTab() {
   const [page, setPage] = useState(1)
-  const { records: requests, total, limit, isLoading } = useDeleteRequestsList({ page, limit: PAGE_SIZE })
+  const { records: requests, total, limit, isLoading, isError, error, refetch } = useDeleteRequestsList({ page, limit: PAGE_SIZE })
   const clamping = useClampedPage(page, setPage, total, limit, isLoading)
   const completeDeleteRequest = useCompleteDeleteRequest()
   const push = useToastStore(s => s.push)
+  const apiErrorMessage = useApiErrorMessage()
   const [target, setTarget] = useState<User | null>(null)
   const [rejectTarget, setRejectTarget] = useState<User | null>(null)
 
   function complete(user: User) {
     completeDeleteRequest.mutate(user._id, {
       onSuccess: () => { push('Đã xử lý yêu cầu xoá tài khoản'); setTarget(null) },
-      onError: (err) => push(getApiErrorMessage(err, 'Xử lý yêu cầu xoá thất bại'), 'error'),
+      onError: (err) => push(apiErrorMessage(err, i18nT('Xử lý yêu cầu xoá thất bại')), 'error'),
     })
   }
 
   if (isLoading || clamping) return <div className={FRAME}><LoadingSkeleton count={5} className="h-14 w-full" /></div>
+  if (isError) return <div className={FRAME}><LoadError title={i18nT('Không tải được yêu cầu xoá tài khoản')} error={error} onRetry={() => void refetch()} /></div>
 
   // Người dùng (tên và email) · Thời gian yêu cầu · Hạn xử lý (còn N ngày) · Thao tác: tổng 36+18+18+28 = 100
   const columns: DataTableColumn<User>[] = [

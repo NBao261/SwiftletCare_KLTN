@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Drawer } from '@/components/ui/Drawer'
 import { Button } from '@/components/ui/Button'
+import ErrorNotice from '@/components/ui/ErrorNotice'
 import type { ConfigProfile, ConfigProfileInput, HouseStage } from '@/types/expert.types'
 import { FACTORY_DEFAULT_THRESHOLDS, DEFAULT_FUZZY_TUNING } from '@/constants/thresholds'
 import { t } from '@/i18n'
@@ -221,12 +222,7 @@ export default function ProfileFormDrawer({ open, initial, onClose, onSubmit, is
         </GroupToggle>
       </div>
 
-      {error && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-alertRed/5 border border-alertRed/20 text-sm text-alertRed">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorNotice>{error}</ErrorNotice>}
 
       {/* Footer */}
       <div className="shrink-0 pt-4 border-t border-warmGray/10 flex items-center justify-end gap-2">

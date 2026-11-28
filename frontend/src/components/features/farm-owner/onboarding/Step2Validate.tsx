@@ -8,6 +8,7 @@ import { parseDeviceLabelCode } from '@/lib/qrCode'
 import { Thermometer, Camera, QrCode, CheckCircle2, X, AlertTriangle, XCircle, ArrowLeft, ArrowRight } from 'lucide-react'
 import { ACTIVATION_KEY_MAX_LENGTH, DEVICE_ID_MAX_LENGTH, deviceIdError } from '@/validations/common/deviceId.validation'
 import type { OnboardingState } from './onboardingTypes'
+import FieldError from '@/components/ui/FieldError'
 
 type ValidateStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -115,7 +116,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             {showQrInput ? <X className="h-5 w-5" /> : <QrCode className="h-5 w-5" />}
           </button>
         </div>
-        {idProblem && <p className="text-xs text-alertRed">{idProblem}</p>}
+        {idProblem && <FieldError>{idProblem}</FieldError>}
       </div>
 
       {/* QR URI paste panel */}
@@ -133,7 +134,7 @@ export function Step2Validate({ data, patch, onNext, onBack }: Props) {
             />
             <Button type="button" onClick={handleQrPaste} className="shrink-0">Điền</Button>
           </div>
-          {qrError && <p className="text-xs text-alertRed">{qrError}</p>}
+          {qrError && <FieldError>{qrError}</FieldError>}
         </div>
       )}
 

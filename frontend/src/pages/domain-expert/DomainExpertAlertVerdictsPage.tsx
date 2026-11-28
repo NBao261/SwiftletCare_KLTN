@@ -1,8 +1,7 @@
 // Thẩm định cảnh báo suy luận
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check } from 'lucide-react';
-import { SectionCard } from '@/components/ui';
+import { LoadError, SectionCard } from '@/components/ui';
 import StatusTabs from '@/components/common/StatusTabs';
 import SelectMenu from '@/components/ui/SelectMenu';
 import ClearFiltersButton from '@/components/ui/ClearFiltersButton';
@@ -23,22 +22,13 @@ import {
 } from '@/hooks/domain-expert/useExpertAlerts';
 import type { InferredAlertItem, InferredAlertType } from '@/types/expert.types';
 import type { AlertSeverity } from '@/types';
+import { useToastStore } from '@/stores/toastStore';
 import { useZoneStore } from '@/stores/zoneStore';
 import { useAllZones } from '@/hooks/shared/useFarms';
 import { t } from '@/i18n';
 import { SEVERITY_TO_LEVEL } from '@/constants/severity';
 import { levelDict } from '@/constants/severity.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
-
-function Toast({ show, message }: { show: boolean; message: string }) {
-  if (!show) return null;
-  return (
-    <div className="fixed bottom-6 right-6 z-[60] px-5 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-3 bg-[#27231F] text-[#ECFFA9]">
-      <Check className="w-4 h-4 flex-shrink-0" />
-      {message}
-    </div>
-  );
-}
 
 export default function DomainExpertAlertVerdictsPage() {
   const [searchParams] = useSearchParams();
@@ -55,7 +45,7 @@ export default function DomainExpertAlertVerdictsPage() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<InferredAlertItem | null>(null);
-  const [toast, setToast] = useState({ show: false, message: '' });
+  const pushToast = useToastStore(state => state.push);
 
   const {
     filters,
@@ -67,6 +57,9 @@ export default function DomainExpertAlertVerdictsPage() {
     filteredTotal,
     kpiCounts,
     isLoading,
+    isError,
+    error,
+    refetch,
     pageSize,
   } = useAlertsWithFilters(farmId, filterZoneId);
   // Ô lọc mức độ theo cấp chung (FE_Design 2.4)
@@ -116,9 +109,8 @@ export default function DomainExpertAlertVerdictsPage() {
 
   const handleVerdictSaved = useCallback((_id: string, result: 'CONFIRMED' | 'REJECTED') => {
     const messageText = result === 'CONFIRMED' ? t('Đã xác nhận sự cố thật') : t('Đã bác bỏ báo động giả');
-    setToast({ show: true, message: messageText });
-    setTimeout(() => setToast(currentToast => ({ ...currentToast, show: false })), 3000);
-  }, []);
+    pushToast(messageText);
+  }, [pushToast]);
 
   // Ô lọc đang bật (không tính tab): để hiện nút Huỷ lọc
   const isFiltered = filters.type !== 'ALL' || filters.severity !== 'ALL' || filterZoneId !== undefined;
@@ -176,15 +168,19 @@ export default function DomainExpertAlertVerdictsPage() {
           )}
         </div>
 
-        <InferredAlertsTable
-          alerts={paginatedAlerts}
-          isLoading={isLoading}
-          onOpenDrawer={openDrawer}
-          page={filters.page}
-          pageSize={pageSize}
-          filteredTotal={filteredTotal}
-          onPageChange={setPage}
-        />
+        {isError ? (
+          <LoadError title={t('Không tải được danh sách cảnh báo')} error={error} onRetry={() => void refetch()} />
+        ) : (
+          <InferredAlertsTable
+            alerts={paginatedAlerts}
+            isLoading={isLoading}
+            onOpenDrawer={openDrawer}
+            page={filters.page}
+            pageSize={pageSize}
+            filteredTotal={filteredTotal}
+            onPageChange={setPage}
+          />
+        )}
       </SectionCard>
 
       <ExpertVerdictDrawer
@@ -193,7 +189,6 @@ export default function DomainExpertAlertVerdictsPage() {
         onClose={closeDrawer}
         onVerdictSaved={handleVerdictSaved}
       />
-      <Toast show={toast.show} message={toast.message} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { useRateHealthDay, useSkipHealthDay } from '@/hooks/shared/useHealthDays
 import { cn } from '@/lib/cn';
 import { useToastStore } from '@/stores/toastStore';
 import type { HealthRatingValue, HouseHealthDay } from '@/types';
+import FieldError from '@/components/ui/FieldError'
 
 const RATINGS: HealthRatingValue[] = ['GOOD', 'WATCH', 'ACTION'];
 // Viền khi chọn, cùng màu với badge trạng thái
@@ -167,7 +168,7 @@ export default function HealthRatingModal({ day, onClose, onDone }: HealthRating
                 </button>
               ))}
             </div>
-            {isPickError && <p className="text-sm text-alertRed">{t('rate.pickOne')}</p>}
+            {isPickError && <FieldError>{t('rate.pickOne')}</FieldError>}
             <Textarea
               label={t('rate.note')}
               placeholder={t('rate.notePlaceholder')}
