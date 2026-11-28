@@ -98,26 +98,33 @@ function historyEntry(from: WorkOrderStatus | undefined, to: WorkOrderStatus, by
   return { from, to, by: by as never, note, at: new Date() }
 }
 
-// Gọi trước khi đóng cảnh báo của thiết bị: cảnh báo đóng vì gỡ, thay, dời không được job kiểm coi là đã phục hồi.
-// Trạng thái phiếu giữ nguyên, chủ nhà yến kiểm tại nhà yến rồi duyệt hoặc huỷ. Phiếu phòng ngừa đóng theo checklist nên không đụng
-export async function markDeviceLeft(nodeId: unknown, kind: DeviceLeftKind, user: CurrentUser, note: string): Promise<number> {
-  const open = await WorkOrder.find({ node_id: nodeId, is_open: true, kind: 'REPAIR' })
+// Gọi trước khi lưu việc gỡ, thay, dời: lỗi ở đây thì thiết bị chưa đổi gì. Cảnh báo đóng theo việc đó không được job kiểm
+// coi là đã phục hồi. Trạng thái phiếu giữ nguyên; một lệnh ghi cho mọi phiếu. Phiếu phòng ngừa đóng theo checklist nên không đụng
+export async function markDeviceLeft(nodeId: unknown, kind: DeviceLeftKind, user: CurrentUser, note: string): Promise<IWorkOrder[]> {
+  const ids = await WorkOrder.find({ node_id: nodeId, is_open: true, kind: 'REPAIR' }).distinct('_id')
+  if (ids.length === 0) return []
   const at = new Date()
-  let marked = 0
-  for (const wo of open) {
-    const updated = await WorkOrder.findOneAndUpdate(
-      { _id: wo._id, is_open: true },
-      { $set: { device_left: { kind, at } }, $push: { history: historyEntry(wo.status, wo.status, user._id, note) } },
-      { new: true },
-    )
-    if (!updated) continue
-    marked++
-    const recipients = new Set([...await handlerIds(updated), ...await ownerIdsOf(updated.farm_id)])
-    recipients.delete(user._id)
-    await notifyAll([...recipients], updated, `Thiết bị của phiếu công việc đã ${DEVICE_LEFT_LABEL[kind]}: ${updated.title}`,
-      `${asSentence(note)} Phiếu không còn tự kiểm phục hồi bằng dữ liệu: chủ nhà yến kiểm tại nhà yến rồi duyệt, hoặc huỷ phiếu nếu không cần sửa nữa.`)
+  await WorkOrder.updateMany({ _id: { $in: ids }, is_open: true }, [{
+    $set: {
+      device_left: { $literal: { kind, at } },
+      history: { $concatArrays: ['$history', [{ from: '$status', to: '$status', by: new Types.ObjectId(user._id), note: { $literal: note }, at }]] },
+    },
+  }])
+  return WorkOrder.find({ _id: { $in: ids }, 'device_left.at': at })
+}
+
+// Gọi sau khi thao tác thiết bị đã xong. Thông báo hỏng không được làm hỏng việc gỡ, thay, dời
+export async function notifyDeviceLeft(orders: IWorkOrder[], kind: DeviceLeftKind, user: CurrentUser, note: string): Promise<void> {
+  for (const wo of orders) {
+    try {
+      const recipients = new Set([...await handlerIds(wo), ...await ownerIdsOf(wo.farm_id)])
+      recipients.delete(user._id)
+      await notifyAll([...recipients], wo, `Thiết bị của phiếu công việc đã ${DEVICE_LEFT_LABEL[kind]}: ${wo.title}`,
+        `${asSentence(note)} Phiếu không còn tự kiểm phục hồi bằng dữ liệu: chủ nhà yến kiểm tại nhà yến rồi duyệt, hoặc huỷ phiếu nếu không cần sửa nữa.`)
+    } catch (err) {
+      logger.warn('Báo việc thiết bị rời chỗ cho phiếu công việc thất bại', { workOrderId: String(wo._id), err })
+    }
   }
-  return marked
 }
 
 // Lý do người dùng gõ có thể đã có dấu chấm
@@ -531,10 +538,12 @@ export async function completeWorkOrder(
   const now = new Date()
   const to: WorkOrderStatus = wo.alert_id && !preventive ? 'VERIFYING' : 'AWAITING_APPROVAL'
   const claim = await takeOverBy(wo, user)
+  // Diễn biến của bước này vẫn đọc là báo xong; nhận làm thay ghi kèm
+  const doneNote = claim.note && `Báo xong, ${claim.note.charAt(0).toLowerCase()}${claim.note.slice(1)}`
   const updated = await withStoredPhotos(photos, () => transition(wo, ['IN_PROGRESS'], to, {
     done_at: now, cause: input.cause, work_note: input.work_note?.trim() || undefined,
     photos: [...wo.photos, ...photos], ...(to === 'AWAITING_APPROVAL' && { verified_at: now }), ...claim.set,
-  }, user._id, claim.note))
+  }, user._id, doneNote))
   await afterTakeOver(updated, user, claim)
   if (wo.alert_id && input.cause) {
     await Alert.updateOne({ _id: wo.alert_id }, {

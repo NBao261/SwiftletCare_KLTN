@@ -11,7 +11,7 @@ import { publishNodeConfig, publishZoneConfig } from '@/services/deviceConfig.se
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraLowFpsAlert, raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
-import { markDeviceLeft } from '@/services/workOrder.service'
+import { markDeviceLeft, notifyDeviceLeft } from '@/services/workOrder.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange, type ReviewApplyOptions } from '@/services/parameterReview.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
@@ -297,6 +297,9 @@ export async function reassignZone(
   }
   const destChain = await assertZoneAccess(input.newZoneId, user, 'device')
 
+  // Trước khi lưu việc dời: lỗi ở đây thì thiết bị chưa đổi gì, phiếu không tự đóng như đã phục hồi
+  const moveNote = `Thiết bị ${node.device_id} đã được dời từ Zone "${sourceChain.zone.name}" sang Zone "${destChain.zone.name}"`
+  const leftOrders = await markDeviceLeft(node._id, 'MOVED', user, moveNote)
   // Override đang chạy thuộc Zone cũ nên kết thúc ở đây
   node.zone_id = destChain.zone._id
   resetOverrides(node)
@@ -308,9 +311,6 @@ export async function reassignZone(
   // tăng phiên bản Zone đích để số cũ không trùng mà bị coi là đã áp
   const delivered = (await publishZoneConfig(destChain.zone._id)) && overrideCleared
   await closeOverrideLogs([node._id], 'CLEARED_EARLY')
-  // Trước khi đóng cảnh báo: phiếu không được tự đóng như đã phục hồi
-  await markDeviceLeft(node._id, 'MOVED', user,
-    `Thiết bị ${node.device_id} đã được dời từ Zone "${sourceChain.zone.name}" sang Zone "${destChain.zone.name}"`)
   // Để lại thì job gửi lại cho Farm Owner farm cũ; sự cố thật sẽ được báo lại
   await resolveAlertsForNode(String(node._id), 'Thiết bị đã dời sang Zone khác')
 
@@ -323,6 +323,7 @@ export async function reassignZone(
   }
   await notifyOwnersOfTechnicianAction(user, destChain.farm._id, node._id, moved)
   if (String(sourceChain.farm._id) !== String(destChain.farm._id)) await notifyOwnersOfTechnicianAction(user, sourceChain.farm._id, node._id, moved)
+  await notifyDeviceLeft(leftOrders, 'MOVED', user, moveNote)
   return { node, delivered }
 }
 
@@ -636,6 +637,13 @@ export async function decommissionDevice(
     )
   }
 
+  // Trước khi lưu việc gỡ: lỗi ở đây thì thiết bị chưa đổi gì, phiếu không tự đóng như đã phục hồi
+  const leftKind = replacement ? 'REPLACED' : 'REMOVED'
+  const leftNote = replacement
+    ? `Thiết bị ${node.device_id} đã được thay bằng ${replacement.device_id}. Lý do: ${reason}`
+    : `Thiết bị ${node.device_id} đã được gỡ khỏi ${loc.place}. Lý do: ${reason}`
+  const leftOrders = await markDeviceLeft(node._id, leftKind, user, leftNote)
+
   node.decommissioned_at = new Date()
   node.decommission_reason = reason
   node.status = 'OFFLINE'
@@ -647,10 +655,6 @@ export async function decommissionDevice(
 
   loc.emitStatus({ nodeId: String(node._id), status: 'OFFLINE', timestamp: new Date().toISOString() })
 
-  // Trước khi đóng cảnh báo: phiếu không được tự đóng như đã phục hồi
-  await markDeviceLeft(node._id, replacement ? 'REPLACED' : 'REMOVED', user, replacement
-    ? `Thiết bị ${node.device_id} đã được thay bằng ${replacement.device_id}. Lý do: ${reason}`
-    : `Thiết bị ${node.device_id} đã được gỡ khỏi ${loc.place}. Lý do: ${reason}`)
   const closedAlerts = await resolveAlertsForNode(String(node._id), `Thiết bị đã được gỡ bỏ: ${reason}`)
 
   await logAction(user._id, 'DEVICE_DECOMMISSIONED', TARGET_TYPES[kind], String(node._id), {
@@ -663,6 +667,7 @@ export async function decommissionDevice(
     title: 'Thiết bị đã được gỡ khỏi nhà yến',
     body: `Kỹ thuật viên đã gỡ ${node.device_id} khỏi ${loc.place}. Lý do: ${reason}`,
   })
+  await notifyDeviceLeft(leftOrders, leftKind, user, leftNote)
   return node
 }
 
