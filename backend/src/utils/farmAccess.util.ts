@@ -1,3 +1,4 @@
+import { CameraNode, SensorNode } from '@/models/device.model'
 import { Farm, IFarm } from '@/models/farm.model'
 import { House, Zone, IZone, IHouse } from '@/models/houseZone.model'
 import { User, SIGN_IN_FILTER } from '@/models/user.model'
@@ -95,6 +96,20 @@ export async function assertHouseAccess(
   const chain = await findHouseChainOrThrow(houseId)
   if (!canAccessHouse(chain.farm, chain.house, user, scope)) throw ForbiddenError('Không có quyền trên house này')
   return chain
+}
+
+// Nhà chứa một thiết bị: node cảm biến qua Zone, camera theo nhà; thiết bị đã gỡ vẫn tính (lịch sử còn)
+export async function assertNodeHouseAccess(
+  nodeId: string, user: CurrentUser, scope: AccessScope = 'farm',
+): Promise<{ house: IHouse; farm: IFarm }> {
+  const sensor = await SensorNode.findById(nodeId).select('zone_id').lean()
+  if (sensor) {
+    const { house, farm } = await assertZoneAccess(String(sensor.zone_id), user, scope)
+    return { house, farm }
+  }
+  const camera = await CameraNode.findById(nodeId).select('house_id').lean()
+  if (!camera) throw NotFoundError('Không tìm thấy thiết bị')
+  return assertHouseAccess(String(camera.house_id), user, scope)
 }
 
 // zoneId cũ: quy ra House chứa Zone

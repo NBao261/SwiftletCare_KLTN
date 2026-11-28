@@ -4594,6 +4594,7 @@ paths:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: zoneId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string }, description: "Cảnh báo của một nhà yến: cảnh báo cả nhà (camera đếm chim) và cảnh báo của các Zone trong nhà (ALERT-FR-007). Nhà ngoài phạm vi → 403, như `zoneId`" }
+        - { name: nodeId, in: query, schema: { type: string, format: objectId }, description: "Cảnh báo của một thiết bị (bộ điều khiển hoặc camera). Nhà của thiết bị ngoài phạm vi → 403, thiết bị không có → 404 (FARM-FR-015)" }
         - { name: type, in: query, schema: { $ref: "#/components/schemas/AlertType" } }
         - name: verdict
           in: query
@@ -4933,6 +4934,7 @@ paths:
       parameters:
         - { name: farmId, in: query, schema: { type: string } }
         - { name: houseId, in: query, schema: { type: string } }
+        - { name: nodeId, in: query, schema: { type: string, format: objectId }, description: "Phiếu công việc của một thiết bị (bộ điều khiển hoặc camera). Nhà của thiết bị không được giao cho kỹ thuật viên → 403, thiết bị không có → 404 (FARM-FR-015)" }
         - { name: alertId, in: query, schema: { type: string }, description: "Work Order của một cảnh báo (mở từ màn chi tiết cảnh báo)" }
         - { name: assigneeId, in: query, schema: { type: string }, description: "id người được giao, hoặc `me`" }
         - { name: status, in: query, schema: { $ref: "#/components/schemas/WorkOrderStatus" } }

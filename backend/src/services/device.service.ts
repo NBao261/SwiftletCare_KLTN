@@ -11,6 +11,7 @@ import { publishNodeConfig, publishZoneConfig } from '@/services/deviceConfig.se
 import { emitRelayUpdate, emitDeviceStatusChange, emitHouseDeviceStatusChange } from '@/socket'
 import { raiseCameraLowFpsAlert, raiseCameraOfflineAlert, raiseNodeOfflineAlert, resolveAlertsForNode } from '@/services/alert.service'
 import { logAction } from '@/services/auditLog.service'
+import { noteDeviceReplaced } from '@/services/workOrder.service'
 import { notifyExpertDecision } from '@/services/expertActivity.service'
 import { trackParameterChange, type ReviewApplyOptions } from '@/services/parameterReview.service'
 import { findRecipients, notifyUser, type UserNotification } from '@/services/notification.service'
@@ -742,6 +743,9 @@ export async function replaceSensorNode(
 
   // Thiết bị cũ thường vẫn ONLINE
   const oldNode = await decommissionDevice('sensor', nodeId, user, input.reason, { replacedBy: newNode._id, force: true })
+  // Máy đã thay xong: ghi chú phiếu lỗi gặp trục trặc thì thôi, không làm hỏng việc thay
+  await noteDeviceReplaced(nodeId, old.device_id, input.new_device_id, user._id)
+    .catch(err => logger.warn('Không ghi được việc thay thiết bị vào phiếu công việc', { nodeId, err }))
   await logAction(user._id, 'DEVICE_REPLACED', 'sensor_node', String(old._id), {
     oldDeviceId: old.device_id, newDeviceId: input.new_device_id, newNodeId: String(newNode._id), reason: input.reason,
   })
