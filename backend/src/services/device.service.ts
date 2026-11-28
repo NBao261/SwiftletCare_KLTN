@@ -21,7 +21,7 @@ import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
 import { syncAfterHeartbeat } from '@/utils/configSync.util'
 import { COMMAND_SUPPORT_SINCE, OTA_CONFIRM_TIMEOUT_MS, versionAtLeast } from '@/utils/firmwareImage.util'
 import { sessionWindowsAhead, vnDateOf } from '@/utils/countingSchedule.util'
-import { DEVICE_STATUS_LABEL, formatVnDateTime } from '@/utils/displayLabel.util'
+import { DEVICE_STATUS_LABEL, RELAY_LABEL, formatVnDateTime } from '@/utils/displayLabel.util'
 import {
   closeOrphanedOverrideLogs, closeOverrideLogs, closeOverrideLogFromDevice, closeRelayOverrideLog,
   openOverrideLog, openOverrideStates, DEVICE_CONFIRM_GRACE_MS,
@@ -218,6 +218,12 @@ export async function controlRelay(
   await logAction(user._id, 'RELAY_OVERRIDE', 'sensor_node', String(node._id), {
     relayName: input.relayName, state: input.state, durationMs: overrideMs, delivered, alertConfirmed,
   })
+  // Như các thao tác thiết bị khác của kỹ thuật viên: Farm Owner biết ai đang điều khiển tay nhà mình
+  await notifyOwnersOfTechnicianAction(user, chain.farm._id, node._id, {
+    title: 'Kỹ thuật viên đã điều khiển tay',
+    body: `${RELAY_LABEL[relayName]} của ${node.device_id} ở Zone "${chain.zone.name}" được ${input.state ? 'bật' : 'tắt'} `
+      + `trong ${Math.round(overrideMs / 60_000)} phút${alertConfirmed ? ', đã xác nhận cảnh báo đang mở' : ''}.`,
+  })
   return { node, delivered }
 }
 
@@ -260,6 +266,10 @@ export async function clearRelayOverride(nodeId: string, user: CurrentUser, rela
   }
   await closeOverrideLogs([node._id], 'CLEARED_EARLY')
   await logAction(user._id, 'RELAY_OVERRIDE_CLEARED', 'sensor_node', String(node._id), {})
+  await notifyOwnersOfTechnicianAction(user, chain.farm._id, node._id, {
+    title: 'Kỹ thuật viên đã trả về tự động',
+    body: `Mọi relay của ${node.device_id} ở Zone "${chain.zone.name}" đã trở lại điều khiển tự động.`,
+  })
   return node
 }
 
@@ -276,6 +286,10 @@ async function clearOneRelayOverride(
   await node.save()
   emitRelayUpdate(zoneId, { zoneId, relayName, state: node.relay_states[relayName], mode: 'AUTO' })
   await logAction(user._id, 'RELAY_OVERRIDE_CLEARED', 'sensor_node', String(node._id), { relayName })
+  await notifyOwnersOfTechnicianAction(user, chain.farm._id, node._id, {
+    title: 'Kỹ thuật viên đã trả về tự động',
+    body: `${RELAY_LABEL[relayName]} của ${node.device_id} ở Zone "${chain.zone.name}" đã trở lại điều khiển tự động.`,
+  })
   return node
 }
 

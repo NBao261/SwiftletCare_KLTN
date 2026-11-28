@@ -6,6 +6,12 @@ import type { ConfigProfileStatus } from '@/models/configProfile.model'
 
 // Cùng tên với web (FE_Design); không đưa mã enum ra người dùng
 
+export const RELAY_LABEL: Record<'misting' | 'speaker' | 'ventilation', string> = {
+  misting: 'Phun sương',
+  ventilation: 'Quạt thông gió',
+  speaker: 'Loa ru',
+}
+
 export const ROLE_LABEL: Record<Role, string> = {
   ADMIN: 'Quản trị viên',
   FARM_OWNER: 'Chủ nhà yến',

@@ -255,6 +255,41 @@ describe('Farm Technician chỉ trên nhà được giao (AUTH-FR-004, 013)', ()
   })
 })
 
+describe('điều khiển tay của Farm Technician được báo cho Farm Owner (ENV-FR-016)', () => {
+  it('bật relay và trả về tự động đều báo Farm Owner; Farm Owner tự làm thì không ai bị báo', async () => {
+    const { owner, house, node, tech, owner$, tech$ } = await seedFarmWithTechnician()
+    await owner$.put(assignPath(house._id, tech.user._id)).expect(200)
+
+    await owner$.post(`/devices/sensor-nodes/${node._id}/relay`, { relayName: 'ventilation', state: true, durationMs: 600_000 }).expect(200)
+    await owner$.delete(`/devices/sensor-nodes/${node._id}/relay-override`).expect(200)
+    expect(await Notification.countDocuments()).toBe(0)
+
+    await tech$.post(`/devices/sensor-nodes/${node._id}/relay`, { relayName: 'misting', state: true, durationMs: 600_000 }).expect(200)
+    await tech$.delete(`/devices/sensor-nodes/${node._id}/relay-override?relayName=misting`).expect(200)
+    await tech$.post(`/devices/sensor-nodes/${node._id}/relay`, { relayName: 'ventilation', state: false }).expect(200)
+    await tech$.delete(`/devices/sensor-nodes/${node._id}/relay-override`).expect(200)
+
+    const notices = await Notification.find().sort({ created_at: 1 }).lean()
+    expect(notices.map(n => String(n.user_id))).toEqual(Array(4).fill(String(owner._id)))
+    expect(notices.map(n => n.title)).toEqual([
+      'Kỹ thuật viên đã điều khiển tay', 'Kỹ thuật viên đã trả về tự động',
+      'Kỹ thuật viên đã điều khiển tay', 'Kỹ thuật viên đã trả về tự động',
+    ])
+    expect(notices[0].body).toBe(`Phun sương của ${node.device_id} ở Zone "Z" được bật trong 10 phút.`)
+    expect(notices[1].body).toContain('Phun sương')
+    expect(notices[2].body).toContain('Quạt thông gió')
+    expect(notices[3].body).toContain('Mọi relay')
+  })
+
+  it('trả về tự động khi không có relay nào đang tay thì không báo', async () => {
+    const { house, node, tech, owner$, tech$ } = await seedFarmWithTechnician()
+    await owner$.put(assignPath(house._id, tech.user._id)).expect(200)
+    await tech$.delete(`/devices/sensor-nodes/${node._id}/relay-override`).expect(200)
+    await tech$.delete(`/devices/sensor-nodes/${node._id}/relay-override?relayName=speaker`).expect(200)
+    expect(await Notification.countDocuments()).toBe(0)
+  })
+})
+
 describe('lệnh từ xa (FARM-FR-013)', () => {
   const send = (token: string, nodeId: unknown, command: string) =>
     as(token).post(`/devices/sensor-nodes/${nodeId}/commands`, { command })
