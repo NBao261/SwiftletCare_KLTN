@@ -41,7 +41,7 @@ export function workOrderActions(workOrder: Pick<WorkOrder, 'status' | 'kind'>, 
 
 // Phòng ngừa kiểm bằng checklist, sửa chữa kiểm bằng dữ liệu
 export function approvalDescriptionKey(
-  workOrder: Pick<WorkOrder, 'kind' | 'alert_id' | 'alert_type'>,
+  workOrder: Pick<WorkOrder, 'kind' | 'alert_id' | 'alert_type' | 'device_left'>,
 ): 'approve.descPreventive' | 'approve.descUnverified' | 'approve.desc' {
   if (workOrder.kind === 'PREVENTIVE') return 'approve.descPreventive';
   return isRecoveryUnverified(workOrder) ? 'approve.descUnverified' : 'approve.desc';
@@ -50,8 +50,10 @@ export function approvalDescriptionKey(
 // loại cảnh báo backend chưa có dữ liệu để kiểm phục hồi (UNVERIFIABLE_RECOVERY ở workOrder.service.ts)
 const UNVERIFIABLE_ALERT_TYPES: AlertType[] = ['ACTUATOR_FAULT', 'SPEAKER_FAILURE', 'UNEXPECTED_RESTART'];
 
-// Phiếu sang chờ duyệt mà chưa kiểm được dữ liệu: mở tay không gắn cảnh báo, hoặc cảnh báo thuộc loại trên
-export function isRecoveryUnverified(workOrder: Pick<WorkOrder, 'alert_id' | 'alert_type'>): boolean {
+// Phiếu sang chờ duyệt mà chưa kiểm được dữ liệu: mở tay không gắn cảnh báo, cảnh báo thuộc loại trên,
+// hoặc thiết bị của phiếu đã bị gỡ, thay, dời (cảnh báo đóng theo việc đó chứ không theo dữ liệu)
+export function isRecoveryUnverified(workOrder: Pick<WorkOrder, 'alert_id' | 'alert_type' | 'device_left'>): boolean {
+  if (workOrder.device_left) return true;
   return !workOrder.alert_id || (workOrder.alert_type !== null && UNVERIFIABLE_ALERT_TYPES.includes(workOrder.alert_type));
 }
 

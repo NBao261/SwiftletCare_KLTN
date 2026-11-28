@@ -1271,6 +1271,9 @@ export const EN_TRANSLATIONS: Record<string, string> = {
   'Cảm biến': 'Sensor',
   'Khác': 'Other',
   'Đã báo chủ trại': 'Escalated to the owner',
+  'Thiết bị đã bị gỡ': 'Device removed',
+  'Thiết bị đã được thay': 'Device replaced',
+  'Thiết bị đã được dời Zone': 'Device moved to another zone',
   // Work Order (G-21, OPS-FR-001…004)
   'Chủ trại xử lý': 'Handled by the owner',
   'Xem chi tiết phiếu công việc': 'Open the work order',

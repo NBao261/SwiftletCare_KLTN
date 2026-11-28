@@ -89,6 +89,16 @@ export default function WorkOrderDetailDrawer({
                 <Field label={t('detail.openedAt')}>{dateTime(workOrder.opened_at)}</Field>
                 {workOrder.escalated_at && <Field label={t('detail.escalatedAt')}>{dateTime(workOrder.escalated_at)}</Field>}
               </dl>
+              {/* Thiết bị đã rời chỗ: chủ nhà yến kiểm tại nhà yến rồi duyệt hoặc huỷ */}
+              {workOrder.device_left && (
+                <div className="flex flex-col gap-1.5 rounded-xl border border-warmGray/30 p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="warning">{t(`deviceLeft.${workOrder.device_left.kind}`)}</Badge>
+                    <span className="text-xs text-warmGray">{dateTime(workOrder.device_left.at)}</span>
+                  </div>
+                  <p className="text-sm text-graphite">{t('deviceLeft.hint')}</p>
+                </div>
+              )}
             </section>
 
             {/* checklist của phiếu phòng ngừa: kết quả, ghi chú, ảnh từng mục */}

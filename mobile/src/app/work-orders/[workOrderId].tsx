@@ -49,6 +49,7 @@ import {
   getOwnerWorkOrderActions,
   getReassignCandidates,
   getWorkOrderAction,
+  getDeviceLeftLabel,
   getWorkOrderMilestones,
   isApprovalUnverified,
 } from '@/utils/workOrder.utils'
@@ -215,6 +216,10 @@ export default function WorkOrderDetailScreen() {
           ))}
           {workOrder.escalated_at && (
             <StatRow label={t('Đã báo chủ trại')} value={formatDateTime(workOrder.escalated_at)} isWarning />
+          )}
+          {/* Thiết bị đã rời chỗ: chủ trại kiểm tại nhà yến rồi duyệt hoặc huỷ */}
+          {workOrder.device_left && (
+            <StatRow label={getDeviceLeftLabel(workOrder) ?? ''} value={formatDateTime(workOrder.device_left.at)} isWarning />
           )}
         </Card>
 
