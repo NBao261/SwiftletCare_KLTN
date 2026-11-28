@@ -76,7 +76,8 @@ def main() -> None:
             break
         tracks, _, _ = pipe.track(frame)
         counter.update(track_ids(tracks), tracks.xyxy)
-        writer.write(draw(frame.copy(), tracks, counter, counter.entry_count + counter.exit_count))
+        # video của nhóm để soi vòng đếm, không phải hình cho người xem: vẽ cả vòng
+        writer.write(draw(frame.copy(), tracks, counter, counter.entry_count + counter.exit_count, show_rings=True))
         max_tracks = max(max_tracks, len(tracks))
         n += 1
     for _ in range(cfg["tracking"]["lost_track_buffer"] + 2):   # chốt các vết còn đang theo khi hết đoạn

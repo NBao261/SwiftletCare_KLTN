@@ -1,4 +1,4 @@
-"""Every frame sent to viewers shows the ring, and every tracked bird a green box with its id."""
+"""Every frame sent to viewers shows a green box with its id on every tracked bird and no counting ring (the ring only counts)."""
 import sys
 from pathlib import Path
 
@@ -46,6 +46,10 @@ def assert_ring(img: np.ndarray, counter: MultiRingCounter) -> None:
             assert has_color(img, YELLOW, mx - 2, my - 2, mx + 3, my + 3), f"ring edge {a}-{b} not drawn"
 
 
+def assert_no_ring(img: np.ndarray, counter: MultiRingCounter) -> None:
+    assert not has_color(img, YELLOW, 0, 0, W, H), "the counting ring is drawn for the viewers"
+
+
 def assert_box_and_label(img: np.ndarray, box) -> None:
     x1, y1, x2, y2 = (int(v) for v in box)
     mid_y = (y1 + y2) // 2
@@ -56,11 +60,11 @@ def assert_box_and_label(img: np.ndarray, box) -> None:
     assert has_color(img, GREEN, lx, ly - LABEL_HEIGHT + 2, lx + 30, ly + 1), f"no #id label for {box}"
 
 
-def test_draw_shows_the_ring_each_box_with_its_id_and_the_total():
+def test_draw_shows_each_box_with_its_id_and_the_total_but_not_the_ring():
     ring = counter()
     boxes = [(100, 200, 120, 220), (400, 150, 425, 172)]
     img = draw(blank(), tracks(boxes, [3, 7]), ring, total=42)
-    assert_ring(img, ring)
+    assert_no_ring(img, ring)
     for box in boxes:
         assert_box_and_label(img, box)
     assert has_color(img, WHITE, 10, H - 40, 600, H - 5), "total not drawn"
@@ -73,15 +77,24 @@ def test_total_is_the_only_text_left_on_the_frame():
     assert not has_color(img, WHITE, 160, H - 40, W, H - 5), "text longer than the total"
 
 
-def test_both_rings_of_a_two_hole_camera_are_drawn():
+def test_the_ring_is_drawn_only_when_asked_for_calibration_and_tools():
+    ring = counter()
+    assert_ring(draw(blank(), sv.Detections.empty(), ring, total=0, show_rings=True), ring)
+
+
+def test_both_rings_of_a_two_hole_camera_are_drawn_when_asked():
     two = MultiRingCounter([(CONFIG["tracking"]["ring"], True), (SECOND_HOLE, False)], W, H)
-    assert_ring(draw(blank(), sv.Detections.empty(), two, total=0), two)
+    assert_ring(draw(blank(), sv.Detections.empty(), two, total=0, show_rings=True), two)
 
 
-def test_frame_without_birds_still_shows_the_ring_and_the_total():
+def test_config_hides_the_ring_from_viewers_by_default():
+    assert CONFIG["overlay"]["show_rings"] is False
+
+
+def test_frame_without_birds_still_shows_the_total_and_no_ring():
     ring = counter()
     img = draw(blank(), sv.Detections.empty(), ring, total=0)
-    assert_ring(img, ring)
+    assert_no_ring(img, ring)
     assert has_color(img, WHITE, 10, H - 40, 600, H - 5)
     assert not has_color(img, GREEN, 0, 0, W, H), "no bird, so no box"
 
@@ -123,7 +136,7 @@ class FakeEngine:
         return dets, 25.0
 
 
-def test_every_published_frame_has_the_ring_and_a_box_with_id_per_tracked_bird():
+def test_every_published_frame_has_a_box_with_id_per_tracked_bird_and_no_ring():
     bird_a = [(60 + 6 * i, 250 - 3 * i) for i in range(20)]
     bird_b = [(500 - 5 * i, 60 + 4 * i) for i in range(5, 20)]   # appears later
     pipeline = FramePipeline(CONFIG, FakeEngine([bird_a, bird_b]), W, H)
@@ -134,7 +147,7 @@ def test_every_published_frame_has_the_ring_and_a_box_with_id_per_tracked_bird()
         frame = blank()
         tracked, _, _ = pipeline.track(frame)
         img = draw(frame.copy(), tracked, ring, total=0)
-        assert_ring(img, ring)
+        assert_no_ring(img, ring)
         for box, tid in zip(tracked.xyxy, tracked.tracker_id if tracked.tracker_id is not None else []):
             assert_box_and_label(img, box)
             ids.add(int(tid))

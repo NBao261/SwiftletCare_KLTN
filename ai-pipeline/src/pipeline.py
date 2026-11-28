@@ -74,9 +74,12 @@ def label_origin(box: Sequence[int], frame_shape: Tuple[int, ...], text_width: i
     return x, min(y, height - 1)
 
 
-def draw(frame: np.ndarray, tracks: sv.Detections, counter: MultiRingCounter, total: int) -> np.ndarray:
-    """Green box + #id per bird, the counting rings and today's total; in/out per session are on the web."""
-    cv2.polylines(frame, [p.astype(np.int32) for p in counter.polygons], True, YELLOW, 2)
+def draw(frame: np.ndarray, tracks: sv.Detections, counter: MultiRingCounter, total: int, show_rings: bool = False) -> np.ndarray:
+    """Green box + #id per bird and today's total; in/out per session are on the web.
+
+    The counting rings only count: viewers do not see them, unless `show_rings` (calibration, tools)."""
+    if show_rings:
+        cv2.polylines(frame, [p.astype(np.int32) for p in counter.polygons], True, YELLOW, 2)
     for box, tid in zip(tracks.xyxy.astype(int), track_ids(tracks)):
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), GREEN, 2)
         label = f"#{tid}"

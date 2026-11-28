@@ -28,13 +28,13 @@ python tools/track_clip.py <clip> --start 425 --seconds 20 [--detector motion]  
 
 Today:
 ```
-config/config.yaml    camera (source, tiles, mask), model, classes, tracking (ring, extrapolation), sessions, MQTT, push, MJPEG
+config/config.yaml    camera (source, tiles, mask), model, classes, tracking (ring, extrapolation), sessions, MQTT, push, overlay (show_rings), MJPEG
 .env.example          RTSP URL, device/farm/house ids, MQTT login, STREAM_PUSH_URL (copy to .env, never committed)
 pytest.ini
 requirements.txt
 src/
   stream.py           live loop: latest-frame reader, sessions in Vietnam time, state.json, MQTT publisher, 5-minute buckets
-  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack; draw() green boxes, rings, day total
+  pipeline.py         FramePipeline: mask → 2 tiles → YOLO → sv.ByteTrack; draw() green boxes with ids and the day total, rings only when `overlay.show_rings` or for the tools (the rings count, viewers do not see them)
   mjpeg_server.py     MJPEG preview on 127.0.0.1 (encodes only while someone watches)
   stream_pusher.py    pushes the annotated frames to MediaMTX with ffmpeg; masks the password in its logs
   frame_prep.py       mask + tiles, shared with the dataset tools so training and production see the same pixels
