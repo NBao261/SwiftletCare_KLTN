@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import type { WeatherRule } from '@/types/expert.types';
 import { validateWeatherRule, isWeatherRuleValid, METRIC_MIN_RANGE } from '@/validations/common/weatherRule.validation';
 import { t } from '@/i18n';
+import FieldError from '@/components/ui/FieldError'
 
 type DraftRule = Omit<Partial<WeatherRule>, 'metric'> & { metric: WeatherRule['metric'] | '' };
 
@@ -58,7 +59,7 @@ export default function WeatherRuleAddForm({ onAdd, disabled }: Props) {
             disabled={disabled}
             highlightFiltered={false}
           />
-          {errors.metric && <span className="text-xs text-alertRed">{errors.metric}</span>}
+          {errors.metric && <FieldError>{errors.metric}</FieldError>}
         </div>
 
         <Input

@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useToastStore } from '@/stores/toastStore';
 import { MAX_DISPLAY_NAME_LENGTH, validateAudioUpload, type AudioUploadField } from '@/validations/farm-owner/audioTrack.validation';
 import type { AudioTrack, SensorNode } from '@/types';
+import FieldError from '@/components/ui/FieldError'
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 
@@ -190,7 +191,7 @@ function UploadForm({ nodeId }: { nodeId: string }): JSX.Element {
       <div className="flex flex-col gap-1.5">
         <input type="file" accept=".mp3,audio/mpeg" aria-label={t('trk.fileLabel')} className="text-sm"
           onChange={event => setFile(event.target.files?.[0] ?? null)} />
-        {errors.file && <span className="text-xs text-alertRed">{errors.file}</span>}
+        {errors.file && <FieldError>{errors.file}</FieldError>}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Input label={t('trk.numberLabel')} type="number" min={1} max={255} placeholder={t('trk.numberPlaceholder')}

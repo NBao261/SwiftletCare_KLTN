@@ -9,6 +9,7 @@ import {
 import { assertHouseAccess } from '@/utils/farmAccess.util'
 import { trackParameterChange, type ReviewApplyOptions } from '@/services/parameterReview.service'
 import { THRESHOLD_HISTORY_LIMIT } from '@/utils/thresholdUpdate.util'
+import { isUnchanged } from '@/utils/parameterChange.util'
 import type { CurrentUser } from '@/types'
 import logger from '@/utils/logger.util'
 
@@ -54,6 +55,8 @@ export async function updateCountingSchedule(houseId: string, user: CurrentUser,
   const { house, farm } = await assertHouseAccess(houseId, user)
   const schedule = parseCountingSchedule(input)
   const before = house.counting_schedule ?? EMPTY
+  // Lịch giống hệt lịch đang áp dụng thì không thêm phiên bản, không gửi lại cho nút AI, không báo ai
+  if (isUnchanged(before, schedule)) return present(house)
   const effectiveFrom = addDays(vnDate(new Date()), 1)
 
   house.counting_schedule = schedule

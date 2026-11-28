@@ -4,6 +4,8 @@ import { formatChanges, notifyExpertDecision } from '@/services/expertActivity.s
 import { trackParameterChange } from '@/services/parameterReview.service'
 import type { IZone, IHouse } from '@/models/houseZone.model'
 import type { IFarm } from '@/models/farm.model'
+import { THRESHOLD_KEYS } from '@/utils/thresholds.util'
+import { isUnchanged } from '@/utils/parameterChange.util'
 import type { Thresholds, CurrentUser } from '@/types'
 
 // Không đặt trong thresholds.util: model import file đó, sẽ thành circular require
@@ -22,6 +24,9 @@ export async function applyThresholdUpdate(
 ): Promise<IZone> {
   const { zone, house, farm } = chain
   const oldValues = { ...zone.thresholds }
+  // Không đổi gì (vd khôi phục mặc định khi đang là mặc định) thì không ghi, không phát lại, không báo ai
+  const pickKeys = (values: Partial<Thresholds>) => Object.fromEntries(THRESHOLD_KEYS.map(key => [key, Number(values[key])]))
+  if (isUnchanged(pickKeys(oldValues), pickKeys(params.thresholds))) return zone
 
   zone.thresholds = params.thresholds
   zone.threshold_history.push({

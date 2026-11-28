@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Scatter } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
 
-import { Badge, Button, ChartEmptyFrame, EmptyState, FilterChip, LoadingSkeleton } from '@/components/ui';
+import { Badge, ChartEmptyFrame, FilterChip, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import SegmentedChips from '@/components/features/farm-owner/analytics/SegmentedChips';
 import {
@@ -16,6 +16,7 @@ import { analyticsDict } from '@/constants/analytics.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useCorrelation } from '@/hooks/farm-owner/useAnalytics';
 import { baseChartOptions } from '@/lib/chartTheme';
+import LoadError from '@/components/ui/LoadError'
 
 // Chỉ số môi trường đem so với tỷ lệ chim về
 const CORRELATION_METRICS = ['humidity', 'temperature'] as const;
@@ -30,7 +31,7 @@ export default function CorrelationCard({ zoneId }: CorrelationCardProps): JSX.E
   const { t, num } = useTranslation(analyticsDict);
   const [days, setDays] = useState<CorrelationDayOption>(30);
   const [metric, setMetric] = useState<CorrelationMetric>('humidity');
-  const { data, isLoading, isError, refetch } = useCorrelation(zoneId, days);
+  const { data, isLoading, isError, error, refetch } = useCorrelation(zoneId, days);
 
   const dayOptions = CORRELATION_DAY_OPTIONS.map(value => ({ value, label: t('common.days', { n: value }) }));
   const metricUnit = metric === 'humidity' ? '%' : '°C';
@@ -77,10 +78,7 @@ export default function CorrelationCard({ zoneId }: CorrelationCardProps): JSX.E
   let body = <LoadingSkeleton className="h-64 w-full" />;
   if (!isLoading && isError) {
     body = (
-      <EmptyState
-        title={t('common.loadError')}
-        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={error} onRetry={() => void refetch()} />
     );
   }
   if (!isLoading && !isError && points.length < 2) {

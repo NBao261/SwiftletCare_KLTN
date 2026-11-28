@@ -1459,7 +1459,7 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
   - `AppShell` bọc `<Outlet />` trong `ErrorBoundary` (component trong `components/ui/`, không biết domain), đặt `key={location.pathname}` để chuyển trang là tự hồi phục. App dùng `BrowserRouter` nên không dùng `errorElement` của data router.
   - Khối nặng dễ lỗi riêng (biểu đồ, video/live stream, bảng lớn) bọc thêm `ErrorBoundary` riêng để 1 khối hỏng không kéo cả trang.
   - Màn dự phòng dùng `EmptyState`: "Có lỗi khi hiển thị phần này" + nút **Thử lại** (reset boundary) + nút **Về trang chủ**. Không hiện `error.message` hay stack (13.16).
-  - Trạng thái: **chưa có** (0 chỗ) — ghi ở 13.14.
+  - Trạng thái: đã có `ui/ErrorBoundary.tsx`, bọc `<Outlet />` trong `AppShell`.
 
 ### 13.6. TypeScript
 
@@ -1535,8 +1535,6 @@ page / component  →  hooks/<bucket>/useX.ts  →  apis/<bucket>/x.api.ts  → 
 | ~~`pages/technician/TechnicianDevicesPage.tsx`~~ | ~~Gọi `queryClient.invalidateQueries` ngay trong page (13.2 [Nên])~~ | ✅ Đã bỏ cùng các nhánh Farm Owner / Admin (G-29, `todo-audit-1119.md` §9) |
 | Mục 6 i18n | Hai hệ dịch song song (`src/i18n/` cho Admin + `ui/`; `useTranslation` + `*.i18n.ts` cho Farm Owner, Technician farms, khung app); nhiều màn vẫn hardcode tiếng Việt | PR riêng gộp về một hệ, sau đó 13.x mới yêu cầu `t('...')` |
 | `StatCard` cục bộ trong `AdminSystemHealthPage` | Mục 9 muốn dùng chung | Tách ra khi màn thứ hai cần |
-| Chưa có `ErrorBoundary` (0 chỗ) | 13.5 | Thêm `ui/ErrorBoundary.tsx`, bọc `<Outlet />` trong `AppShell` |
-| `getApiErrorMessage` trả câu lỗi nguyên văn của backend — màn trang trại, thiết bị của Farm Owner đã chuyển; khoảng 40 file còn gọi `getApiErrorMessage` | 13.16 b | Màn khi sửa đổi sang `useApiErrorMessage()` (`hooks/common/`); hết chỗ gọi thì xoá `getApiErrorMessage` |
 | Chưa có Prettier, husky, lint-staged; ESLint thiếu rule ở 13.15 | 13.15 | 1 PR cài công cụ + 1 commit format toàn bộ |
 | `formatDate`/`formatDateOnly` (`lib/helpers.ts`), `day`/`time` của `useTranslation` lệch chuẩn 6.1 | 6.1 | Chuyển sang `formatStandardDate`/`formatHourMinute`/`formatDateTime` khi sửa màn |
 | ~~Màn Admin/Technician còn hiện mã rút gọn từ id (`TechnicianAlertsPage`, bảng OTA)~~ | 13.16 a | ✅ Đã gỡ ở PR #106 — tra tên Zone (`useAllZones`) và mã thiết bị (`useSensorNodes`) |
@@ -1589,18 +1587,24 @@ Quy tắc định dạng ở đầu tài liệu phải do máy bắt, không tr�
 - **[Bắt buộc] Chữ phụ (dòng xám, gợi ý, mô tả) phải đúng với dữ liệu thật** — không viết câu chung chung có thể sai: cảnh báo hệ thống tự sinh không ghi "Đã gửi"; chưa có ai xác nhận thì không ghi "đã tiếp nhận"; mô tả ở đầu trang chỉ hiện khi đúng người tạo đã nhập; mỗi ghi chú ghi rõ người viết (Hệ thống · Bạn · Kỹ thuật viên · Thành viên khác — suy từ id người viết).
 - Ghi chú: tab Network của trình duyệt vẫn thấy id — đó không phải lỗ hổng; quyền thật do backend chặn (13.8).
 
-**b) Lỗi API gộp theo nhóm — 1 câu chung, không chi tiết từng mã** — **[Bắt buộc]**. Không hiện mã HTTP, mã lỗi backend (`error.code`), câu lỗi nguyên văn của backend, endpoint, stack — tránh lộ cấu trúc hệ thống cho người dò lỗi:
+**b) Lỗi API gộp theo nhóm — một câu chung cho mỗi nhóm** — **[Bắt buộc]**. Không hiện mã HTTP, mã lỗi backend (`error.code`), câu lỗi nguyên văn của backend, endpoint, stack — tránh lộ cấu trúc hệ thống cho người dò lỗi:
 
-| Nhóm | Mã gộp vào | Câu hiện (VI) | Câu hiện (EN) | Hành vi thêm |
-|---|---|---|---|---|
-| Phiên / quyền | 401 (sau khi làm mới phiên thất bại), 403 | Bạn không có quyền thực hiện thao tác này hoặc phiên đăng nhập đã hết hạn. | You don't have permission for this action or your session has expired. | 401 `TOKEN_EXPIRED` vẫn tự làm mới phiên trước (`lib/axios.ts`); hết cách thì về `/login`. Mở trang không đủ quyền → `/403` |
-| Không tìm thấy | 404, 410 | Không tìm thấy dữ liệu hoặc dữ liệu đã bị xoá. | The data was not found or has been removed. | Trang chi tiết hiện `EmptyState` + nút về danh sách |
-| Dữ liệu không hợp lệ / xung đột | 400, 409, 413, 415, 422 | Thông tin chưa hợp lệ hoặc đã thay đổi. Vui lòng kiểm tra lại. | The information is invalid or has changed. Please check and try again. | Lỗi từng ô do **validator phía client** (`validations/`) báo ngay dưới ô, không lấy câu backend |
-| Hệ thống / mạng | 429, 5xx, hết thời gian chờ, không có phản hồi | Không kết nối được hệ thống. Vui lòng thử lại sau. | Could not reach the system. Please try again later. | Có nút **Thử lại**; màn realtime chuyển "Tự làm mới" (5.5) |
+| Nhóm | Mã gộp vào | Câu hiện (VI) | Hành vi thêm |
+|---|---|---|---|
+| `network` | không có phản hồi, mất mạng, hết thời gian chờ | Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại. | Có nút **Thử lại** |
+| `server` | 5xx | Máy chủ đang gặp sự cố. Thử lại sau ít phút. | Có nút **Thử lại**; màn realtime chuyển "Tự làm mới" (5.5) |
+| `rateLimited` | 429 | Bạn thao tác quá nhanh. Thử lại sau {n} giây. (không biết số giây: "Đợi một lát rồi thử lại.") | Số giây lấy từ `details.retryAfterSec` |
+| `session` | 401 sau khi làm mới phiên thất bại | Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục. | 401 `TOKEN_EXPIRED` tự làm mới trước (`lib/axios.ts`); hết cách thì về `/login` |
+| `forbidden` | 403 | Bạn không có quyền thực hiện thao tác này. | Mở trang không đủ quyền → `/403` |
+| `notFound` | 404, 410 | Không tìm thấy dữ liệu hoặc dữ liệu đã bị xoá. | Trang chi tiết hiện `EmptyState` + nút về danh sách |
+| `invalid` | 400, 422 | Thông tin chưa hợp lệ. Kiểm tra các ô đã báo lỗi rồi thử lại. | Lỗi từng ô do **validator phía client** (`validations/`) báo ngay dưới ô, không lấy câu backend |
+| `conflict` | 409 | Dữ liệu vừa được thay đổi hoặc đã tồn tại. Tải lại rồi thử lại. | — |
+| `upload` | 413, 415 | File quá lớn hoặc không đúng định dạng. | — |
 
-- Câu của 4 nhóm khai 1 lần trong `constants/error.i18n.ts` (`errorDict`); `lib/apiError.ts` (`getApiErrorGroup`) đổi lỗi → nhóm theo mã HTTP; màn gọi `const apiErrorMessage = useApiErrorMessage()` (`hooks/common/`) rồi `apiErrorMessage(error, t('toast.farmCreateFailed'))` → "Tạo trang trại thất bại. " + câu nhóm.
+- Câu của 9 nhóm (và câu 429 không có số giây) khai một lần trong `constants/error.i18n.ts` (`errorDict`, có bản EN); `lib/apiError.ts` (`getApiErrorGroup`) đổi lỗi → nhóm theo mã HTTP.
+- Vài mã lỗi backend đã biết (`INVALID_CURRENT_PASSWORD`, `HAS_ACTIVE_DEVICES`, `DUPLICATE_NAME`…) có câu riêng trong `errorCodeDict` để nói đúng lý do. Đó là câu **do client viết**: mã chỉ dùng để chọn câu, không bao giờ hiện ra, và câu của backend không bao giờ được hiện.
+- Màn gọi `const apiErrorMessage = useApiErrorMessage()` (`hooks/common/`) rồi `apiErrorMessage(error, t('toast.farmCreateFailed'))` → "Tạo trang trại thất bại. " + câu nhóm. Lỗi dưới ô dùng `ui/FieldError`, lỗi cả khối dùng `ui/ErrorNotice`, tải lỗi dùng `ui/LoadError` (có nút Thử lại), lỗi khi render do `ui/ErrorBoundary` bắt (13.5).
 - Mẫu: trang chi tiết lỗi 404 hiện "Không tìm thấy", nhóm khác hiện "Không mở được" + câu nhóm; khung số liệu (KPI) tải lỗi thì hiện câu nhóm + nút **Thử lại**, không hiện số 0 thay cho số chưa tải được.
-- Nợ: `getApiErrorMessage` (`lib/helpers.ts`) vẫn trả câu lỗi nguyên văn của backend, còn ở các màn Admin/Technician/auth và một số màn Farm Owner — đổi khi sửa màn (13.14).
 
 ### 13.17. Chiến lược kiểm thử
 
@@ -1674,7 +1678,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | Bảng, danh sách | `DataTable` (bảng chuẩn, `onRowClick`, `mobileCard` cho điện thoại) · `FixedRowsTable` (cố định số dòng) · `Pagination` · `FilterChip` · `SortChips` · `SearchInput` · `ClearFiltersButton` (nút "Hủy lọc") |
 | Khung, ô số liệu | `SectionCard` (prop `help` mở `InfoTip`) · `InfoTip` (nút (i) giải thích dài) · `RadialGauge` · `Stepper` (thanh tiến độ) · `StableHeight` (giữ chiều cao khung) |
 | Lớp nổi | `Modal` · `ConfirmModal` · `NoteActionModal` (popup nhập lý do) · `Drawer` · `ActionsMenu` · `SelectMenu` · `useFloatingMenu.ts` |
-| Trạng thái màn | `EmptyState` (lỗi tải / chưa có farm-nhà-Zone) · `LoadingSkeleton` · `ChartEmptyFrame` (khung biểu đồ khi chưa có dữ liệu, mục 8) · `ComingSoon` (tính năng chưa có API) |
+| Trạng thái màn | `EmptyState` (lỗi tải / chưa có farm-nhà-Zone) · `LoadingSkeleton` · `ChartEmptyFrame` (khung biểu đồ khi chưa có dữ liệu, mục 8) · `ComingSoon` (tính năng chưa có API) · `FieldError` (câu lỗi dưới ô) · `ErrorNotice` (lỗi cả khối) · `LoadError` (tải lỗi + Thử lại) · `ErrorBoundary` (lỗi khi render, 13.5) |
 
 **`components/common/`** — có biết domain, ≥ 2 nơi dùng:
 
@@ -1702,7 +1706,7 @@ Luồng e2e tối thiểu (khi cài Playwright): đăng nhập từng role và v
 | `lib/deviceCommand.ts` | `restartBlockCode` · `restartBlockReason(node, say)` · `RESTART_SUPPORT_SINCE`: điều kiện khởi động lại từ xa (online, firmware từ 1.4.0), dùng ở trang Thiết bị của Quản trị viên và Kỹ thuật viên; nơi gọi tự dịch mã lý do | 6, 13.16 |
 | `lib/deviceLocation.ts` | `nodeLocation()` — "Farm | Nhà | Tầng | Zone" của thiết bị trong `GET /devices/system-status` (Admin) | — |
 | `lib/apiError.ts` · `constants/error.i18n.ts` · `hooks/common/useApiErrorMessage.ts` | `getApiErrorGroup` · `errorDict` · `useApiErrorMessage()` — câu lỗi API theo 4 nhóm | 13.16 b |
-| `lib/helpers.ts` | `getApiErrorMessage` (nợ 13.16 b) · `formatDate`/`formatDateOnly` (nợ 6.1) · `formatRelativeTime` | — |
+| `lib/helpers.ts` | `formatDate`/`formatDateOnly` (nợ 6.1) · `formatRelativeTime` | — |
 | `lib/axios.ts` | instance API + tự làm mới phiên 401 | 13.1 |
 | `lib/socket.ts` | socket singleton — chỉ dùng qua hook | 13.4 |
 | `lib/qrCode.ts` | `deviceLabelCode` · `parseDeviceLabelCode` (nhãn thiết bị `swiftletcare://claim?d=&k=`) · `zoneCode` (mã tầng) · `qrDataUrl` · `printQrLabels` — cùng định dạng bộ đọc mobile | — |

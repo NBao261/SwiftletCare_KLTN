@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Button, Input, Modal } from '@/components/ui'
+import { Button, ErrorNotice, Input, Modal } from '@/components/ui'
 import { useCreateFarmOwner } from '@/hooks/admin/useUsers'
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useToastStore } from '@/stores/toastStore'
@@ -77,7 +77,7 @@ export default function CreateFarmOwnerModal({ open, onClose }: { open: boolean;
             error={submitted ? errors.phone : undefined}
           />
           {submitError && (
-            <p role="alert" className="rounded-xl bg-alertRed/10 px-3 py-2.5 text-sm font-medium text-alertRed">{submitError}</p>
+            <ErrorNotice>{submitError}</ErrorNotice>
           )}
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={onClose}>Huỷ</Button>

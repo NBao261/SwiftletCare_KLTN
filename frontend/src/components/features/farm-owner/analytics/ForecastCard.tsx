@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import { WarningIcon } from '@phosphor-icons/react';
 
-import { Button, ChartEmptyFrame, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { ChartEmptyFrame, LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import LineChartPanel, { type LineSeries } from '@/components/features/farm-owner/analytics/LineChartPanel';
 import { SERIES_COLORS } from '@/components/features/farm-owner/analytics/analytics.constants';
@@ -11,6 +11,7 @@ import { NO_VALUE } from '@/constants/display';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useForecast } from '@/hooks/farm-owner/useAnalytics';
 import type { MetricForecast } from '@/apis/farm-owner/analytics.api';
+import LoadError from '@/components/ui/LoadError'
 
 // Đơn vị của 2 chỉ số được dự báo
 const FORECAST_UNIT = { humidity: '%', temperature: '°C' } as const;
@@ -36,7 +37,7 @@ interface ForecastCardProps {
 // Dự báo độ ẩm, nhiệt độ 60 phút tới: mỗi chỉ số một biểu đồ, kèm sai số đánh giá lùi
 export default function ForecastCard({ zoneId }: ForecastCardProps): JSX.Element {
   const { t, exact } = useTranslation(analyticsDict);
-  const { data, isLoading, isError, refetch } = useForecast(zoneId);
+  const { data, isLoading, isError, error, refetch } = useForecast(zoneId);
 
   // Sai số dạng ±x kèm đơn vị
   const errorText = (value: number | null | undefined, unit: string): string => {
@@ -76,10 +77,7 @@ export default function ForecastCard({ zoneId }: ForecastCardProps): JSX.Element
   let body = <LoadingSkeleton className="h-64 w-full" />;
   if (!isLoading && isError) {
     body = (
-      <EmptyState
-        title={t('common.loadError')}
-        action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={error} onRetry={() => void refetch()} />
     );
   }
   if (!isLoading && !isError) {

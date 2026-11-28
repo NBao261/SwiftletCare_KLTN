@@ -1,6 +1,6 @@
 import { UserCircleIcon } from '@phosphor-icons/react';
 
-import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { LoadingSkeleton } from '@/components/ui';
 import FarmFrame from '@/components/features/farm-owner/farms/FarmFrame';
 import StatStrip from '@/components/common/StatStrip';
 import { analyticsDict } from '@/constants/analytics.i18n';
@@ -9,6 +9,7 @@ import { alertTypeDict } from '@/constants/enumLabels.i18n';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useLatestHouseWeeklyReport } from '@/hooks/farm-owner/useHealthReports';
 import type { AlertType } from '@/types';
+import LoadError from '@/components/ui/LoadError'
 
 // Loại cảnh báo phát sinh nhiều nhất trong kỳ, null khi kỳ không có cảnh báo
 function mostFrequentAlertType(alertsByType: Record<string, number>): string | null {
@@ -32,7 +33,7 @@ interface HealthReportCardProps {
 export default function HealthReportCard({ houseId, zoneId }: HealthReportCardProps): JSX.Element {
   const { t, num, date, dateTime } = useTranslation(analyticsDict);
   const { t: translateAlertType } = useTranslation(alertTypeDict);
-  const { data: report, isLoading, isError, refetch } = useLatestHouseWeeklyReport(houseId);
+  const { data: report, isLoading, isError, error, refetch } = useLatestHouseWeeklyReport(houseId);
 
   // Số 1 chữ số lẻ, chưa có thì gạch ngang
   const oneDecimal = (value: number | null): string => (value === null ? NO_VALUE : num(value, 1));
@@ -54,10 +55,7 @@ export default function HealthReportCard({ houseId, zoneId }: HealthReportCardPr
   if (isError) {
     return (
       <FarmFrame title={t('health.title')} className="h-full">
-        <EmptyState
-          title={t('common.loadError')}
-          action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('common.retry')}</Button>}
-        />
+        <LoadError title={t('common.loadError')} error={error} onRetry={() => void refetch()} />
       </FarmFrame>
     );
   }

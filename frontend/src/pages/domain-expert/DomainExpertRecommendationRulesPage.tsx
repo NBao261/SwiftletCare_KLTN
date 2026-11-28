@@ -18,6 +18,7 @@ import { useZoneStore } from '@/stores/zoneStore'
 import type { RecommendationRule } from '@/types'
 import { toggledRuleInput } from '@/validations/common/recommendationRule.validation'
 import { useExpertDecisionRights } from '@/hooks/domain-expert/useExpertDecisionRights'
+import LoadError from '@/components/ui/LoadError'
 
 type RulesTab = 'rules' | 'effects'
 
@@ -51,11 +52,7 @@ export default function DomainExpertRecommendationRulesPage() {
   let rulesBody = <LoadingSkeleton count={3} className="h-24 w-full rounded-2xl" />
   if (!rules.isLoading && rules.isError) {
     rulesBody = (
-      <EmptyState
-        title={t('common.loadError')}
-        description={apiErrorMessage(rules.error)}
-        action={<Button variant="secondary" size="sm" onClick={() => void rules.refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={rules.error} onRetry={() => void rules.refetch()} />
     )
   }
   if (!rules.isLoading && !rules.isError && rules.records.length === 0) {
@@ -88,11 +85,7 @@ export default function DomainExpertRecommendationRulesPage() {
   let effectsBody = <LoadingSkeleton count={3} className="h-12 w-full" />
   if (!effects.isLoading && effects.isError) {
     effectsBody = (
-      <EmptyState
-        title={t('common.loadError')}
-        description={apiErrorMessage(effects.error)}
-        action={<Button variant="secondary" size="sm" onClick={() => void effects.refetch()}>{t('common.retry')}</Button>}
-      />
+      <LoadError title={t('common.loadError')} error={effects.error} onRetry={() => void effects.refetch()} />
     )
   }
   if (!effects.isLoading && !effects.isError) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import FieldError from '@/components/ui/FieldError'
 
-import { Button, EmptyState, Input, LoadingSkeleton, Modal } from '@/components/ui';
+import { Button, Input, LoadingSkeleton, Modal } from '@/components/ui';
 import { healthDict } from '@/constants/health.i18n';
 import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
@@ -8,6 +9,7 @@ import { useHealthLevels, useUpdateHealthLevels } from '@/hooks/shared/useHealth
 import { useToastStore } from '@/stores/toastStore';
 import { HEALTH_LEVEL_LIMITS, validateHealthLevels, type HealthLevelError, type HealthLevelKey } from '@/validations/common/healthLevels.validation';
 import type { HealthLevels } from '@/types';
+import LoadError from '@/components/ui/LoadError'
 
 // 3 chỉ số có mức riêng, mỗi chỉ số 1 hàng; op là phép so sánh như healthAssessment.service của backend
 type Source = 'environment' | 'air' | 'noise';
@@ -95,11 +97,7 @@ export default function HealthLevelsModal({ open, onClose, house, readOnlyNote }
         {isLoading || (!draft && !isError) ? (
           <LoadingSkeleton count={3} className="h-16 w-full" />
         ) : isError || !data || !draft ? (
-          <EmptyState
-            title={t('levels.loadFailed')}
-            description={apiErrorMessage(error)}
-            action={<Button variant="secondary" size="sm" onClick={() => void refetch()}>{t('page.retry')}</Button>}
-          />
+          <LoadError title={t('levels.loadFailed')} error={error} onRetry={() => void refetch()} />
         ) : (
           <>
             {/* Thân popup cuộn trong khung khi màn thấp (đầu popup và nút luôn thấy) */}
@@ -142,9 +140,9 @@ export default function HealthLevelsModal({ open, onClose, house, readOnlyNote }
                         {condition(row.clear, 'levels.clearWhen')}
                       </div>
                       {errorKey && (
-                        <p className="mt-1 text-right text-xs text-alertRed">
+                        <FieldError className="mt-1">
                           {t(ERROR_KEY[errors[errorKey]!], { min: exact(HEALTH_LEVEL_LIMITS[errorKey].min, 1), max: exact(HEALTH_LEVEL_LIMITS[errorKey].max, 1) })}
-                        </p>
+                        </FieldError>
                       )}
                     </li>
                   );

@@ -1,4 +1,5 @@
 import { InfoIcon, ShieldWarningIcon } from '@phosphor-icons/react'
+import FieldError from '@/components/ui/FieldError'
 import { cn } from '@/lib/cn'
 import type { InferredAlertItem } from '@/types/expert.types'
 import { formatDate } from '@/lib/helpers'
@@ -86,7 +87,7 @@ export default function VerdictForm({ alert, verdict, note, onVerdictChange, onN
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <label className="text-sm font-semibold text-charcoal" htmlFor="expert-note">{t('Ghi chú chuyên môn')}</label>
           {isNoteMissing
-            ? <span className="text-xs font-semibold text-alertRed">{t('Bắt buộc nhập lý do bác bỏ')}</span>
+            ? <FieldError inline>{t('Bắt buộc nhập lý do bác bỏ')}</FieldError>
             : <span className="text-xs text-warmGray">{t('{{n}}/{{max}} ký tự', { n: note.length, max: MAX_NOTE })}</span>}
         </div>
         <textarea

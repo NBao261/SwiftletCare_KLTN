@@ -89,6 +89,11 @@ push:                                       # đẩy hình đã vẽ khung lên 
   fps: 15                                   # chỉ là tốc độ phát cho người xem; việc đếm vẫn chạy đủ camera.fps
   bitrate: "1500k"
 
+overlay:                                    # hình đã vẽ cho người xem (MediaMTX) và bản xem thử
+  # Vòng đếm chỉ để đếm: người xem chỉ thấy khung và số hiệu của chim, cộng tổng trong ngày (VISION-FR-014).
+  # Bật true khi canh vòng bằng bản xem thử ở 127.0.0.1; đừng bật khi đẩy lên MediaMTX cho người dùng.
+  show_rings: false
+
 stream:                                     # MJPEG để xem thử; chỉ nén ảnh khi có người đang xem
   host: "127.0.0.1"                         # chỉ máy này xem được; người xem từ xa đi qua MediaMTX
   port: 8090

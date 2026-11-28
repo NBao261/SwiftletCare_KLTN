@@ -114,7 +114,9 @@ describe('VISION-FR-019 — counting schedule', () => {
   it('keeps the saved schedule, its audit and the owner notification when sending it to the AI nodes fails', async () => {
     const s = await seed()
     ;(publishDeviceConfig as jest.Mock).mockImplementationOnce(() => { throw new Error('broker down') })
-    const saved = await s.call('put', s.t.expert, { profiles: [], temporary: [] })
+    // Lịch phải khác lịch đang áp dụng: lưu lại lịch giống hệt thì không ghi, không gửi, không báo ai
+    const temporary = [{ from: '2026-12-01', to: '2026-12-01', morning: { start: '05:00', end: '07:00' }, evening: { start: '17:00', end: '19:00' } }]
+    const saved = await s.call('put', s.t.expert, { profiles: [], temporary })
     expect(saved.status).toBe(200)
     expect(await AuditLog.countDocuments({ action: 'COUNTING_SCHEDULE_UPDATED', target_id: s.house._id })).toBe(1)
     expect(await Notification.countDocuments({ user_id: s.owner._id })).toBe(1)

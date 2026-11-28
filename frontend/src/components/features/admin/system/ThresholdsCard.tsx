@@ -1,11 +1,11 @@
 import { useState } from 'react'
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage'
 import { useDefaultThresholds } from '@/hooks/admin/useSystem'
 import { Button, SectionCard } from '@/components/ui'
 import { IconEdit } from '@/components/ui/icons'
 import KpiTile from '@/components/common/KpiTile'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { formatStandardDate } from '@/lib/i18n'
-import { getApiErrorMessage } from '@/lib/helpers'
 import { t } from '@/i18n'
 import { THRESHOLD_LIMITS } from '@/validations/common/threshold.validation'
 import { THRESHOLD_KEYS, FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
@@ -16,6 +16,7 @@ const ICON = 'bg-warmGray/10 text-charcoal'
 
 // Ngưỡng mặc định: dùng khi tạo Zone mới và khi reset; không đổi ngưỡng của Zone đang chạy
 export default function ThresholdsCard() {
+  const apiErrorMessage = useApiErrorMessage()
   const { data, isLoading, error } = useDefaultThresholds()
   const [isEditing, setIsEditing] = useState(false)
   const isDefault = data ? THRESHOLD_KEYS.every(k => data[k] === FACTORY_DEFAULT_THRESHOLDS[k]) : undefined
@@ -50,7 +51,7 @@ export default function ThresholdsCard() {
 
         {!isLoading && error && (
           <p className="rounded-2xl border border-dashed border-warmGray/30 px-4 py-6 text-center text-sm text-warmGray">
-            {t('Không tải được ngưỡng mặc định')}. {t(getApiErrorMessage(error, 'thử tải lại trang.'))}
+            {apiErrorMessage(error, t('Không tải được ngưỡng mặc định'))}
           </p>
         )}
 

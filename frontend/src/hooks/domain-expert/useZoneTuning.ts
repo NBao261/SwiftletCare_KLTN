@@ -53,8 +53,9 @@ export function useResetThresholds(zoneId?: string) {
       if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.resetThresholds(zoneId)
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: QK('thresholds', zoneId) })
+    // Chờ đọc lại xong rồi mới báo thành công: ô đang sửa dở được đặt lại theo đúng số vừa khôi phục, không nháy số cũ
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: QK('thresholds', zoneId) })
       invalidateZoneCaches(qc, zoneId)
     },
   })
@@ -131,7 +132,7 @@ export function useResetDetectionTuning(zoneId?: string) {
       if (!zoneId) throw new Error('Chưa chọn Zone')
       return expertService.resetDetectionTuning(zoneId)
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QK('detection', zoneId) }),
   })
 }
 
@@ -148,7 +149,8 @@ export function useZoneHouseId(zoneId?: string) {
 // Lưu hoặc khôi phục mặc định; thành công thì đọc lại danh sách nhà (bird_count_tuning nằm trong House)
 export function useSaveReturnRateDrop(farmId?: string | null) {
   const qc = useQueryClient()
-  const onSuccess = () => void qc.invalidateQueries({ queryKey: ['houses', farmId] })
+  // Chờ đọc lại xong: ô đang sửa dở được đặt lại theo số vừa khôi phục
+  const onSuccess = () => qc.invalidateQueries({ queryKey: ['houses', farmId] })
   return {
     update: useMutation({
       mutationFn: ({ houseId, value }: { houseId: string; value: number }) => birdCountTuningApi.update(houseId, value),
