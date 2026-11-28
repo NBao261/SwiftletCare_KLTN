@@ -10,8 +10,12 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 })
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const batches = await harvestService.listHarvests(req.user, req.query.farmId as string | undefined)
-  res.json({ success: true, data: batches })
+  const { records, meta } = await harvestService.listHarvests(req.user, {
+    farmId: req.query.farmId as string | undefined,
+    page: req.query.page as number | undefined,
+    limit: req.query.limit as number | undefined,
+  })
+  res.json({ success: true, data: records, ...(meta && { meta }) })
 })
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {

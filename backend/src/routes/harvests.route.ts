@@ -45,7 +45,9 @@ router.put('/cycles/:id/conclusion', requireRole('DOMAIN_EXPERT'), param('id').i
 router.post  ('/',    canWrite,
   body('zone_id').isString().bail().isMongoId(), body('harvest_date').isString().bail().isISO8601({ strict: true }),
   ...harvestFields(false), validate, harvestController.create)
-router.get   ('/',    canRead,  query('farmId').optional().isString().bail().isMongoId(), validate, harvestController.list)
+router.get   ('/',    canRead,  query('farmId').optional().isString().bail().isMongoId(),
+  query('page').optional().isInt({ min: 1 }).toInt(), query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  validate, harvestController.list)
 router.get   ('/:id', canRead,  param('id').isMongoId(), validate, harvestController.getOne)
 router.put   ('/:id', canWrite, param('id').isMongoId(), ...harvestFields(true), validate, harvestController.update)
 router.put   ('/:id/photo', canWrite, photoUpload.single('photo'), param('id').isMongoId(), validate, harvestController.setPhoto)

@@ -7,6 +7,7 @@ import { assertFarmAccess, assertZoneAccess, listAccessibleFarmIds, listAccessib
 import { logAction } from '@/services/auditLog.service'
 import { rebuildZoneCyclesSafely } from '@/services/harvestCycle.service'
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
+import { paginate } from '@/utils/helpers.util'
 import { presignedGetUrl, removeObject } from '@/config/minio.config'
 import { storePhotos, type UploadedPhoto } from '@/services/workOrder.service'
 import type { CurrentUser, NestType } from '@/types'
@@ -118,16 +119,24 @@ const amountsOf = (batch: Pick<IHarvestBatch, 'nest_count' | 'weight_grams' | 'n
   nest_count: batch.nest_count, weight_grams: batch.weight_grams, nest_type: batch.nest_type, product_images: [...batch.product_images],
 })
 
-export async function listHarvests(user: CurrentUser, farmId?: string) {
+// Không gửi page, limit thì trả cả danh sách như client cũ đang đọc; gửi thì phân trang kèm meta
+export async function listHarvests(user: CurrentUser, query: { farmId?: string; page?: number; limit?: number } = {}) {
+  const { farmId } = query
   // farmId của client phải qua kiểm quyền (IDOR). Farm Technician chỉ zone của nhà được giao
+  let filter: Record<string, unknown>
   if (user.role === 'FARM_TECHNICIAN') {
-    const filter: Record<string, unknown> = { zone_id: { $in: await listAccessibleZoneIds(user) } }
+    filter = { zone_id: { $in: await listAccessibleZoneIds(user) } }
     if (farmId) filter.farm_id = farmId
-    return HarvestBatch.find(filter).sort({ harvest_date: -1 }).lean()
+  } else {
+    if (farmId) await assertFarmAccess(farmId, user)
+    filter = { farm_id: farmId ?? { $in: await listAccessibleFarmIds(user) } }
   }
-  if (farmId) await assertFarmAccess(farmId, user)
-  const filter: Record<string, unknown> = { farm_id: farmId ?? { $in: await listAccessibleFarmIds(user) } }
-  return HarvestBatch.find(filter).sort({ harvest_date: -1 }).lean()
+  // _id phụ: cùng ngày thu hoạch thì thứ tự vẫn cố định giữa các trang
+  const sorted = () => HarvestBatch.find(filter).sort({ harvest_date: -1, _id: -1 })
+  if (query.page === undefined && query.limit === undefined) return { records: await sorted().lean() }
+  const { page, skip, limit } = paginate(query.page, query.limit)
+  const [records, total] = await Promise.all([sorted().skip(skip).limit(limit).lean(), HarvestBatch.countDocuments(filter)])
+  return { records, meta: { total, page, limit } }
 }
 
 export async function getHarvest(id: string, user: CurrentUser): Promise<IHarvestBatch> {

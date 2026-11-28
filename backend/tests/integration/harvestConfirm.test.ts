@@ -129,6 +129,43 @@ describe('sửa, xoá, xem theo nhà được giao (HARVEST-FR-005, AUTH-FR-013)
   })
 })
 
+describe('danh sách lô thu hoạch: phân trang khi client xin', () => {
+  async function threeBatches() {
+    const ctx = await seed()
+    for (const date of ['2026-10-01', '2026-10-03', '2026-10-02']) {
+      await ctx.owner$.post('/harvests', { ...batch(ctx.zone._id), harvest_date: date }).expect(201)
+    }
+    return ctx
+  }
+  const dates = (rows: Array<{ harvest_date: string }>) => rows.map(r => r.harvest_date.slice(0, 10))
+
+  it('không gửi page, limit: cả danh sách, mới nhất trước, không có meta (như web và mobile đang đọc)', async () => {
+    const { farm, owner$ } = await threeBatches()
+    const res = await owner$.get(`/harvests?farmId=${farm._id}`).expect(200)
+    expect(dates(res.body.data)).toEqual(['2026-10-03', '2026-10-02', '2026-10-01'])
+    expect(res.body.meta).toBeUndefined()
+  })
+
+  it('gửi limit, page: một trang kèm meta; limit ngoài 1–100 → 422', async () => {
+    const { farm, owner$ } = await threeBatches()
+    const first = await owner$.get(`/harvests?farmId=${farm._id}&limit=2`).expect(200)
+    expect(dates(first.body.data)).toEqual(['2026-10-03', '2026-10-02'])
+    expect(first.body.meta).toEqual({ total: 3, page: 1, limit: 2 })
+    const second = await owner$.get(`/harvests?farmId=${farm._id}&limit=2&page=2`).expect(200)
+    expect(dates(second.body.data)).toEqual(['2026-10-01'])
+    expect((await owner$.get('/harvests?page=1').expect(200)).body.meta).toEqual({ total: 3, page: 1, limit: 20 })
+    await owner$.get('/harvests?limit=101').expect(422)
+    await owner$.get('/harvests?page=0').expect(422)
+  })
+
+  it('kỹ thuật viên phân trang trong nhà được giao', async () => {
+    const { zone, zone2, owner$, a$ } = await seed()
+    await owner$.post('/harvests', batch(zone._id)).expect(201)
+    await owner$.post('/harvests', batch(zone2._id)).expect(201)
+    expect((await a$.get('/harvests?limit=10').expect(200)).body.meta.total).toBe(1)
+  })
+})
+
 describe('nhật ký thao tác của lô thu hoạch', () => {
   const rows = (action: string) => AuditLog.find({ action, target_type: 'harvest_batch' }).lean()
 
