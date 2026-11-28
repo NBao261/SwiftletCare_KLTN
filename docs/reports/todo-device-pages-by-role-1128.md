@@ -49,7 +49,7 @@ Sau `79c54d96` (đã commit, chưa push):
 | Trang chi tiết nhà: thẻ thiết bị với trạng thái, heartbeat, mạng, thời gian chạy, bộ nhớ | **Không thấy cảnh báo mở của thiết bị** và **không thấy phiếu việc của nó**: thiết bị và cảnh báo là hai thế giới tách nhau |
 | Nút Khởi động lại khi thiết bị online | Thiết bị **mất kết nối** thì nút biến mất, không giải thích; hàm `restartBlockReason` còn đó nhưng không còn dùng |
 | Thẻ camera có trạng thái và nút "Cài đặt camera" | Gợi ý sửa lỗi chỉ nằm trong cửa sổ cài đặt, không nằm trên thẻ |
-| Lý do khởi động lại gần nhất (`reset_reason`) có ở model | **Không hiện** (FARM-FR-006 đòi hiện) |
+| Lý do khởi động lại gần nhất (`reset_reason`) có ở model | Trang riêng cũ của kỹ thuật viên có hiện, thẻ của Chủ nhà yến chưa từng có; commit `79c54d96` xoá cùng trang cũ. **Đã khôi phục trên thẻ chung ở #294 (commit `8878f9fc`)**, bước W-1 không phải làm lại (D5) |
 | Dời, thay, gỡ trong menu "Thao tác khác" | Đúng quyền, nhưng không nói rõ "nhà này chưa được giao cho bạn" khi bị 403 |
 
 Hai thiếu sót cần backend: lọc **cảnh báo** theo thiết bị (`GET /alerts` chỉ lọc `farmId`, `zoneId`, `houseId`, `type`) và lọc **phiếu việc** theo thiết bị (`GET /work-orders` chỉ lọc `houseId`, `alertId`...). Cả `Alert` và `WorkOrder` đã có `node_id`, nên không cần đổi dữ liệu.
@@ -182,3 +182,47 @@ Với dữ liệu demo (nhà A có kỹ thuật viên, nhà B không):
 3. **Có cần lịch sử thao tác từ xa của từng thiết bị** (ai khởi động lại lúc nào) trên thẻ: mặc định **không** làm bây giờ; nhật ký kiểm toán đã ghi và Chủ nhà yến đã nhận thông báo.
 4. **Câu hướng dẫn tại chỗ ở §6** cần một kỹ thuật viên thật hoặc firmware lead đọc lại trước khi đưa vào app (không tự bịa quy trình sửa).
 5. **Thông báo khi kỹ thuật viên chạm vào nhà không được giao** (403): mặc định hiện câu "Nhà này chưa được giao cho bạn", đã có kiểu "forbidden" trong `useApiErrorMessage`.
+
+## 12. Đối chiếu vai Kỹ thuật viên với thực tế nhà yến (28/11/2026)
+
+Câu hỏi: ngoài các tài liệu của nhóm, vai Farm Technician có đúng với cách nhà yến vận hành ngoài đời không, thiếu hay thừa gì.
+
+**Nguồn đã tìm được** (tìm web 28/11/2026; ít): Nghị định 13/2020/NĐ-CP cho phát loa dẫn dụ 5:00–11:30 và 13:30–19:00, không quá 70 dBA, và cấm dùng loa khi nhà yến nằm trong hoặc cách khu dân cư dưới 300 m (nguồn: [thuvienphapluat.vn](https://thuvienphapluat.vn/hoi-dap-phap-luat/duoc-phat-loa-phong-de-dan-du-chim-yen-trong-khung-thoi-gian-nao-138021180.html)); một khảo sát nhà yến cho thấy 82,86 % có hệ thống đo nhiệt độ (77,14 % tự động) và 94,29 % phát loa dẫn dụ hàng ngày ([vjol.info.vn](https://vjol.info.vn/khcn/article/download/44254/35697/)). **Không tìm được nguồn nào** nói ai làm gì trong nhà yến, hạn chế ra vào theo mùa sinh sản hay việc thuê người quản lý. Mọi nhận định dưới đây về vai là **suy luận từ cách nhà yến chạy**, chưa kiểm chứng, và phải hỏi chủ nhà yến thật (chủ ngôi nhà mượn để chạy thử) trước khi đưa vào Report 3.
+
+### 12.1. Đúng
+
+| Điều đã chốt | Vì sao hợp thực tế |
+| --- | --- |
+| Kỹ thuật viên là nhân viên của chủ nhà, chỉ làm trên nhà được giao | Chủ thường ở xa, có người ở hoặc thường xuyên có mặt tại nhà yến; quyền theo nhà đúng với cách giao việc |
+| Cảnh báo đến người ở nhà trước, 15 phút không ai nhận thì lên Chủ nhà yến; nghiêm trọng đến cả hai | Người ở nhà là người xử lý được ngay |
+| Kỹ thuật viên thiết lập, thay, gỡ thiết bị và nhập địa chỉ camera | Việc cần có mặt (quét QR tầng, cắm máy, sờ camera); chủ không cần về |
+| Nhà không có kỹ thuật viên thì chủ làm hết | Nhà yến nhỏ phần lớn do chủ tự trông |
+| Loa ru: kỹ thuật viên chỉ xem lịch | Giờ phát loa bị luật giới hạn (nguồn trên), nên giữ ở người chịu trách nhiệm là chủ |
+| Không có nhà cung cấp dịch vụ ngoài, hợp đồng, SLA (§8) | Phạm vi một chủ, không phải nền tảng |
+
+### 12.2. Thiếu (đề xuất, chưa vào Report 3)
+
+| # | Thiếu | Vì sao | Đề xuất |
+| --- | --- | --- | --- |
+| R1 | Gộp sự cố **cả nhà mất kết nối cùng lúc** | Ở nhà yến nguồn điện và Wi-Fi dùng chung cả nhà, nên mất điện hoặc mất mạng làm bộ điều khiển và nút AI offline cùng lúc, nhưng mỗi thiết bị hiện một cảnh báo và (sau 30 phút) một phiếu việc, trong khi nguyên nhân chỉ một. Bộ điều khiển còn nguồn vẫn tự chạy theo cấu hình lưu trong máy khi mất mạng (MF-01), nên mất mạng ít gấp hơn mất điện | Trên trang Thiết bị, khi từ hai thiết bị trở lên của cùng một nhà offline cùng lúc, hiện **một dòng của nhà**: "Nhiều thiết bị của nhà này mất kết nối cùng lúc, có thể mất điện hoặc mất mạng" thay vì từng dòng. Chỉ là cách hiện, không đổi dữ liệu, cảnh báo hay phiếu; không cần ngưỡng mới |
+| R2 | **Cái giá của việc vào nhà** | Chim yến nhạy với xáo trộn (nguồn tìm được chỉ nói về tiếng ồn, chưa nói về việc ra vào), nên chỉ đi khi cần. Việc làm được từ xa (xem số liệu, khởi động lại khi còn online) phải được nói trước việc "đi kiểm tra" | Câu việc cần làm ở §6 luôn đặt cách làm từ xa trước, "đi đến nhà" sau. Chưa đưa giờ nên vào nhà vào app vì chưa có nguồn |
+| R3 | **Chuyển việc ra ngoài**: người ở nhà thường không sửa được điện, rơ-le, mạch; việc sửa thật hay do thợ điện hoặc nhà cung cấp thiết bị | Phiếu việc hiện chỉ có "xong" hoặc "huỷ", không có kết quả "cần thợ ngoài" | **Chưa làm.** Hỏi chủ nhà yến hiện xử lý thế nào. Nếu cần, chỉ thêm một ghi chú trong phiếu, không thêm nhà cung cấp, danh bạ hay theo dõi thợ (§8) |
+| R4 | Người dùng có thể **không rành kỹ thuật** | Người ở nhà yến có thể là người nhà của chủ | Câu ở §6 ngắn, không mã lỗi thô; đã là quy tắc FE_Design §6.4 |
+
+### 12.3. Thừa hoặc nên cân nhắc cắt
+
+| # | Mục | Nhận định |
+| --- | --- | --- |
+| E1 | Web đầy đủ cho kỹ thuật viên (G-33): phân tích, vòng đếm, hồ sơ | Người ở nhà dùng điện thoại là chính; nhưng đã làm xong và menu đã ẩn bớt, **không cắt**, chỉ không mở rộng thêm |
+| E2 | Kỹ thuật viên vẽ vòng đếm camera | Vẽ trên ảnh nên làm ở đâu cũng được, không cần ở nhà. Giữ vì quyền đã chốt; không phải việc đặc trưng của người ở nhà |
+| E3 | Trang web riêng của kỹ thuật viên cho thiết bị | Đã bỏ ở #294 |
+
+Không có quyền nào của kỹ thuật viên **nên bỏ** theo suy luận trên; chỉ R1 và R2 đổi cách hiện, R3 cần hỏi chủ nhà.
+
+### 12.4. Câu hỏi cho chủ nhà yến thật (nhà mượn chạy thử)
+
+1. Ai là người ra vào nhà yến hằng ngày, làm những việc gì (kiểm tra, dọn, bẫy chuột, mở cửa, thu hoạch)?
+2. Khi máy phun sương, quạt, loa hay cảm biến hỏng thì ai sửa: chính người đó, thợ điện quanh vùng, hay nhà cung cấp thiết bị?
+3. Có giờ hay mùa nào hạn chế vào nhà yến không, và vào lúc nào trong ngày là ít xáo trộn nhất?
+4. Mất điện hoặc mất mạng ở nhà xảy ra bao lâu một lần, ai biết đầu tiên và làm gì?
+5. Một người trông mấy nhà? Người đó dùng điện thoại gì và có hay mở ứng dụng khi đang trong nhà không?
