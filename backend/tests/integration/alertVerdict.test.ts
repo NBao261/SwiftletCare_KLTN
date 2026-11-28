@@ -290,7 +290,9 @@ describe('cảnh báo bị bác bỏ — DISMISSED (SM-01, EXPERT-FR-003, ALERT-
 
     const resolved = await mkAlert('FORECAST_BREACH')
     await Alert.updateOne({ _id: resolved._id }, { status: 'RESOLVED', resolved_at: new Date() })
-    await call('put', `/alerts/${resolved._id}/acknowledge`, t.owner, { note: 'ok' }).expect(409)
+    const closed = await call('put', `/alerts/${resolved._id}/acknowledge`, t.owner, { note: 'ok' }).expect(409)
+    // Đã đóng thì nói đúng là đã đóng, không nói "đã được xác nhận"
+    expect(closed.body.error.message).toBe('Cảnh báo này đã đóng, không cần xác nhận nữa')
     expect((await Alert.findById(resolved._id).lean())!.status).toBe('RESOLVED')
   })
 

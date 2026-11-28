@@ -8,7 +8,7 @@ import { validate } from '@/middlewares/validate.middleware'
 const router = Router()
 router.use(authenticate)
 
-const pageQuery = [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 })]
+const pageQuery = [query('page').optional().isString().isInt({ min: 1 }), query('limit').optional().isString().isInt({ min: 1 })]
 const ruleBody = () => [
   body('name').isString().trim().notEmpty().isLength({ max: MAX_NAME_LENGTH }),
   // Chỉ số không hỗ trợ: 400 ở service, không phải 422

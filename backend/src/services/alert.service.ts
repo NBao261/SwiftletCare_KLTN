@@ -507,6 +507,7 @@ export async function acknowledgeAlert(
 ) {
   const { alert } = await findAlertWithAccess(alertId, user)
   if (alert.status === 'DISMISSED') throw ConflictError('Cảnh báo này đã bị bác bỏ, không còn hiệu lực')
+  if (alert.status === 'RESOLVED') throw ConflictError('Cảnh báo này đã đóng, không cần xác nhận nữa')
   if (alert.status !== 'ACTIVE') throw ConflictError('Cảnh báo này đã được xác nhận trước đó')
 
   alert.status = 'ACKNOWLEDGED'

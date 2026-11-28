@@ -41,7 +41,7 @@ router.post  ('/:id/members',  requireRole('FARM_OWNER'), param('id').isMongoId(
 router.delete('/:id/members/:userId', requireRole('FARM_OWNER'), param('id').isMongoId(), param('userId').isMongoId(), validate, farmController.removeMember)
 router.get   ('/:id/invitations', requireRole('FARM_OWNER'), param('id').isMongoId(),
   query('status').optional().isString().isIn(['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED']),
-  query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1 }), validate, farmController.listInvitations)
+  query('page').optional().isString().isInt({ min: 1 }), query('limit').optional().isString().isInt({ min: 1 }), validate, farmController.listInvitations)
 
 router.post('/:id/houses',   requireRole('FARM_OWNER'), param('id').isMongoId(), nameRule(),
   body('floors').optional().isInt({ min: 1, max: MAX_HOUSE_FLOORS }).withMessage(`Số tầng là số nguyên 1–${MAX_HOUSE_FLOORS}`).toInt(),
@@ -119,7 +119,7 @@ router.put ('/zones/:zoneId/thresholds/reset', requireRole('FARM_OWNER','DOMAIN_
 router.put ('/zones/:zoneId/fuzzy-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.updateFuzzyTuning)
 // Farm Owner chỉ khi farm chưa có chuyên gia, còn lại gửi qua /expert-activity/proposals
 router.post('/zones/:zoneId/fuzzy-tuning/apply-suggestion', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.applySuggestion)
-// Farm Owner chỉ khi farm chưa có chuyên gia (service kiểm)
+// Farm Owner đổi là áp ngay; farm có chuyên gia thì mở mục duyệt cho chuyên gia (service)
 router.put ('/zones/:zoneId/detection-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.updateDetectionTuning)
 router.put ('/zones/:zoneId/detection-tuning/reset', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('zoneId').isMongoId(), validate, farmController.resetDetectionTuning)
 router.put ('/houses/:houseId/bird-count-tuning', requireRole('FARM_OWNER','DOMAIN_EXPERT'), param('houseId').isMongoId(), validate, farmController.updateBirdCountTuning)

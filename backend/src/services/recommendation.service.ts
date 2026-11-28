@@ -182,7 +182,7 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
     }
   }
   const acceptStart = new Date()
-  // Chỉ lỗi hạ tầng mới dừng giữa chừng: ghi log các zone đã đổi vì không hoàn tác được cấu hình đã gửi
+  // Chỉ lỗi hạ tầng mới dừng giữa chừng: các zone đã đổi được trả về giá trị cũ
   const applied: string[] = []
   const recommendation = await decide(current._id, { status: 'ACCEPTED', decided_by: user._id as never, decided_at: acceptStart })
   try {
@@ -209,10 +209,8 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
     }
     await recommendation.save()
   } catch (err) {
-    if (applied.length > 0) {
-      logger.error('Chấp nhận khuyến nghị dừng giữa chừng, một số zone đã đổi tham số', {
-        recommendationId: String(recommendation._id), appliedZoneIds: applied, err: (err as Error).message,
-      })
+    if (action.type === 'PARAMETER_CHANGE' && applied.length > 0) {
+      await undoParameterChange(action, zones, applied, user, String(recommendation._id), err as Error)
     }
     await reopen(recommendation._id)
     throw err
@@ -222,6 +220,29 @@ export async function acceptRecommendation(id: string, user: CurrentUser) {
     review_ids: recommendation.review_ids.map(String),
   }, { farmId: String(farm._id) })
   return recommendation
+}
+
+// Khuyến nghị mở lại thì nhà phải như chưa chấp nhận: zone đã đổi về giá trị đọc được trước khi đổi,
+// qua chính hàm cập nhật để thiết bị nhận lại cấu hình và mục duyệt vừa mở tự bỏ. Zone không trả được thì ghi log
+async function undoParameterChange(
+  action: Extract<RuleSnapshot['action'], { type: 'PARAMETER_CHANGE' }>, zones: Array<{ _id: unknown; thresholds: object; fuzzy_tuning: object }>,
+  appliedZoneIds: string[], user: CurrentUser, recommendationId: string, cause: Error,
+): Promise<void> {
+  const notRestored: string[] = []
+  for (const zoneId of appliedZoneIds) {
+    const zone = zones.find(z => String(z._id) === zoneId)
+    const values: object = (action.group === 'thresholds' ? zone?.thresholds : zone?.fuzzy_tuning) ?? {}
+    try {
+      const updates = { [action.key]: (values as Record<string, unknown>)[action.key] }
+      if (action.group === 'thresholds') await updateZoneThresholds(zoneId, user, updates)
+      else await updateZoneFuzzyTuning(zoneId, user, updates)
+    } catch {
+      notRestored.push(zoneId)
+    }
+  }
+  logger.error('Chấp nhận khuyến nghị dừng giữa chừng, đã trả các zone về giá trị cũ', {
+    recommendationId, appliedZoneIds, notRestoredZoneIds: notRestored, err: cause.message,
+  })
 }
 
 // Chỉ mở lại khi vẫn là ACCEPTED của lần này; không được thì ghi log để người gọi nhận lỗi gốc

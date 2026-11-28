@@ -1640,6 +1640,9 @@ paths:
     post:
       tags: [Farms]
       summary: Chấp nhận lời mời (Flow 12 bước 3a) — yêu cầu đăng nhập bằng đúng email được mời
+      description: |
+        Thêm người dùng vào farm và ghi audit `FARM_MEMBER_JOINED` theo farm (cũng ghi khi tạo tài khoản từ link).
+        Farm của lời mời không còn → 404 và lời mời vẫn `PENDING`.
       parameters:
         [{ name: token, in: path, required: true, schema: { type: string } }]
       responses:
@@ -4135,7 +4138,8 @@ paths:
         Hành động `WORK_ORDER`: mở đúng một Work Order sửa chữa (nguồn `RECOMMENDATION`, `recommendation_id`) cho thợ đang
         trực của nhà (MF-02). Hành động `PARAMETER_CHANGE`: sửa ngưỡng hoặc hệ số mờ của mọi zone trong nhà như Farm Owner
         tự sửa, farm có chuyên gia thì mỗi zone có một mục duyệt (MF-05, EXPERT-FR-010), id ở `review_ids`. Khuyến nghị
-        không còn OPEN (đã quyết định, hết hạn) → 409; lỗi khi thực hiện thì khuyến nghị mở lại. Audit `RECOMMENDATION_ACCEPTED`.
+        không còn OPEN (đã quyết định, hết hạn) → 409; lỗi khi thực hiện thì khuyến nghị mở lại, và các zone đã đổi được trả
+        về giá trị cũ (mục duyệt vừa mở tự bỏ), để nhà như chưa chấp nhận. Audit `RECOMMENDATION_ACCEPTED`.
       responses:
         "200":
           description: Khuyến nghị ACCEPTED

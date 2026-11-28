@@ -107,8 +107,16 @@ export async function createHarvest(user: CurrentUser, input: CreateHarvestInput
     ...(confirmed && { confirmed_by: user._id, confirmed_at: new Date() }),
   })
   if (confirmed) await rebuildZoneCyclesSafely(zone._id)
+  await logAction(user._id, 'HARVEST_CREATED', 'harvest_batch', String(batch._id), {
+    zone_id: String(zone._id), harvest_date: batch.harvest_date, status: batch.status, ...amountsOf(batch),
+  }, { farmId: String(batch.farm_id) })
   return batch
 }
+
+// Số liệu người nhập của một lô: dùng cho nhật ký trước/sau
+const amountsOf = (batch: Pick<IHarvestBatch, 'nest_count' | 'weight_grams' | 'nest_type' | 'product_images'>) => ({
+  nest_count: batch.nest_count, weight_grams: batch.weight_grams, nest_type: batch.nest_type, product_images: [...batch.product_images],
+})
 
 export async function listHarvests(user: CurrentUser, farmId?: string) {
   // farmId của client phải qua kiểm quyền (IDOR). Farm Technician chỉ zone của nhà được giao
@@ -169,12 +177,20 @@ export async function updateHarvest(
 ): Promise<IHarvestBatch> {
   const batch = await getHarvest(id, user)
   assertTechnicianOwnDraft(batch, user)
+  const before = amountsOf(batch)
   if (updates.nest_count !== undefined) batch.nest_count = updates.nest_count
   if (updates.weight_grams !== undefined) batch.weight_grams = updates.weight_grams
   if (updates.nest_type !== undefined) batch.nest_type = updates.nest_type
   if (updates.product_images !== undefined) batch.product_images = updates.product_images
+  const after = amountsOf(batch)
+  // Gửi lại đúng số cũ thì không ghi gì
+  if (JSON.stringify(after) === JSON.stringify(before)) return batch
   await batch.save()
   if (batch.status === 'CONFIRMED') await rebuildZoneCyclesSafely(batch.zone_id)
+  // Lô đã xác nhận vẫn sửa được nên phải để lại dấu vết
+  await logAction(user._id, 'HARVEST_UPDATED', 'harvest_batch', String(batch._id), {
+    status: batch.status, before, after,
+  }, { farmId: String(batch.farm_id) })
   return batch
 }
 
@@ -185,6 +201,9 @@ export async function removeHarvest(id: string, user: CurrentUser): Promise<void
   await batch.save()
   // Chu kỳ gộp vào chu kỳ sau
   if (batch.status === 'CONFIRMED') await rebuildZoneCyclesSafely(batch.zone_id)
+  await logAction(user._id, 'HARVEST_DELETED', 'harvest_batch', String(batch._id), {
+    zone_id: String(batch.zone_id), harvest_date: batch.harvest_date, status: batch.status, ...amountsOf(batch),
+  }, { farmId: String(batch.farm_id) })
 }
 
 // Đã xác nhận → 409

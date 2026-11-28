@@ -10,8 +10,8 @@ const router = Router()
 router.use(authenticate, requireRole('ADMIN'))
 
 router.get('/audit-logs',
-  query('actorId').optional().isMongoId(),
-  query('targetId').optional().isMongoId(),
+  query('actorId').optional().isString().isMongoId(),
+  query('targetId').optional().isString().isMongoId(),
   ...isoRange(),
   validate,
   systemController.listAuditLogs,

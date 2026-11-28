@@ -16,12 +16,12 @@ router.use(authenticate, requireRole('ADMIN'))
 const ROLES: Role[] = ['ADMIN', 'FARM_OWNER', 'DOMAIN_EXPERT', 'FARM_TECHNICIAN']
 // paginate() tự kẹp về mức tối đa
 const paginationQuery = [
-  query('page').optional().isInt({ min: 1 }),
-  query('limit').optional().isInt({ min: 1 }),
+  query('page').optional().isString().isInt({ min: 1 }),
+  query('limit').optional().isString().isInt({ min: 1 }),
 ]
 
 router.get('/users',
-  query('role').optional().isIn(ROLES), query('status').optional().isIn(['active', 'inactive', 'deleted']),
+  query('role').optional().isString().isIn(ROLES), query('status').optional().isString().isIn(['active', 'inactive', 'deleted']),
   query('q').optional().isString().trim().isLength({ max: 100 }),
   ...paginationQuery, validate,
   adminController.listUsers,
@@ -58,8 +58,8 @@ router.post('/provisioned-devices',
   adminController.createProvisionedDevice,
 )
 router.get('/provisioned-devices',
-  query('kind').optional().isIn(['SENSOR', 'CAMERA']), query('claimed').optional().isIn(['true', 'false']),
-  query('revoked').optional().isIn(['true', 'false']),
+  query('kind').optional().isString().isIn(['SENSOR', 'CAMERA']), query('claimed').optional().isString().isIn(['true', 'false']),
+  query('revoked').optional().isString().isIn(['true', 'false']),
   query('deviceId').optional().isString().matches(DEVICE_ID_PATTERN),
   query('chipMac').optional().isString().toUpperCase().matches(CHIP_MAC_PATTERN),
   ...paginationQuery, validate,
