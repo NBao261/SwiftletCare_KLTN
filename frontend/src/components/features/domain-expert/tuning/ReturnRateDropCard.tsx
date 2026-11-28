@@ -1,9 +1,9 @@
-import { useEffect, useState, forwardRef, useImperativeHandle } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react'
 import { Button, SectionCard } from '@/components/ui'
 import TuningStepperInput from '@/components/features/domain-expert/tuning/TuningStepperInput'
 import { TuningRangeList } from '@/components/features/domain-expert/tuning/TuningRangeTip'
-import type { TuningBlockHandle } from '@/components/features/domain-expert/tuning/tuning.utils'
+import TuningSaveBar from '@/components/features/domain-expert/tuning/TuningSaveBar'
 import { t } from '@/i18n'
 
 // Mặc định và khoảng khớp backend `detectionTuning.util.ts` (BIRD_COUNT_TUNING_LIMITS)
@@ -17,14 +17,10 @@ interface Props {
   onSave: (returnRateDropPct: number) => void
   // Trả về true khi khôi phục được: ô đang sửa dở cũng về mặc định theo
   onReset: () => Promise<boolean> | undefined
-  // Báo có đang khác bản đã lưu lên thanh lưu dính đáy của trang
-  onDirtyChange?: (count: number) => void
 }
 
 // mức giảm tỷ lệ chim về là tham số của cả nhà yến (camera ở cửa nhà), đặt riêng với 5 tham số của Zone
-const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnRateDropCard(
-  { houseName, value, isSaving, isResetting, onSave, onReset, onDirtyChange }, ref,
-) {
+export default function ReturnRateDropCard({ houseName, value, isSaving, isResetting, onSave, onReset }: Props) {
   const base = value ?? DEFAULT_RETURN_RATE_DROP_PCT
   const [draft, setDraft] = useState(base)
   // Khôi phục mặc định xong thì ô đang sửa dở về đúng số đang áp dụng, kể cả khi số đang áp dụng không đổi (đã là mặc định)
@@ -35,12 +31,7 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
   }
 
   const dirtyCount = houseName && draft !== base ? 1 : 0
-  useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
-  useImperativeHandle(ref, () => ({
-    save: () => onSave(draft),
-    cancel: () => setDraft(base),
-  }))
 
   return (
     <SectionCard
@@ -55,15 +46,13 @@ const ReturnRateDropCard = forwardRef<TuningBlockHandle, Props>(function ReturnR
           </Button>
       )}
     >
-      {/* Nút Lưu chung ở thanh dính đáy của trang */}
       {houseName && (
         <fieldset disabled={isSaving} className="contents">
           <TuningStepperInput label={t('Mức giảm tỷ lệ chim về')} value={draft}
             onChange={setDraft} min={5} max={50} step={5} unit="%" />
         </fieldset>
       )}
+      {houseName && <TuningSaveBar changedCount={dirtyCount} isSaving={isSaving} onSave={() => onSave(draft)} onCancel={() => setDraft(base)} />}
     </SectionCard>
   )
-})
-
-export default ReturnRateDropCard
+}
