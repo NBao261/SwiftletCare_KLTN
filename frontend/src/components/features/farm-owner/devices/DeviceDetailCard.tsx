@@ -4,7 +4,9 @@ import { ArrowClockwiseIcon, CalendarBlankIcon, CpuIcon, GearSixIcon, MusicNotes
 import SimulatedBadge from '@/components/common/SimulatedBadge';
 import { ActionsMenu, Badge, type ActionsMenuItem } from '@/components/ui';
 import StatusDot from '@/components/common/StatusDot';
+import DeviceWorkPanel from '@/components/features/farm-owner/devices/DeviceWorkPanel';
 import { uptimeParts, type DeviceItem } from '@/components/features/farm-owner/devices/deviceInventory';
+import { NO_OPEN_ITEMS, type DeviceOpenItems } from '@/components/features/farm-owner/devices/deviceWork';
 import { isUnexpectedReset, resetReasonKey } from '@/components/features/farm-owner/devices/resetReason';
 import { CAMERA_STATUS_TONE } from '@/components/features/farm-owner/devices/CameraSourceModal';
 import { DETAIL_BUTTON_CLASS } from '@/components/features/farm-owner/harvest/harvest.constants';
@@ -23,8 +25,12 @@ interface DeviceDetailCardProps {
   // Node cảm biến: mở popup lịch loa ru / bài loa ru
   onOpenSchedule?: () => void;
   onOpenTracks?: () => void;
-  // Farm Owner khởi động lại bộ điều khiển đang ONLINE
+  // Farm Owner và Farm Technician khởi động lại bộ điều khiển đang ONLINE
   onRestart?: () => void;
+  // Có quyền khởi động lại nhưng chưa gửi được: nút khoá, lý do nằm ở chú thích của nút
+  restartBlockedReason?: string;
+  // Cảnh báo thiết bị và Work Order còn mở của thiết bị này
+  items?: DeviceOpenItems;
   // Camera: Farm Owner nhập địa chỉ camera IP cho nút AI
   onOpenCameraSource?: () => void;
   // dời, thay, gỡ bộ điều khiển (chỉ Farm Owner); rỗng thì không hiện menu
@@ -32,7 +38,7 @@ interface DeviceDetailCardProps {
 }
 
 // Thẻ chi tiết 1 thiết bị, nút theo quyền
-export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, onOpenCameraSource, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
+export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onOpenTracks, onRestart, restartBlockedReason, items = NO_OPEN_ITEMS, onOpenCameraSource, moreActions = [] }: DeviceDetailCardProps): JSX.Element {
   const { t, num, day, ago, dateTime } = useTranslation(devicesDict);
   const isSensor = device.type === 'sensor';
   const quality = wifiQuality(device.rssi);
@@ -67,8 +73,14 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
               {t('action.tracks')}
             </button>
           )}
-          {onRestart && (
-            <button type="button" className={cn(DETAIL_BUTTON_CLASS, 'inline-flex items-center gap-1.5')} onClick={onRestart}>
+          {(onRestart || restartBlockedReason) && (
+            <button
+              type="button"
+              className={cn(DETAIL_BUTTON_CLASS, 'inline-flex items-center gap-1.5', restartBlockedReason && 'cursor-not-allowed opacity-50')}
+              disabled={Boolean(restartBlockedReason)}
+              title={restartBlockedReason}
+              onClick={onRestart}
+            >
               <ArrowClockwiseIcon size={14} />
               {t('action.restart')}
             </button>
@@ -82,6 +94,8 @@ export default function DeviceDetailCard({ device, zoneName, onOpenSchedule, onO
           {moreActions.length > 0 && <ActionsMenu items={moreActions} />}
         </div>
       </div>
+
+      <DeviceWorkPanel device={device} items={items} />
 
       <div className="grid grid-cols-1 gap-4 border-t border-gray-200 pt-4 sm:grid-cols-3">
         <InfoSection title={t('detail.sectionStatus')}>
