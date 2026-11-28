@@ -1,4 +1,4 @@
-import { SelectHTMLAttributes, forwardRef } from 'react'
+import { SelectHTMLAttributes, forwardRef, useId } from 'react'
 import { cn } from '@/lib/cn'
 import FieldError from '@/components/ui/FieldError'
 
@@ -10,8 +10,9 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 // Select: cùng khuôn với Input.tsx, dùng lại class `.input` (index.css)
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, className, id, children, ...props }, ref) => {
-    const selectId = id ?? props.name
-    const errorId = `${selectId ?? 'field'}-error`
+    const generatedId = useId()
+    const selectId = id ?? props.name ?? generatedId
+    const errorId = `${selectId}-error`
     return (
       <div className="flex flex-col gap-1.5">
         {label && (

@@ -1,4 +1,4 @@
-import { TextareaHTMLAttributes, forwardRef } from 'react'
+import { TextareaHTMLAttributes, forwardRef, useId } from 'react'
 import { cn } from '@/lib/cn'
 import { tr } from '@/i18n'
 import FieldError from '@/components/ui/FieldError'
@@ -13,10 +13,11 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 // Textarea: cùng khuôn với Input.tsx, dùng lại class `.input` (index.css)
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ label: rawLabel, error: rawError, errorInLabel, className, id, rows = 3, placeholder, ...props }, ref) => {
-    const textareaId = id ?? props.name
+    const generatedId = useId()
+    const textareaId = id ?? props.name ?? generatedId
     // Nhãn/lỗi/placeholder tự dịch theo VI/EN (chuỗi không có bản dịch giữ nguyên)
     const label = tr(rawLabel), error = tr(rawError)
-    const errorId = `${textareaId ?? 'field'}-error`
+    const errorId = `${textareaId}-error`
     const describedBy = [props['aria-describedby'], error ? errorId : undefined].filter(Boolean).join(' ') || undefined
     return (
       <div className="flex flex-col gap-1.5">

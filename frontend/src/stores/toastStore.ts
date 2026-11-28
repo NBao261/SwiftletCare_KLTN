@@ -16,7 +16,7 @@ export const TOAST_DURATION_MS: Record<ToastItem['tone'], number> = { success: 4
 export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
   push: (message, tone = 'success') => {
-    // Cùng một câu đang hiện thì không chồng thêm (bấm liên tục một nút lỗi)
+    // Cùng câu cùng tone đang hiện thì không chồng thêm (bấm lưu hai lần trong vài giây chỉ hiện một lần)
     if (get().toasts.some(toast => toast.message === message && toast.tone === tone)) return
     const id = nextId++
     set(s => ({ toasts: [...s.toasts, { id, message, tone }] }))

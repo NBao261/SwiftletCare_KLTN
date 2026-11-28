@@ -1,4 +1,5 @@
 // Ô số kiểu -/+ có min/max và đơn vị; số ở giữa gõ thẳng được
+import { useId } from 'react'
 import { cn } from '@/lib/cn'
 import { t } from '@/i18n'
 import StepperValueInput from './StepperValueInput'
@@ -23,7 +24,7 @@ export default function TuningStepperInput({
   label, subLabel, value, onChange, min, max,
   step = 1, decimals = 0, unit, highlighted, error,
 }: Props) {
-  const errorId = `${label}-error`.replace(/s+/g, '-')
+  const errorId = `${useId()}-error`
   const clamp = (v: number) => {
     const rounded = Math.round(v * 10 ** decimals) / 10 ** decimals
     if (min !== undefined && rounded < min) return min
