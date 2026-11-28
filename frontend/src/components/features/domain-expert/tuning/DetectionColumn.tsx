@@ -27,7 +27,8 @@ interface Props {
   isSaving: boolean
   isResetting: boolean
   onSave: (v: Partial<ExpertDetectionTuning>) => void
-  onReset: () => void
+  // Trả về true khi khôi phục được: ô đang sửa dở cũng về mặc định theo
+  onReset: () => Promise<boolean> | undefined
   updatedAt?: string
   // Báo số tham số đang khác bản đã lưu lên thanh lưu dính đáy của trang
   onDirtyChange?: (count: number) => void
@@ -86,7 +87,12 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
 ) {
   const [form, setForm] = useState<ExpertDetectionTuning>(DEFAULT_DETECTION)
 
-  useEffect(() => { if (data) setForm(data) }, [data])
+  // Khôi phục mặc định xong thì ô đang sửa dở về đúng số đang áp dụng, kể cả khi số đang áp dụng không đổi (đã là mặc định)
+  const [resetCount, setResetCount] = useState(0)
+  useEffect(() => { if (data) setForm(data) }, [data, resetCount])
+  const handleReset = () => {
+    void onReset()?.then(succeeded => { if (succeeded) setResetCount(count => count + 1) })
+  }
   const set = (key: keyof ExpertDetectionTuning) => (v: number) => setForm(f => ({ ...f, [key]: v }))
 
   const base = data ?? DEFAULT_DETECTION
@@ -107,7 +113,7 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
       description={t('Ngưỡng để hệ thống nhận ra sự cố thiết bị và tiếng ồn')}
       help={<TuningRangeList hints={FIELDS.map(field => ({ label: t(field.label), range: field.range, defaultValue: field.defaultHint }))} />}
       action={(
-        <Button variant="icon" size="sm" onClick={onReset} disabled={isResetting} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>
+        <Button variant="icon" size="sm" onClick={handleReset} disabled={isResetting} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>
             <ArrowCounterClockwiseIcon size={16} weight="bold" />
           </Button>
       )}

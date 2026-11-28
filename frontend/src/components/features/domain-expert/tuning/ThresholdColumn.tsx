@@ -17,7 +17,8 @@ interface Props {
   isSaving: boolean
   isResetting: boolean
   onSave: (v: Partial<ExpertThresholds>) => void
-  onReset: () => void
+  // Trả về true khi khôi phục được: ô đang sửa dở cũng về mặc định theo
+  onReset: () => Promise<boolean> | undefined
   // Báo số ngưỡng đang khác bản đã lưu lên thanh lưu dính đáy của trang
   onDirtyChange?: (count: number) => void
 }
@@ -42,7 +43,16 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
   // Đã bấm Lưu khi còn ô sai: hiện câu nhắc cuối khối, vì thanh Lưu nằm xa các ô
   const [saveAttempted, setSaveAttempted] = useState(false)
 
-  useEffect(() => { if (data) setForm(data) }, [data])
+  // Khôi phục mặc định xong thì ô đang sửa dở về đúng số đang áp dụng, kể cả khi số đang áp dụng không đổi (đã là mặc định)
+  const [resetCount, setResetCount] = useState(0)
+  useEffect(() => { if (data) setForm(data) }, [data, resetCount])
+  const handleReset = () => {
+    void onReset()?.then(succeeded => {
+      if (!succeeded) return
+      setSaveAttempted(false)
+      setResetCount(count => count + 1)
+    })
+  }
 
   const base = data ?? FACTORY_DEFAULT_THRESHOLDS
   // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
@@ -108,7 +118,7 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
         confirmLabel={t('Xác nhận khôi phục')}
         danger
         loading={isResetting}
-        onConfirm={() => { onReset(); setResetOpen(false) }}
+        onConfirm={() => { handleReset(); setResetOpen(false) }}
         onCancel={() => setResetOpen(false)}
       />
     </>

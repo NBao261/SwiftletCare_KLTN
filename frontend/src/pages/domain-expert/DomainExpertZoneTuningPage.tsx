@@ -109,9 +109,12 @@ export default function DomainExpertZoneTuningPage() {
   }
 
   // Mọi thao tác lưu báo kết quả, kể cả lỗi (FE_Design 13.5); thay đổi của Farm Owner ở farm có chuyên gia mở mục duyệt
-  function notify(action: Promise<unknown>, doneMessage: string, reviewed = true) {
+  // Trả về true khi lưu được: khối khôi phục mặc định dùng để đặt lại ô đang sửa dở
+  function notify(action: Promise<unknown>, doneMessage: string, reviewed = true): Promise<boolean> {
     const message = ownerNeedsExpert && reviewed ? `${t(doneMessage)}. ${t('Chuyên gia sẽ xem lại thay đổi này.')}` : t(doneMessage);
-    action.then(() => push(message)).catch(error => push(apiErrorMessage(error, t(FAILED_MESSAGE[doneMessage] ?? 'Lưu thất bại')), 'error'));
+    return action
+      .then(() => { push(message); return true; })
+      .catch(error => { push(apiErrorMessage(error, t(FAILED_MESSAGE[doneMessage] ?? 'Lưu thất bại')), 'error'); return false; });
   }
 
   // Gợi ý hệ số: người được quyết thì áp ngay, Farm Owner ở farm có chuyên gia thì gửi chuyên gia duyệt
@@ -185,7 +188,7 @@ export default function DomainExpertZoneTuningPage() {
               isResetting={returnRateDrop.reset.isPending}
               onDirtyChange={onReturnRateDirty}
               onSave={value => house && notify(returnRateDrop.update.mutateAsync({ houseId: house._id, value }), 'Đã lưu mức giảm tỷ lệ chim về của nhà')}
-              onReset={() => house && notify(returnRateDrop.reset.mutateAsync(house._id), 'Đã khôi phục mức giảm tỷ lệ chim về mặc định')}
+              onReset={() => (house ? notify(returnRateDrop.reset.mutateAsync(house._id), 'Đã khôi phục mức giảm tỷ lệ chim về mặc định') : undefined)}
             />
           </fieldset>
         </div>
