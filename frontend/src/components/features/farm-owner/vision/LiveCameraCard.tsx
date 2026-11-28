@@ -25,12 +25,11 @@ interface LiveCameraCardProps {
   action?: ReactNode
   // Trang Chim ra vào đã có thẻ số đếm bên cạnh: tắt để không lặp số trên cùng màn
   showTodayCounts?: boolean
-  // Vòng đếm chỉ để đếm, người xem không thấy (cả trên hình do nút AI vẽ lẫn ở đây); chỉ chuyên gia và kỹ thuật viên vẽ và xem vòng ở trang vòng đếm
   // Tổng quan: hình và hai số tổng của nhà (chim ra buổi sáng, chim vào buổi chiều); không trạng thái camera, lần kết nối cuối, vòng đếm hay chú thích
   compact?: boolean
 }
 
-// Xem trực tiếp camera của 1 nhà, kèm thông số và số đếm hôm nay
+// Xem trực tiếp camera của 1 nhà, kèm thông số và số đếm hôm nay; vòng đếm không hiện cho người xem
 export default function LiveCameraCard({ houseId, houseName, expanded = false, onToggleExpand, action, showTodayCounts = true, compact = false }: LiveCameraCardProps) {
   const { t, num, ago } = useTranslation(dashboardDict)
   const videoRef = useRef<HTMLVideoElement>(null)
