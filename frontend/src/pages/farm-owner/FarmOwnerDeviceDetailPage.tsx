@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CpuIcon, SlidersHorizontalIcon, SquaresFourIcon, WarningIcon, WifiHighIcon } from '@phosphor-icons/react';
 
-import { Button, EmptyState, LoadingSkeleton } from '@/components/ui';
+import { Button, EmptyState, ErrorNotice, LoadingSkeleton } from '@/components/ui';
 import DeviceDetailCard from '@/components/features/farm-owner/devices/DeviceDetailCard';
 import DeviceSection from '@/components/features/farm-owner/devices/DeviceSection';
 import LullabyTracksModal from '@/components/features/farm-owner/devices/LullabyTracksModal';
@@ -57,7 +57,8 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
   // Việc còn mở của cả nhà, gom theo thiết bị để mỗi thẻ hiện việc của mình
-  const { itemsByDevice } = useDeviceOpenItems(house ? [house._id] : [], true);
+  const openItems = useDeviceOpenItems(house ? [house._id] : [], true);
+  const { itemsByDevice } = openItems;
   // Lịch loa ru chỉ Farm Owner đặt; danh sách bài thì Farm Technician cũng xem được (chỉ đọc)
   const canOperateSpeaker = usePermission('FARM_OWNER');
   const canSeeTracks = usePermission('FARM_OWNER', 'FARM_TECHNICIAN');
@@ -157,6 +158,9 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-5">
+      {openItems.isError && (
+        <ErrorNotice onRetry={openItems.refetch}>{apiErrorMessage(openItems.error, t('open.loadFailed'))}</ErrorNotice>
+      )}
       <FarmFrame title={house.name} description={t('detail.subtitle', { farm: scope.farmNames.get(houseFarmId) ?? NO_VALUE })} help={t('detail.readOnly')}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiTile icon={SquaresFourIcon} label={t('detail.kpiZones')} value={num(item.zoneGroups.length)} sub={t('detail.kpiZonesSub')} />

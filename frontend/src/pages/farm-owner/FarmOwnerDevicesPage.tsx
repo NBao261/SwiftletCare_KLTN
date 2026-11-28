@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PlusIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,10 +10,11 @@ import { listDeviceRows, type DeviceRow } from '@/components/features/farm-owner
 import { compareAttention, needsAttention, NO_OPEN_ITEMS } from '@/components/features/farm-owner/devices/deviceWork';
 import { DEVICE_DETAIL_PATH, type DeviceDetailState } from '@/components/features/farm-owner/devices/devices.constants';
 import RemovedDevicesSection from '@/components/features/farm-owner/devices/RemovedDevicesSection';
-import { Button, EmptyState, LoadingSkeleton, SectionCard } from '@/components/ui';
+import { Button, EmptyState, ErrorNotice, LoadingSkeleton, SectionCard } from '@/components/ui';
 import { devicesDict } from '@/constants/devices.i18n';
 import { DEVICE_SETUP_ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
+import { useApiErrorMessage } from '@/hooks/common/useApiErrorMessage';
 import { useTranslation } from '@/hooks/common/useTranslation';
 import { useDeviceInventory } from '@/hooks/farm-owner/useDeviceInventory';
 import { useDeviceOpenItems } from '@/hooks/farm-owner/useDeviceOpenItems';
@@ -32,15 +33,17 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
   const canSetUp = usePermission(...DEVICE_SETUP_ROLES);
   const scope = useScopeFilter();
   const { houses, houseId, zones, zone, isLoading: isLoadingScope } = scope;
-  // Chưa chọn tab thì kỹ thuật viên vào "Cần xử lý" khi có việc, còn lại vào "Tất cả"
+  // Tab mặc định chọn một lần, sau khi việc đang mở tải xong, để danh sách không tự nhảy tab giữa chừng
   const [chosenTab, setChosenTab] = useState<StatusTab>();
+  const apiErrorMessage = useApiErrorMessage();
   const isTechnician = usePermission('FARM_TECHNICIAN');
   // Phạm vi: 1 nhà đang lọc hoặc mọi nhà của farm; chọn 1 Zone thì chỉ còn thiết bị của Zone đó
   const scopedHouses = useMemo(() => (houseId ? houses.filter(house => house._id === houseId) : houses), [houses, houseId]);
   const { inventory, isLoading, isError, refetch } = useDeviceInventory(scopedHouses, zones, zone?._id);
 
   // Cảnh báo thiết bị còn mở của các nhà trong phạm vi, để biết thiết bị nào cần xử lý
-  const { itemsByDevice } = useDeviceOpenItems(useMemo(() => scopedHouses.map(house => house._id), [scopedHouses]), false);
+  const openItems = useDeviceOpenItems(useMemo(() => scopedHouses.map(house => house._id), [scopedHouses]), false);
+  const { itemsByDevice } = openItems;
 
   const allRows = useMemo(() => listDeviceRows(inventory), [inventory]);
   // Dòng cần xử lý, mất kết nối lâu nhất lên đầu
@@ -60,7 +63,12 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
     }
     return result;
   }, [allRows, attentionRows]);
-  const statusTab = chosenTab ?? (isTechnician && counts.attention > 0 ? 'attention' : 'all');
+  const statusTab = chosenTab ?? 'all';
+  const isSettled = !isLoadingScope && !isLoading && !openItems.isLoading;
+  // Kỹ thuật viên vào "Cần xử lý" khi có việc, còn lại vào "Tất cả"; chốt lại để lượt tải sau không đổi tab
+  useEffect(() => {
+    if (chosenTab === undefined && isSettled) setChosenTab(isTechnician && counts.attention > 0 ? 'attention' : 'all');
+  }, [chosenTab, isSettled, isTechnician, counts.attention]);
   const visibleRows = useMemo(() => {
     if (statusTab === 'all') return allRows;
     if (statusTab === 'attention') return attentionRows;
@@ -75,6 +83,9 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
 
   let body = (
     <>
+      {openItems.isError && (
+        <ErrorNotice onRetry={openItems.refetch}>{apiErrorMessage(openItems.error, t('open.loadFailed'))}</ErrorNotice>
+      )}
       <StatusTabs
         variant="underline"
         ariaLabel={t('list.filterStatus')}
@@ -85,7 +96,8 @@ export default function FarmOwnerDevicesPage(): JSX.Element {
       <DeviceListTable rows={visibleRows} hasAnyDevice={allRows.length > 0} onOpen={openDetail} />
     </>
   );
-  if (isLoadingScope || isLoading) body = <LoadingSkeleton count={4} className="h-16 w-full" />;
+  // Kỹ thuật viên chưa có tab mặc định thì chờ, kẻo thấy "Tất cả" rồi bị chuyển sang "Cần xử lý"
+  if (isLoadingScope || isLoading || (isTechnician && chosenTab === undefined && openItems.isLoading)) body = <LoadingSkeleton count={4} className="h-16 w-full" />;
   if (isError) {
     body = (
       <EmptyState
