@@ -18,6 +18,7 @@ import { analyticsDict } from '@/constants/analytics.i18n';
 import { FARM_SIDE_ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/common/usePermission';
 import { useTranslation } from '@/hooks/common/useTranslation';
+import CurrentWeather from '@/components/common/CurrentWeather';
 import { useScopeFilter } from '@/hooks/shared/useScopeFilter';
 import { useZone } from '@/hooks/shared/useFarms';
 import { cn } from '@/lib/cn';
@@ -104,6 +105,8 @@ export default function FarmOwnerAnalyticsPage(): JSX.Element {
     if (tab === 'env') {
       body = (
         <>
+          {/* Trời ngoài nhà đang nắng hay mưa: bối cảnh để đọc biểu đồ trong nhà và ngoài trời bên dưới */}
+          {zone && <CurrentWeather houseId={zone.house_id} compact />}
           {zone && (
             <>
               <EnvVariationCard

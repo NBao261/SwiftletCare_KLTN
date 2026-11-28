@@ -6,6 +6,7 @@ import { Badge, Button } from '@/components/ui'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorNotice from '@/components/ui/ErrorNotice'
 import LoadError from '@/components/ui/LoadError'
+import CurrentWeather from '@/components/common/CurrentWeather'
 import SectionCard from '@/components/ui/SectionCard'
 import { Modal } from '@/components/ui/Modal'
 import NoteActionModal from '@/components/ui/NoteActionModal'
@@ -226,6 +227,9 @@ export default function DomainExpertWeatherRulesPage() {
           {isError && !isLoading && (
             <LoadError title={t('Không tải được luật phun sương theo thời tiết')} error={loadError} onRetry={() => void refetch()} />
           )}
+
+          {/* Trời đang nắng hay mưa ngoài nhà: để chọn luật bù cho đúng lúc */}
+          <CurrentWeather houseId={houseId} />
 
           {/* Lần chỉnh gần nhất */}
           {renderLastCompensation()}

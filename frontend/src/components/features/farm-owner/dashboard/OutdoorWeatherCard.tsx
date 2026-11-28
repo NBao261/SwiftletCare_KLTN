@@ -1,40 +1,63 @@
 import { CloudSunIcon, DropIcon, ThermometerIcon } from '@phosphor-icons/react'
-import { Badge, Card } from '@/components/ui'
+import { Card } from '@/components/ui'
+import { WEATHER_TONE_CLASS, WeatherCredit, WeatherGlyph } from '@/components/common/CurrentWeather'
+import { describeWeather, rainfallText } from '@/components/common/currentWeather.utils'
 import { dashboardDict } from '@/constants/dashboard.i18n'
 import { NO_VALUE } from '@/constants/display'
 import { useTranslation } from '@/hooks/common/useTranslation'
 import { useOutdoorWeatherNow } from '@/hooks/farm-owner/useAnalytics'
+import { useCurrentWeather } from '@/hooks/shared/useCurrentWeather'
 import { cn } from '@/lib/cn'
+import { t as translateSentence } from '@/i18n'
 
 const HOUR_MS = 3_600_000
 
-// Nhiệt độ, độ ẩm ngoài trời của trang trại chứa Zone. Khung nét đứt, nền xám nhạt và nhãn "ngoài trời" để không lẫn với số đo cảm biến trong nhà
-export default function OutdoorWeatherCard({ zoneId }: { zoneId?: string }) {
+// Khung thời tiết ngoài trời của nhà
+export default function OutdoorWeatherCard({ zoneId, houseId }: { zoneId?: string; houseId?: string }) {
   const { t, num, hourMinute } = useTranslation(dashboardDict)
-  const { data: point, isLoading, isError } = useOutdoorWeatherNow(zoneId)
+  const current = useCurrentWeather(houseId)
+  const hourly = useOutdoorWeatherNow(zoneId)
+  const weather = current.data?.weather ?? null
+  const point = hourly.data
 
-  // Bản ghi là số liệu của [giờ đó, giờ đó + 1 giờ)
-  const period = point
+  // Có số hiện tại thì chỉ dùng số đó (số null là chưa có, không lấy số theo giờ thay), để cả khung cùng một giờ
+  const temperature = weather ? weather.temperature_c : point?.temperature
+  const humidity = weather ? weather.humidity_pct : point?.humidity
+  const isLoading = (current.isLoading || hourly.isLoading) && !weather && !point
+  const hasNumbers = (temperature !== undefined && temperature !== null) || (humidity !== undefined && humidity !== null)
+
+  // Chỉ khi cả hai nguồn đều không có số mới báo lỗi hoặc báo chưa có
+  const emptyNote = isLoading || hasNumbers || weather ? null : t(current.isError && hourly.isError ? 'outdoor.error' : 'outdoor.empty')
+  // Dùng số theo giờ: nói rõ là số của giờ nào
+  const hourlyPeriod = !weather && point
     ? t('outdoor.period', { from: hourMinute(point.timestamp), to: hourMinute(new Date(Date.parse(point.timestamp) + HOUR_MS).toISOString()) })
-    : ''
-  let note = t('outdoor.subtitle')
-  if (isError) note = t('outdoor.error')
-  else if (!isLoading && !point) note = t('outdoor.empty')
+    : null
 
   const stats = [
-    { key: 'temperature', label: t('outdoor.temperature'), value: point?.temperature, unit: '°C', digits: 1, icon: ThermometerIcon },
-    { key: 'humidity', label: t('outdoor.humidity'), value: point?.humidity, unit: '%', digits: 0, icon: DropIcon },
+    { key: 'temperature', label: t('outdoor.temperature'), value: temperature, unit: '°C', digits: 1, icon: ThermometerIcon },
+    { key: 'humidity', label: t('outdoor.humidity'), value: humidity, unit: '%', digits: 0, icon: DropIcon },
   ]
+  const sky = weather ? describeWeather(weather) : null
+  const rainfall = weather ? rainfallText(weather) : null
 
   return (
     <Card aria-label={t('outdoor.title')} className="flex flex-col gap-3 border-dashed border-warmGray/35 bg-warmGray/[0.05]">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-h3 text-charcoal">
-          <CloudSunIcon size={20} aria-hidden className="text-graphite" />
-          {t('outdoor.title')}
-        </h2>
-        {period && <Badge tone="info">{period}</Badge>}
-      </div>
+      <h2 className="flex items-center gap-2 text-h3 text-charcoal">
+        <CloudSunIcon size={20} aria-hidden className="text-graphite" />
+        {t('outdoor.title')}
+      </h2>
+
+      {sky && (
+        <div className={cn('flex items-center gap-3 rounded-2xl px-4 py-3', WEATHER_TONE_CLASS[sky.tone])}>
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/70">
+            <WeatherGlyph icon={sky.icon} size={30} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-h3 font-bold leading-tight">{translateSentence(sky.label)}</p>
+            {rainfall && <p className="text-small text-graphite">{rainfall}</p>}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {stats.map(stat => {
@@ -55,7 +78,15 @@ export default function OutdoorWeatherCard({ zoneId }: { zoneId?: string }) {
         })}
       </div>
 
-      <p className="text-small text-warmGray">{note}</p>
+      {/* Một dòng chân khung: số này ở đâu, của giờ nào, nguồn nào */}
+      {emptyNote ? (
+        <p className="text-small text-warmGray">{emptyNote}</p>
+      ) : (
+        <p className="text-small text-warmGray">
+          {hourlyPeriod && `${hourlyPeriod}. `}{t('outdoor.subtitle')}{' '}
+          <WeatherCredit observedAt={weather?.observed_at} />
+        </p>
+      )}
     </Card>
   )
 }
