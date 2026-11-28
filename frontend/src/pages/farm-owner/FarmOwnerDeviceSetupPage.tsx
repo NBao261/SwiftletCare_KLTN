@@ -10,6 +10,7 @@ import { Step5WaitOnline } from '@/components/features/farm-owner/onboarding/Ste
 import type { OnboardingState } from '@/components/features/farm-owner/onboarding/onboardingTypes'
 import { clearSetupProgress, isDeviceSetupState, loadSetupProgress, saveSetupProgress } from '@/components/features/farm-owner/onboarding/deviceSetupState'
 import { DEVICE_LIST_PATH } from '@/components/features/farm-owner/devices/devices.constants'
+import { usePageBack } from '@/hooks/common/useBreadcrumb'
 import { useAllZones } from '@/hooks/shared/useFarms'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -37,6 +38,8 @@ export default function FarmOwnerDeviceSetupPage() {
   // Thiết bị của chính người này đã đăng ký mà chưa xong (tải lại trang, hay rời đi giữa chừng): hỏi nối lại hay làm mới, không tự nối
   const [unfinished, setUnfinished] = useState(() => loadSetupProgress(userId))
   const leaveLabel = returnTo ? 'Quay lại Zone' : 'Về danh sách thiết bị'
+  // Nút quay lại ở đầu trang ở mọi bước; đang thiết lập dở thì tiến trình vẫn giữ để nối lại lần sau
+  usePageBack(returnTo ?? DEVICE_LIST_PATH, returnTo ? 'Zone' : 'Thiết bị')
 
   const patch = (partial: Partial<OnboardingState>) =>
     setData(prev => ({ ...prev, ...partial }))

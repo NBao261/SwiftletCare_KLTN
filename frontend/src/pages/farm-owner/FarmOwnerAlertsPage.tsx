@@ -10,6 +10,7 @@ import AlertDetailDrawer from '@/components/features/farm-owner/alerts/AlertDeta
 import OnsiteCheckModal from '@/components/features/farm-owner/alerts/OnsiteCheckModal';
 import AlertTable, { type AlertAction } from '@/components/features/farm-owner/alerts/AlertTable';
 import { ClearFiltersButton, LoadingSkeleton, SectionCard, SelectMenu } from '@/components/ui';
+import { DEVICE_ALERT_TYPES } from '@/constants/deviceAlertTypes';
 import { alertsDict } from '@/constants/alerts.i18n';
 import { alertTypeDict } from '@/constants/enumLabels.i18n';
 import { NO_VALUE } from '@/constants/display';
@@ -34,11 +35,6 @@ const STATUS_TABS = ['open', 'ACTIVE', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED', 
 type LevelFilter = 'all' | SeverityLevel;
 type VerdictFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
 const ALERT_TYPES = Object.keys(alertTypeDict.vi) as AlertType[];
-// "Device alert", khớp DEVICE_ALERT_TYPES của backend: Admin chỉ thấy các loại này
-const DEVICE_ALERT_TYPES: AlertType[] = [
-  'NODE_OFFLINE', 'EDGE_AI_DEGRADED', 'SENSOR_FAULT', 'RS485_BUS_FAILURE', 'UNEXPECTED_RESTART',
-  'SPEAKER_FAILURE', 'MISTING_INEFFECTIVE', 'ACTUATOR_FAULT', 'CONFIG_MISMATCH', 'MAINTENANCE_DUE',
-];
 const INFERRED_TYPES: InferredAlertType[] = ['NOISE_ANOMALY', 'SENSOR_ANOMALY', 'FORECAST_BREACH', 'LOW_RETURN_RATE'];
 const isInferred = (type: AlertType) => (INFERRED_TYPES as AlertType[]).includes(type);
 

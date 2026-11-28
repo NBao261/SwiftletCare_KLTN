@@ -16,7 +16,7 @@ export function canSetCameraSource(role: Role | undefined, device: Pick<DeviceIt
   return (role === 'FARM_OWNER' || role === 'FARM_TECHNICIAN') && device.type === 'camera'
 }
 
-// Farm Owner và Farm Technician (nhà được giao) khởi động lại bộ điều khiển; chỉ khi đang ONLINE (lệnh đi qua MQTT)
-export function canRestartController(role: Role | undefined, device: Pick<DeviceItem, 'type' | 'status'>): boolean {
-  return (role === 'FARM_OWNER' || role === 'FARM_TECHNICIAN') && device.type === 'sensor' && device.status === 'ONLINE'
+// Farm Owner và Farm Technician (nhà được giao) khởi động lại bộ điều khiển; có gửi được lúc này hay không là việc của restartBlockCode (lệnh đi qua MQTT, cần ONLINE)
+export function canRestartController(role: Role | undefined, device: Pick<DeviceItem, 'type'>): boolean {
+  return (role === 'FARM_OWNER' || role === 'FARM_TECHNICIAN') && device.type === 'sensor'
 }
