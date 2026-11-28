@@ -69,7 +69,7 @@ tags:
   - name: System
     description: SYSTEM-FR-001..003 (Module SYSTEM §5.11 — xem audit log, ngưỡng mặc định hệ thống, tổng quan sức khỏe hệ thống) — mọi endpoint chỉ ADMIN
   - name: Farms
-    description: FARM-FR-001..002/007, AUTH-FR-005/010 (farm/house/zone/member/invitation)
+    description: "FARM-FR-001..002/007, AUTH-FR-005/010 (farm/house/zone/member/invitation). PUT đổi ngưỡng, hệ số điều khiển mờ, tham số phát hiện, mức giảm tỷ lệ chim về, mức chỉ số sức khỏe hoặc lịch đếm mà giá trị giống hệt bộ đang áp dụng (kể cả reset khi đang là mặc định) trả 200 với dữ liệu hiện tại và không ghi lịch sử, không gửi lại cấu hình xuống thiết bị, không ghi nhật ký, không báo ai, không mở mục duyệt"
   - name: Devices
     description: FARM-FR-003..007, ENV-FR-006/015..018, VISION-FR-013 (sensor/camera node, relay control, token xem live stream)
   - name: Agent
