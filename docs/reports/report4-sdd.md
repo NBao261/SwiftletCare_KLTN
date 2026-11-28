@@ -8,8 +8,8 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.35 (Review 2, final scope) |
-| Date | 27/11/2026 |
+| Document version | 2.2.36 (Review 2, final scope) |
+| Date | 28/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.28 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -346,7 +346,7 @@ Farm location (FARM-FR-001): the web farm form shows an OpenStreetMap map (`leaf
 
 Device setup (SF-01): the mobile app scans the device label and the floor code with `expo-camera`, fills in the registration, guides Wi-Fi provisioning in AP mode and shows the setup progress (FARM-FR-012) from the device status and the configuration sync state (SM-12). The Administrator's stock screen prints the label right after a device is added, because the API returns the activation key (and, for flashing, the broker credential) only then; the zone screen prints floor codes. Both QR codes are generated in the client with `qrcode` from values the API already returns, so there is no QR endpoint. Formats: `swiftletcare://claim?d=<device ID>&k=<activation key>` and `swiftletcare://zone?z=<zone ID>`; the web setup screen does not scan: it takes the label's QR text pasted or the device ID and activation key typed (FARM-FR-003), and shows the same three setup steps as the mobile app (registered, online, zone configuration applied).
 
-**Farm Technician client.** The web application and the mobile application both carry every task of the Farm Technician in Report 3, Section 2.4, on its assigned houses: the dashboard, analytics, bird counts and live stream, the counting rings, alerts with acknowledgement, on-site cause and on-site checks, Work Orders with checklists and up to five photos, maintenance plans and recommendations to read, the daily rating, harvest entry, manual override and restart, the devices with the speaker schedule and lullaby tracks to read, the setup, move and removal of the devices of its houses, the zone parameters, counting schedule and weather rules to read, its duty shifts, the in-app notifications and its settings; actions the API refuses to the technician are not shown. The mobile application adds what the house needs on the spot: the camera for photos and QR codes, and push notifications. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
+**Farm Technician client.** The web application and the mobile application both carry every task of the Farm Technician in Report 3, Section 2.4, on its assigned houses: the dashboard, analytics, bird counts and live stream, the counting rings, alerts with acknowledgement, on-site cause and on-site checks, Work Orders with checklists and up to five photos, maintenance plans and recommendations to read, the daily rating, harvest entry, manual override and restart, the devices with the open alerts and Work Orders of each, the speaker schedule and lullaby tracks to read, the setup, move and removal of the devices of its houses, the zone parameters, counting schedule and weather rules to read, its duty shifts, the in-app notifications and its settings; actions the API refuses to the technician are not shown. The mobile application adds what the house needs on the spot: the camera for photos and QR codes, and push notifications. The web application adds for the Farm Owner the farm overview, the house comparison, Work Order approval, maintenance plans, recommendations, profile application and harvest cycles, and for the Domain Expert the profiles, weather compensation rules, recommendation rules and season conclusions.
 
 ### 5.5 Engineering Constants in the Code
 
@@ -1038,13 +1038,13 @@ The full contract (paths, parameters, bodies, responses, roles) is `docs/api/api
 | `/invitations` | Accept, decline |
 | `/devices` | Sensor nodes (register, move and remove, by the Farm Owner or the Farm Technician of the house for SF-01; relay override, speaker schedule, audio tracks, remote commands, history), camera nodes (register, counting ring, stream token) |
 | `/telemetry` | Latest and history |
-| `/alerts` | List, detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
+| `/alerts` | List (by farm, house, zone, device `nodeId`), detail, acknowledge, verdict, verdict statistics, evidence of an inferred alert, on-site check request and answer (EXPERT-FR-021) |
 | `/analytics` | Charts (with the farm's hourly outdoor weather on the same buckets, ANALYTICS-FR-013), comparison, control performance, forecast, coefficient suggestion, autonomy, bird counts (current, daily, trends, buckets, correlation) |
 | `/health-reports` | Daily, weekly and monthly reports per house and conclusions; disagreeing days and house levels (EXPERT-FR-022); daily health statuses of a house; rating and skipping of a day; CSV of daily indicators (with the status, whether or not the caller has rated the day, BR-31) |
 | `/expert-activity` | Expert activity history of a farm (EXPERT-FR-009), review items and coefficient proposals (EXPERT-FR-010, 011), the Farm Owner's reminders to the expert (BR-22) |
 | `/notifications` | Inbox, mark read; push-token registration and removal (ALERT-FR-002) |
 | `/harvests` | Harvest batches (entry, confirmation), harvest cycles of a zone and the season conclusion |
-| `/work-orders` | Work Orders: list per house or assignee, open, start, done with cause, photos and checklist, approve, reopen, cancel, reassign |
+| `/work-orders` | Work Orders: list per house, device `nodeId` or assignee, open, start, done with cause, photos and checklist, approve, reopen, cancel, reassign |
 | `/maintenance` | Maintenance plans and checklist templates, maintenance and calibration records, due list |
 | `/recommendations` | Recommendation rules (expert; the Farm Owner's wait inactive on a farm with an expert, BR-22), recommendations of a house, accept, reject, effect per rule |
 | `/profiles` | Configuration profiles: draft (expert or Farm Owner), approve and archive (expert), apply to houses (Farm Owner) |
@@ -1910,6 +1910,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.36 | 28/11/2026 | The device pages show the open device alerts and Work Orders of each device and what to do for its state (Report 3 4.2.36, FARM-FR-015): `GET /alerts` and `GET /work-orders` take `nodeId`; the web and mobile technician client follow |
 | 2.2.35 | 27/11/2026 | Header baseline SRS 4.2.28 (BR-36 lists the Work Orders, maintenance and recommendations kept for good); the privacy policy page of the web has a table of contents and is rewritten as version 1.2 |
 | 2.2.34 | 27/11/2026 | Maintenance: the 07:00 run also reminds each due or overdue plan once a day (Report 3 4.2.27, OPS-FR-006); a preventive Work Order needs one photo to be reported done (OPS-FR-008) |
 | 2.2.33 | 26/11/2026 | The Farm Technician sets up, moves and removes devices of the assigned houses (Report 3 4.2.26, BM03 row 21): DF-9, D14, §5.4 technician client, the `/devices` route table, device lifecycle, AD-10 and AD-11 follow |
