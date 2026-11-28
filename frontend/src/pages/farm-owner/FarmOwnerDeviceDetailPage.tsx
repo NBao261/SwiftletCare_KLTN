@@ -53,8 +53,9 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const houseZones = house ? zones : [];
   const { inventory, isLoading: isLoadingDevices, isError, refetch } = useDeviceInventory(houses, houseZones);
   const item = inventory[0];
-  // Lịch và bài loa ru chỉ Farm Owner đặt; Domain Expert chỉ đọc
+  // Lịch loa ru chỉ Farm Owner đặt; danh sách bài thì Farm Technician cũng xem được (chỉ đọc)
   const canOperateSpeaker = usePermission('FARM_OWNER');
+  const canSeeTracks = usePermission('FARM_OWNER', 'FARM_TECHNICIAN');
   // Ngưỡng của Zone chỉ sửa ở /domain-expert/tuning; popup ở đây là lịch và bài loa ru của 1 bộ điều khiển
   const openZoneTuning = useOpenZoneTuning();
   const [scheduleNodeId, setScheduleNodeId] = useState<string>();
@@ -64,7 +65,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
   const sensorNodeById = useMemo(() => new Map((sensorNodes ?? []).map(node => [node._id, node])), [sensorNodes]);
   const scheduleNode = scheduleNodeId ? sensorNodeById.get(scheduleNodeId) : undefined;
   const tracksNode = tracksNodeId ? sensorNodeById.get(tracksNodeId) : undefined;
-  // khởi động lại bộ điều khiển (Farm Owner, thiết bị ONLINE)
+  // khởi động lại bộ điều khiển (Farm Owner và Farm Technician, thiết bị ONLINE)
   const role = useAuthStore(state => state.user?.role);
   const sendCommand = useSendNodeCommand();
   const push = useToastStore(state => state.push);
@@ -129,7 +130,7 @@ export default function FarmOwnerDeviceDetailPage(): JSX.Element {
           device={device}
           zoneName={zoneName}
           onOpenSchedule={canOperateSpeaker && device.type === 'sensor' ? () => setScheduleNodeId(device.id) : undefined}
-          onOpenTracks={canOperateSpeaker && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
+          onOpenTracks={canSeeTracks && device.type === 'sensor' ? () => setTracksNodeId(device.id) : undefined}
           onRestart={canRestartController(role, device) ? () => setRestartDevice(device) : undefined}
           onOpenCameraSource={canSetCameraSource(role, device) ? () => setCameraSourceDevice(device) : undefined}
           moreActions={canManageController(role, device) ? [
