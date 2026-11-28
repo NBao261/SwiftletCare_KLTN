@@ -2,8 +2,10 @@ import { escapeHtml, renderEmail } from '@/utils/emailTemplate.util'
 
 const SPEC = {
   preheader: 'Xem trước',
+  eyebrow: 'Lời mời',
   title: 'Tiêu đề thư',
   paragraphs: ['Đoạn một.', 'Đoạn hai.'],
+  list: { title: 'Bạn sẽ', items: ['Việc một', 'Việc hai'] },
   highlight: { label: 'Mã', value: '482915' },
   details: [{ label: 'Hạn dùng', value: '23:12 28/11/2026' }],
   button: { label: 'Mở ứng dụng', url: 'https://app.swiftletcare.vn/login' },
@@ -25,22 +27,29 @@ describe('khung thư SwiftletCare', () => {
     expect(html).toContain('Trại &quot;A &amp; B&quot;')
   })
 
-  it('có đủ phần: xem trước, tiêu đề, mã, bảng chi tiết, nút kèm liên kết dán được, lưu ý và chân thư', () => {
+  it('có đủ phần: xem trước, nhãn, tiêu đề, việc làm được, mã, bảng chi tiết, nút kèm liên kết dán được, lưu ý và chân thư', () => {
     const { html } = renderEmail(SPEC)
     expect(html.startsWith('<!doctype html>')).toBe(true)
     expect(html).toContain('lang="vi"')
     expect(html).toContain('Xem trước')
+    expect(html).toContain('Lời mời')
     expect(html).toContain('Tiêu đề thư')
+    expect(html).toContain('Việc một')
+    expect(html).toContain('Việc hai')
     expect(html).toContain('482915')
     expect(html).toContain('Hạn dùng')
     expect(html.match(/href="https:\/\/app\.swiftletcare\.vn\/login"/g)).toHaveLength(2)
     expect(html).toContain('Nếu không phải bạn')
     expect(html).toContain('Thư tự động, đừng trả lời thư này.')
+    // Chân thư ghi tên miền của SwiftletCare
+    expect(html).toContain('href="https://swiftletcare.io.vn"')
+    expect(html).toContain('>swiftletcare.io.vn</a>')
   })
 
   it('bản chữ thường có cùng nội dung, mỗi giá trị một dòng "Nhãn: giá trị", không còn thẻ HTML', () => {
     const { text } = renderEmail(SPEC)
-    expect(text).toContain('Tiêu đề thư')
+    expect(text.startsWith('Tiêu đề thư\n')).toBe(true)
+    expect(text).toContain('Bạn sẽ:\n- Việc một\n- Việc hai')
     expect(text).toContain('Mã: 482915')
     expect(text).toContain('Hạn dùng: 23:12 28/11/2026')
     expect(text).toContain('Mở ứng dụng: https://app.swiftletcare.vn/login')
@@ -49,9 +58,9 @@ describe('khung thư SwiftletCare', () => {
   })
 
   it('thư không có mã, nút hay chi tiết thì không vẽ các khung đó', () => {
-    const { html, text } = renderEmail({ preheader: 'x', title: 'Chỉ báo tin', paragraphs: ['Nội dung.'] })
-    expect(html).not.toContain('bgcolor')
+    const { html, text } = renderEmail({ preheader: 'x', eyebrow: 'Tin', title: 'Chỉ báo tin', paragraphs: ['Nội dung.'] })
+    expect(html).not.toContain('bgcolor="#B5D32C"')
     expect(html).not.toContain('border-collapse')
-    expect(text).toBe('Chỉ báo tin\n\nNội dung.\n\nSwiftletCare: giám sát và điều khiển nhà yến')
+    expect(text).toBe('Chỉ báo tin\n\nNội dung.\n\nSwiftletCare, https://swiftletcare.io.vn\nGiám sát và điều khiển nhà yến')
   })
 })

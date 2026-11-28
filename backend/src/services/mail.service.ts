@@ -1,8 +1,9 @@
 import nodemailer, { type Transporter } from 'nodemailer'
 import { appPublicUrl } from '@/utils/appUrl.util'
-import { formatVnDateTime } from '@/utils/displayLabel.util'
+import { ROLE_ABILITIES, formatVnDateTime } from '@/utils/displayLabel.util'
 import { renderEmail } from '@/utils/emailTemplate.util'
 import logger from '@/utils/logger.util'
+import type { Role } from '@/types'
 
 // Chỉ thư tài khoản đi qua e-mail. Không ghi log nội dung. Chưa cấu hình SMTP thì chỉ cảnh báo
 
@@ -80,21 +81,18 @@ function accountMail(to: string, subject: string, spec: Parameters<typeof render
 }
 
 export function invitationMail(input: {
-  to: string; farmName: string; roleLabel: string; token: string; expiresAt: Date
+  to: string; farmName: string; role: Role; roleLabel: string; token: string; expiresAt: Date
 }): MailMessage {
   const link = `${appPublicUrl()}/invitations/${input.token}`
   return accountMail(input.to, `Lời mời tham gia ${input.farmName} trên SwiftletCare`, {
     preheader: `Bạn được mời vào ${input.farmName} với vai trò ${input.roleLabel}. Lời mời hết hạn ${formatVnDateTime(input.expiresAt)}.`,
+    eyebrow: 'Lời mời',
     title: `Bạn được mời tham gia ${input.farmName}`,
     paragraphs: [
-      `Bạn được mời vào trang trại "${input.farmName}" với vai trò ${input.roleLabel}.`,
-      'Bấm nút bên dưới để nhận lời mời. Chưa có tài khoản thì bạn tạo tài khoản ngay từ lời mời này.',
+      `Bạn được mời vào trang trại "${input.farmName}" với vai trò ${input.roleLabel}. Chưa có tài khoản thì bạn tạo tài khoản ngay từ lời mời này.`,
     ],
-    details: [
-      { label: 'Trang trại', value: input.farmName },
-      { label: 'Vai trò', value: input.roleLabel },
-      { label: 'Hạn lời mời', value: formatVnDateTime(input.expiresAt) },
-    ],
+    list: ROLE_ABILITIES[input.role] && { title: `Với vai trò ${input.roleLabel}, bạn sẽ`, items: ROLE_ABILITIES[input.role]! },
+    details: [{ label: 'Hạn lời mời', value: formatVnDateTime(input.expiresAt) }],
     button: { label: 'Nhận lời mời', url: link },
     notes: ['Nếu bạn không biết lời mời này, cứ bỏ qua thư. Lời mời sẽ tự hết hạn.'],
   })
@@ -103,6 +101,7 @@ export function invitationMail(input: {
 export function resetCodeMail(input: { to: string; code: string; expiresAt: Date }): MailMessage {
   return accountMail(input.to, 'Mã đặt lại mật khẩu SwiftletCare', {
     preheader: `Mã đặt lại mật khẩu của bạn là ${input.code}. Dùng được một lần, hết hạn ${formatVnDateTime(input.expiresAt)}.`,
+    eyebrow: 'Bảo mật tài khoản',
     title: 'Đặt lại mật khẩu',
     paragraphs: ['Bạn vừa yêu cầu đặt lại mật khẩu. Nhập mã bên dưới vào màn hình đặt lại mật khẩu của SwiftletCare.'],
     highlight: { label: 'Mã đặt lại mật khẩu', value: input.code },
@@ -120,13 +119,14 @@ export function resetCodeMail(input: { to: string; code: string; expiresAt: Date
 export function temporaryPasswordMail(input: { to: string; fullName: string; temporaryPassword: string }): MailMessage {
   return accountMail(input.to, 'Tài khoản SwiftletCare của bạn', {
     preheader: 'Tài khoản chủ nhà yến của bạn đã được tạo. Đăng nhập và đổi mật khẩu tạm ở lần đầu.',
+    eyebrow: 'Tài khoản mới',
     title: `Chào ${input.fullName}, tài khoản của bạn đã sẵn sàng`,
     paragraphs: [
       'Tài khoản chủ nhà yến của bạn trên SwiftletCare đã được tạo.',
       `Đăng nhập bằng email ${input.to} và mật khẩu tạm bên dưới.`,
     ],
     highlight: { label: 'Mật khẩu tạm', value: input.temporaryPassword },
-    button: { label: 'Đăng nhập', url: `${appPublicUrl()}/login` },
+    button: { label: 'Đăng nhập SwiftletCare', url: `${appPublicUrl()}/login` },
     notes: [
       'Ở lần đăng nhập đầu, bạn phải đổi mật khẩu tạm này trước khi dùng được các chức năng khác.',
       'Không chia sẻ mật khẩu này cho ai. Nên xoá thư sau khi đã đổi mật khẩu.',
