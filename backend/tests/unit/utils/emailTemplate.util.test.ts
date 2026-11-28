@@ -8,7 +8,7 @@ const SPEC = {
   list: { title: 'Bạn sẽ', items: ['Việc một', 'Việc hai'] },
   highlight: { label: 'Mã', value: '482915' },
   details: [{ label: 'Hạn dùng', value: '23:12 28/11/2026' }],
-  button: { label: 'Mở ứng dụng', url: 'https://app.swiftletcare.vn/login' },
+  button: { label: 'Mở ứng dụng', url: 'https://app.swiftletcare.io.vn/login' },
   notes: ['Nếu không phải bạn, hãy bỏ qua thư này.'],
 }
 
@@ -38,7 +38,7 @@ describe('khung thư SwiftletCare', () => {
     expect(html).toContain('Việc hai')
     expect(html).toContain('482915')
     expect(html).toContain('Hạn dùng')
-    expect(html.match(/href="https:\/\/app\.swiftletcare\.vn\/login"/g)).toHaveLength(2)
+    expect(html.match(/href="https:\/\/app\.swiftletcare\.io\.vn\/login"/g)).toHaveLength(2)
     expect(html).toContain('Nếu không phải bạn')
     expect(html).toContain('Thư tự động, đừng trả lời thư này.')
     // Chân thư ghi tên miền của SwiftletCare
@@ -52,7 +52,7 @@ describe('khung thư SwiftletCare', () => {
     expect(text).toContain('Bạn sẽ:\n- Việc một\n- Việc hai')
     expect(text).toContain('Mã: 482915')
     expect(text).toContain('Hạn dùng: 23:12 28/11/2026')
-    expect(text).toContain('Mở ứng dụng: https://app.swiftletcare.vn/login')
+    expect(text).toContain('Mở ứng dụng: https://app.swiftletcare.io.vn/login')
     expect(text).toContain('Nếu không phải bạn, hãy bỏ qua thư này.')
     expect(text).not.toMatch(/<[a-z/]/)
   })

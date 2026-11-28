@@ -202,7 +202,7 @@ describe('gửi cảnh báo qua Telegram', () => {
   })
 
   it('tin cảnh báo ghi tên trang trại, nhà, Zone và mã thiết bị của cảnh báo; nút mở cảnh báo khi địa chỉ ứng dụng công khai', async () => {
-    process.env.APP_PUBLIC_URL = 'https://app.swiftletcare.vn'
+    process.env.APP_PUBLIC_URL = 'https://app.swiftletcare.io.vn'
     const owner = await mkUser({ telegram_chat_id: '100', notification_preferences: { push: false, telegram: true } })
     const farm = await Farm.create({ name: 'Trại yến Demo', address: 'x', owner_id: owner._id, members: [{ user_id: owner._id, is_primary: true }] })
     const house = await House.create({ farm_id: farm._id, name: 'A · Nhà điều khiển' })
@@ -219,13 +219,13 @@ describe('gửi cảnh báo qua Telegram', () => {
     expect(message.text).toContain('<b>Nhà yến:</b> A · Nhà điều khiển')
     expect(message.text).toContain('<b>Vị trí:</b> A · Tầng 1')
     expect(message.text).toContain('<b>Thiết bị:</b> demo-ctl-a1')
-    expect(message.reply_markup?.inline_keyboard[0][0]).toEqual({ text: 'Mở cảnh báo', url: `https://app.swiftletcare.vn/alerts?highlight=${alert._id}` })
+    expect(message.reply_markup?.inline_keyboard[0][0]).toEqual({ text: 'Mở cảnh báo', url: `https://app.swiftletcare.io.vn/alerts?highlight=${alert._id}` })
   })
 
   it('Telegram từ chối nút thì gửi lại đúng tin đó không nút; không có nút thì không gửi lại', async () => {
     const reject = { ok: false, status: 400, json: async () => ({ ok: false, description: 'Bad Request: wrong HTTP URL' }) }
     fetchMock.mockResolvedValueOnce(reject)
-    const message = { text: '<b>x</b>', button: { label: 'Mở', url: 'https://app.swiftletcare.vn/alerts' } }
+    const message = { text: '<b>x</b>', button: { label: 'Mở', url: 'https://app.swiftletcare.io.vn/alerts' } }
     expect(await sendTelegram('1', message)).toBe(true)
     const [first, second] = sent() as Array<Record<string, unknown>>
     expect(first).toHaveProperty('reply_markup')

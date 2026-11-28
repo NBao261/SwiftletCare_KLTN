@@ -47,9 +47,9 @@ describe('tin cảnh báo Telegram', () => {
   })
 
   it('nút "Mở cảnh báo" chỉ có khi địa chỉ ứng dụng là HTTPS công khai', () => {
-    process.env.APP_PUBLIC_URL = 'https://app.swiftletcare.vn'
-    expect(alertTelegram(BASE).button).toEqual({ label: 'Mở cảnh báo', url: 'https://app.swiftletcare.vn/alerts?highlight=abc123' })
-    for (const local of ['http://localhost:5173', 'https://localhost', 'http://app.swiftletcare.vn', 'https://192.168.1.10', 'https://intranet']) {
+    process.env.APP_PUBLIC_URL = 'https://app.swiftletcare.io.vn'
+    expect(alertTelegram(BASE).button).toEqual({ label: 'Mở cảnh báo', url: 'https://app.swiftletcare.io.vn/alerts?highlight=abc123' })
+    for (const local of ['http://localhost:5173', 'https://localhost', 'http://app.swiftletcare.io.vn', 'https://192.168.1.10', 'https://intranet']) {
       process.env.APP_PUBLIC_URL = local
       expect(alertTelegram(BASE).button).toBeUndefined()
       expect(telegramButtonUrl('/alerts')).toBeUndefined()
@@ -59,13 +59,13 @@ describe('tin cảnh báo Telegram', () => {
 
 describe('tin thông báo nghiệp vụ Telegram', () => {
   it('tiêu đề đậm, nội dung bên dưới, nút mở đúng trang của loại thông báo', () => {
-    process.env.APP_PUBLIC_URL = 'https://app.swiftletcare.vn'
+    process.env.APP_PUBLIC_URL = 'https://app.swiftletcare.io.vn'
     const workOrder = noticeTelegram({ title: 'Phiếu mới', body: 'Nhà A', ref: { kind: 'work_order', id: 'w1' } })
     expect(workOrder.text).toBe('<b>Phiếu mới</b>\nNhà A')
-    expect(workOrder.button?.url).toBe('https://app.swiftletcare.vn/work-orders')
-    expect(noticeTelegram({ title: 'x', body: 'y', ref: { kind: 'alert', id: 'a9' } }).button?.url).toBe('https://app.swiftletcare.vn/alerts?highlight=a9')
-    expect(noticeTelegram({ title: 'x', body: 'y' }).button?.url).toBe('https://app.swiftletcare.vn/notifications')
-    expect(noticeTelegram({ title: 'x', body: 'y', ref: { kind: 'health_report', id: 'h1' } }).button?.url).toBe('https://app.swiftletcare.vn/notifications')
+    expect(workOrder.button?.url).toBe('https://app.swiftletcare.io.vn/work-orders')
+    expect(noticeTelegram({ title: 'x', body: 'y', ref: { kind: 'alert', id: 'a9' } }).button?.url).toBe('https://app.swiftletcare.io.vn/alerts?highlight=a9')
+    expect(noticeTelegram({ title: 'x', body: 'y' }).button?.url).toBe('https://app.swiftletcare.io.vn/notifications')
+    expect(noticeTelegram({ title: 'x', body: 'y', ref: { kind: 'health_report', id: 'h1' } }).button?.url).toBe('https://app.swiftletcare.io.vn/notifications')
   })
 })
 
