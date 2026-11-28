@@ -136,14 +136,14 @@ export default function LiveCameraCard({ houseId, houseName, expanded = false, o
       </div>
 
       {params.length > 0 && (
-      <dl className={cn('grid grid-cols-2 gap-x-4 gap-y-2.5', !compact && 'sm:grid-cols-4')}>
-        {params.map(param => (
-          <div key={param.label} className="min-w-0">
-            <dt className="truncate text-xs text-warmGray">{param.label}</dt>
-            <dd className={cn('truncate text-sm font-semibold', param.value === NO_VALUE ? 'text-warmGray' : 'text-charcoal')}>{param.value}</dd>
-          </div>
-        ))}
-      </dl>
+        <dl className={cn('grid grid-cols-2 gap-x-4 gap-y-2.5', !compact && 'sm:grid-cols-4')}>
+          {params.map(param => (
+            <div key={param.label} className="min-w-0">
+              <dt className="truncate text-xs text-warmGray">{param.label}</dt>
+              <dd className={cn('truncate text-sm font-semibold', param.value === NO_VALUE ? 'text-warmGray' : 'text-charcoal')}>{param.value}</dd>
+            </div>
+          ))}
+        </dl>
       )}
       {isPlaying && !compact && <p className="text-xs text-warmGray">{t('camera.boxesHint')}</p>}
     </Card>
