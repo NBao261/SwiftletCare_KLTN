@@ -23,7 +23,7 @@ describe('User Model', () => {
   describe('comparePassword()', () => {
     it('returns true for the correct password', async () => {
       const user = new User({
-        email:         'test@swiftletcare.vn',
+        email:         'test@swiftletcare.io.vn',
         password_hash: 'password123',
         full_name:     'Test User',
       })
@@ -36,7 +36,7 @@ describe('User Model', () => {
 
     it('returns false for a wrong password', async () => {
       const user = new User({
-        email:         'test2@swiftletcare.vn',
+        email:         'test2@swiftletcare.io.vn',
         password_hash: 'password123',
         full_name:     'Test User',
       })
@@ -50,7 +50,7 @@ describe('User Model', () => {
   describe('toJSON()', () => {
     it('strips password_hash and refresh_tokens from output', () => {
       const user = new User({
-        email:         'test3@swiftletcare.vn',
+        email:         'test3@swiftletcare.io.vn',
         password_hash: 'password123',
         full_name:     'Test User',
       })
@@ -63,7 +63,7 @@ describe('User Model', () => {
 
     it('keeps non-sensitive fields in output', () => {
       const user = new User({
-        email:         'test4@swiftletcare.vn',
+        email:         'test4@swiftletcare.io.vn',
         password_hash: 'password123',
         full_name:     'Full Name',
         role:          'FARM_OWNER',
@@ -71,7 +71,7 @@ describe('User Model', () => {
 
       const json = user.toJSON() as Record<string, unknown>
 
-      expect(json.email).toBe('test4@swiftletcare.vn')
+      expect(json.email).toBe('test4@swiftletcare.io.vn')
       expect(json.full_name).toBe('Full Name')
       expect(json.role).toBe('FARM_OWNER')
     })

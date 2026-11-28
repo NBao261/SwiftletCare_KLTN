@@ -231,9 +231,9 @@ describe('đợt cập nhật firmware từ xa (FARM-FR-013b)', () => {
     await create(token, { image_id: image._id, node_ids: [String(a._id)] }).expect(409)
 
     await SensorNode.updateOne({ _id: a._id }, { status: 'ONLINE' })
-    process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.vn'
+    process.env.OTA_ALLOWED_HOSTS = 'fw.swiftletcare.io.vn'
     await request(app).post(`/devices/sensor-nodes/${a._id}/commands`).set('Authorization', `Bearer ${token}`)
-      .send({ command: 'OTA', ota: { version: '2.6.0', url: 'https://fw.swiftletcare.vn/a.bin', sha256: 'a'.repeat(64) } }).expect(409)
+      .send({ command: 'OTA', ota: { version: '2.6.0', url: 'https://fw.swiftletcare.io.vn/a.bin', sha256: 'a'.repeat(64) } }).expect(409)
     delete process.env.OTA_ALLOWED_HOSTS
 
     delete process.env.OTA_DOWNLOAD_BASE_URL

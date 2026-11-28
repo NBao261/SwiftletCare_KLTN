@@ -4388,7 +4388,7 @@ paths:
                   description: "Bắt buộc khi command=OTA"
                   properties:
                     version: { type: string, pattern: "^\\d+\\.\\d+\\.\\d+$", example: "1.4.1", description: "Không có tiền tố \"v\" — phải khớp đúng FIRMWARE_VERSION thiết bị báo về" }
-                    url: { type: string, example: "https://fw.swiftletcare.vn/esp32-1.4.1.bin" }
+                    url: { type: string, example: "https://fw.swiftletcare.io.vn/esp32-1.4.1.bin" }
                     sha256: { type: string, example: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
       responses:
         "202":
