@@ -107,7 +107,7 @@ Chuyên gia: trang ở chế độ chỉ đọc đã có chữ "chỉ xem" (DE-1
 Giữ cửa sổ thay hiện tại (FARM-FR-008): quét hoặc dán nhãn thiết bị mới, thiết bị cũ chuyển `DECOMMISSIONED` giữ lịch sử, thiết bị mới nhận cấu hình của Zone. Thêm hai điều:
 
 - Sau khi thay, thẻ thiết bị mới hiện dải "Đang chờ kết nối lần đầu" với đếm ngược 15 phút (BR-27); quá thì báo theo FARM-FR-012 (đã có thông báo cho người đăng ký).
-- Nếu thiết bị cũ có phiếu việc `NODE_OFFLINE` đang mở, ghi vào phiếu một dòng "đã thay máy" để chủ nhà thấy lý do phiếu tự đóng khi máy mới online (BR-41). Việc ghi dòng này cần backend (§8).
+- Nếu thiết bị cũ có phiếu việc `NODE_OFFLINE` đang mở, ghi vào phiếu một dòng "đã thay máy" để chủ nhà thấy lý do. Thay máy đóng cảnh báo của máy cũ nên phiếu `OPEN` chưa ai bắt đầu tự đóng `SELF_RECOVERED` sau 10 phút, còn phiếu `IN_PROGRESS` chờ kỹ thuật viên báo xong rồi qua kiểm phục hồi (luồng sẵn có, không đổi). Dòng ghi chú do backend ghi (§8, đã làm ở #296).
 
 ## 6. Việc cần làm theo tình trạng thiết bị
 
@@ -142,11 +142,11 @@ Chỉ hai bộ lọc và một dòng ghi chú, không model mới:
 
 | Việc | Chi tiết |
 | --- | --- |
-| `GET /alerts?nodeId=` | Lọc cảnh báo theo thiết bị (`node_id` đã có và đã có index). Kiểm quyền như `zoneId`: nhà ngoài phạm vi → 403 |
+| `GET /alerts?nodeId=` | Lọc cảnh báo theo thiết bị (`node_id` đã có; truy vấn luôn kèm phạm vi nhà nên chưa cần index riêng). Kiểm quyền như `houseId`: nhà của thiết bị ngoài phạm vi → 403, thiết bị không có → 404 |
 | `GET /work-orders?nodeId=` | Tương tự cho phiếu việc (`node_id` đã có) |
 | Ghi chú thay thiết bị | Khi thay thiết bị có phiếu `NODE_OFFLINE` đang mở, thêm một dòng vào lịch sử phiếu: thiết bị đã được thay bởi ai, lúc nào. Không đổi trạng thái phiếu; phiếu vẫn chỉ đóng theo BR-41 |
 | `docs/api/api-spec.yaml` | Thêm hai tham số trên |
-| Test tích hợp | `nodeId` đúng nhà, `nodeId` sai nhà (403), kỹ thuật viên chưa được giao nhà (403), `nodeId` không tồn tại (rỗng) |
+| Test tích hợp | `nodeId` đúng nhà, `nodeId` sai nhà (403), kỹ thuật viên chưa được giao nhà (403), `nodeId` không tồn tại (404), `nodeId` sai dạng (422), thiết bị đã gỡ vẫn xem được |
 
 Số cảnh báo mở của từng thiết bị cho danh sách (tab "Cần xử lý") lấy từ một lần gọi `GET /alerts?open=true&houseId=` rồi gom theo `node_id` ở web (một lần duyệt), **không** gọi theo từng thiết bị.
 
@@ -155,7 +155,7 @@ Số cảnh báo mở của từng thiết bị cho danh sách (tab "Cần xử 
 | PR | Việc | Nơi sửa | Người |
 | --- | --- | --- | --- |
 | D-1 | Tài liệu: Report 3 thêm Kỹ thuật viên vào FARM-FR-005 và FARM-FR-006 (hiện chỉ Farm Owner, Domain Expert / Farm Owner, Administrator), thêm yêu cầu "cảnh báo và phiếu việc đang mở của thiết bị" (FARM-FR-015 mới), nhắc BR-27 và BR-10 trong tiêu chí; Report 4 cập nhật mô tả trang; `report5/tc.py` thêm ca (TC thiết bị vai kỹ thuật viên); dòng mới ở `project-tracking.md` §6 (G-36) | `docs/reports/` | Bảo |
-| B-1 | `GET /alerts?nodeId=`, `GET /work-orders?nodeId=`, ghi chú khi thay thiết bị; spec; test | `backend/` | Bảo hoặc Kiệt (chỉ hai người này sửa backend) |
+| B-1 | `GET /alerts?nodeId=`, `GET /work-orders?nodeId=`, ghi chú khi thay thiết bị; spec; test. **Xong: PR #296** | `backend/` | Bảo |
 | W-1 | Web: tab "Cần xử lý", khối "Việc đang mở", dải trạng thái §6, `reset_reason`, nút khởi động lại khoá kèm lý do; test thuần cho hàm "cần xử lý" và "việc cần làm"; e2e T4 cập nhật | `frontend/` (Nhi duyệt `farm-owner/`) | Bảo |
 | M-1 | Mobile: cùng tab, khối và câu §6 | `mobile/` | Len |
 | X-1 | Xoá dòng G-36 khỏi §6 khi xong; cập nhật `CLAUDE.md` các module | docs | Bảo |
@@ -170,7 +170,7 @@ Với dữ liệu demo (nhà A có kỹ thuật viên, nhà B không):
 2. Mở chi tiết một bộ điều khiển `OFFLINE`: thấy dải "Mất kết nối …", cảnh báo `NODE_OFFLINE` mở và phiếu việc (nếu đã quá 30 phút); không có nút khởi động lại; có lý do.
 3. Thiết bị online: bấm khởi động lại → thông báo gửi lệnh; Chủ nhà yến nhận thông báo "kỹ thuật viên đã thao tác" như hiện nay.
 4. Camera `AUTH_FAILED`: thẻ nói sai mật khẩu, "Cài đặt camera" mở; lưu xong, khi nút AI báo `OK` thì dải biến mất.
-5. Thay một bộ điều khiển có phiếu `NODE_OFFLINE` mở: phiếu có dòng "đã thay máy"; máy mới online thì phiếu theo BR-41 sang `VERIFYING` rồi chờ chủ duyệt.
+5. Thay một bộ điều khiển có phiếu `NODE_OFFLINE` mở: phiếu có dòng "đã thay máy"; phiếu chưa ai bắt đầu tự đóng sau 10 phút, phiếu đang làm thì kỹ thuật viên báo xong và qua kiểm phục hồi như thường.
 6. Chủ nhà yến mở cùng trang: thấy cùng dải và khối, có thêm lịch loa ru, thiết lập, mã QR tầng; mở đúng nhà của mình.
 7. Chuyên gia: chỉ xem, không nút thao tác.
 8. `npm run lint`, `tsc --noEmit`, `vitest run`, `build` qua; backend `npm test` qua; e2e T4 qua trên CI.
