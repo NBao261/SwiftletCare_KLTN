@@ -58,7 +58,7 @@ const vi = {
 
   'env.title': 'Số đo trong nhà',
   'outdoor.title': 'Thời tiết ngoài trời',
-  'outdoor.subtitle': 'Theo giờ, tại toạ độ trang trại. Không phải số đo của cảm biến trong nhà.',
+  'outdoor.subtitle': 'Tại toạ độ trang trại, không phải số đo của cảm biến trong nhà.',
   'outdoor.period': 'Giờ {from}–{to}',
   'outdoor.temperature': 'Nhiệt độ ngoài trời',
   'outdoor.humidity': 'Độ ẩm ngoài trời',
@@ -193,7 +193,7 @@ const en: Record<DashboardKey, string> = {
 
   'env.title': 'Indoor readings',
   'outdoor.title': 'Outdoor weather',
-  'outdoor.subtitle': 'Hourly, at the farm coordinates. Not a reading from the sensors inside the house.',
+  'outdoor.subtitle': 'At the farm coordinates, not a reading from the sensors inside the house.',
   'outdoor.period': 'Hour {from}–{to}',
   'outdoor.temperature': 'Outdoor temperature',
   'outdoor.humidity': 'Outdoor humidity',
