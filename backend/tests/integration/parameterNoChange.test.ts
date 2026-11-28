@@ -118,6 +118,22 @@ describe('không đổi gì thì không ghi, không gửi thiết bị, không b
     expect((await Zone.findById(zone._id).lean())!.thresholds.humidity_min).toBe(75)
   })
 
+  it('chuyên gia lưu lại đúng giá trị Farm Owner vừa đổi: không ghi thêm, mục duyệt vẫn chờ (chuyên gia dùng nút giữ thay đổi để chốt)', async () => {
+    const { owner, expert, zone, put } = await seed()
+    await put(`/farms/zones/${zone._id}/thresholds`, 'owner', { humidity_min: 78 }).expect(200)
+    const before = await sideEffects(owner._id, expert._id)
+    await put(`/farms/zones/${zone._id}/thresholds`, 'expert', { humidity_min: 78 }).expect(200)
+    expect(await sideEffects(owner._id, expert._id)).toEqual(before)
+    expect((await ParameterReview.findOne().lean())!.status).toBe('PENDING_REVIEW')
+  })
+
+  it('Farm Owner đổi rồi đổi lại đúng giá trị cũ: hai lần đổi thật, mỗi lần để lại dấu vết', async () => {
+    const { owner, expert, zone, put } = await seed()
+    await put(`/farms/zones/${zone._id}/thresholds`, 'owner', { humidity_min: 78 }).expect(200)
+    await put(`/farms/zones/${zone._id}/thresholds`, 'owner', { humidity_min: 75 }).expect(200)
+    expect((await sideEffects(owner._id, expert._id)).audits).toBe(2)
+  })
+
   it('hệ số mờ: lưu lại đúng hệ số đang áp dụng', async () => {
     const { owner, expert, zone, put } = await seed()
     const current = (await Zone.findById(zone._id).lean())!.fuzzy_tuning
