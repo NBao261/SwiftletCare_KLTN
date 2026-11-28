@@ -8,8 +8,8 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 4.2.36 (Review 2, final scope) |
-| Date | 28/11/2026 |
+| Document version | 4.2.37 (Review 2, final scope) |
+| Date | 29/11/2026 |
 | Scope baseline | Registration form – final version v3 with Record of Changes (BM03 1.3), `docs/reports/registration-v3.md` |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -1016,15 +1016,16 @@ The state is derived from the day's stored ratings and its date; it is not a sep
 | From | To | Trigger | FR |
 | --- | --- | --- | --- |
 | (new) | `OPEN` | An alert that needs a visit (BR-39), a confirmed inferred alert, a due maintenance plan, an accepted recommendation, a checklist defect, or the Farm Owner by hand; assigned to the house's technician | OPS-FR-001, 006, 007, EXPERT-FR-018 |
-| `OPEN` | `IN_PROGRESS` | The Farm Technician starts it | OPS-FR-002 |
-| `OPEN` | `CLOSED` | Its alert recovers and stays recovered for `recovery_verify_min` before the work starts; result "self-recovered" | OPS-FR-003 |
-| `IN_PROGRESS` | `VERIFYING` | The technician marks it done with the work, cause and photos | OPS-FR-002, ALERT-FR-018 |
-| `VERIFYING` | `AWAITING_APPROVAL` | The condition stays recovered for `recovery_verify_min`, or no data can show the recovery and the Work Order is marked as not verified (BR-41) | OPS-FR-003 |
+| `OPEN` | `IN_PROGRESS` | The Farm Technician starts it; a technician who is not its assignee, or one who starts a Work Order assigned to no one, becomes the assignee and the previous assignee is notified | OPS-FR-002 |
+| `OPEN` | `CLOSED` | Its alert recovers and stays recovered for `recovery_verify_min` before the work starts; result "self-recovered". Not when its device was removed, replaced or moved while it was open: the alert was closed by that, not by the data | OPS-FR-003, FARM-FR-007b, 008 |
+| `IN_PROGRESS` | `VERIFYING` | The technician marks it done with the work, cause and photos; a technician who is not its assignee becomes the assignee | OPS-FR-002, ALERT-FR-018 |
+| `VERIFYING` | `AWAITING_APPROVAL` | The condition stays recovered for `recovery_verify_min`, or no data can show the recovery (also when its device was removed, replaced or moved) and the Work Order is marked as not verified (BR-41) | OPS-FR-003 |
 | `VERIFYING` | `IN_PROGRESS` | The condition comes back during verification; the technician is notified | OPS-FR-003 |
 | `AWAITING_APPROVAL` | `CLOSED` | The Farm Owner approves; its alert is resolved; MTTR recorded | OPS-FR-004, 009 |
 | `AWAITING_APPROVAL` | `IN_PROGRESS` | The Farm Owner reopens it with a note | OPS-FR-004 |
 | `AWAITING_APPROVAL` | `IN_PROGRESS` | The incident comes back before approval; the technician and the Farm Owners are notified | OPS-FR-003 |
 | `OPEN`, `IN_PROGRESS`, `VERIFYING` | `CANCELLED` | The Farm Owner cancels it with a reason (from `VERIFYING` when the condition cannot recover in a way the system measures); a preventive Work Order is not cancelled on its own: retiring its plan cancels it (Section 6.20) | OPS-FR-004, 005 |
+| `OPEN`, `IN_PROGRESS`, `VERIFYING` | `CANCELLED` | The inferred alert whose "needs a visit" verdict opened it is rejected (by the Domain Expert, or the Farm Owner on a farm without one); the holder is notified. A Work Order of that alert opened otherwise (on-site check, by hand) or awaiting approval stays open with the rejection in its history, and its holder and the Farm Owners are notified | EXPERT-FR-003, OPS-FR-001 |
 | `OPEN`, `IN_PROGRESS`, `VERIFYING`, `AWAITING_APPROVAL` | `CANCELLED` | Its house or zone is deleted: there is no place left to work, verify or approve; the assignee is notified | FARM-FR-002 |
 | `OPEN` | same | Not started within `escalation_min` of its assignment: escalated to the Farm Owners once (BR-40) | OPS-FR-004, 006 |
 | `OPEN`, `IN_PROGRESS` | same | Reassigned by the Farm Owner; a technician removed from the house or the farm leaves it to the Farm Owners (AUTH-FR-005) | OPS-FR-004, AUTH-FR-005 |
@@ -1189,6 +1190,7 @@ Report 5 maps the committed items of the Design Brief to test cases: the mandato
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4.2.37 | 29/11/2026 | Section 6.19: a Work Order whose device is removed, replaced or moved while open no longer closes as self-recovered and is verified on site; rejecting an inferred alert cancels the Work Order its "needs a visit" verdict opened; a technician who starts or completes another's or an unassigned Work Order becomes its assignee (PR #301) |
 | 4.2.36 | 28/11/2026 | FARM-FR-005, 006: the Farm Technician of the assigned houses is an actor, as the permission row of Section 2.4 already says; FARM-FR-015 (new): each device shows its open device alerts and Work Orders and what to do for its state, and a restart that cannot be sent says why instead of disappearing; SF-02 and the registration traceability follow (plan `docs/reports/todo-device-pages-by-role-1128.md`, gap G-36) |
 | 4.2.34 | 28/11/2026 | VISION-FR-014: the counting rings are no longer drawn on the published stream, only the boxes with track IDs and the day's total; the rings keep counting and can be shown on the local preview |
 | 4.2.33 | 28/11/2026 | EXPERT-FR-009, 010: a save that changes no value (a reset while the values are the defaults, a save of the same values) is not recorded, sent, notified or reviewed |

@@ -8,8 +8,8 @@
 | Course | SEP490 – Capstone Project, FA26 |
 | Team | Nguyễn Chí Bảo (Leader), Trần Minh Kiệt, Nguyễn Vũ Len, Nguyễn Thị Yến Nhi, Thái Minh Tuấn |
 | Supervisor | Nguyễn Văn Chiến, Trương Long |
-| Document version | 2.2.36 (Review 2, final scope) |
-| Date | 28/11/2026 |
+| Document version | 2.2.37 (Review 2, final scope) |
+| Date | 29/11/2026 |
 | Requirements baseline | Report 3 – SRS 4.2.28 (`docs/reports/report3-srs.md`) |
 | Repository | `https://github.com/NBao261/SwiftletCare_KLTN/tree/review-2` |
 
@@ -791,6 +791,7 @@ erDiagram
     date verified_at
     date closed_at
     date escalated_at
+    object device_left "kind REMOVED | REPLACED | MOVED, at"
   }
   MAINTENANCE_PLAN {
     ObjectId _id PK
@@ -1319,16 +1320,19 @@ The rating state is derived per assessor from `househealthdays.ratings` and the 
 ```mermaid
 stateDiagram-v2
   [*] --> OPEN : alert of BR-39, confirmed inferred alert, due plan, accepted recommendation, or owner (OPS-FR-001)
-  OPEN --> IN_PROGRESS : technician starts (OPS-FR-002)
-  OPEN --> CLOSED : alert recovered for 10 min before the work starts, self-recovered (OPS-FR-003)
+  OPEN --> IN_PROGRESS : technician starts, becomes the assignee (OPS-FR-002)
+  OPEN --> CLOSED : alert recovered for 10 min before the work starts, self-recovered, unless device_left (OPS-FR-003)
   IN_PROGRESS --> VERIFYING : technician done, cause and photos (OPS-FR-002, ALERT-FR-018)
-  VERIFYING --> AWAITING_APPROVAL : recovered for recovery_verify_min, or no data shows it, marked not verified (BR-41)
+  VERIFYING --> AWAITING_APPROVAL : recovered for recovery_verify_min, or no data shows it or device_left, marked not verified (BR-41)
   VERIFYING --> IN_PROGRESS : condition comes back (OPS-FR-003)
   AWAITING_APPROVAL --> CLOSED : owner approves, alert resolved (OPS-FR-004, 009)
   AWAITING_APPROVAL --> IN_PROGRESS : owner reopens, or the incident comes back (OPS-FR-003, 004)
   OPEN --> CANCELLED : owner cancels with reason (OPS-FR-004)
   IN_PROGRESS --> CANCELLED : owner cancels with reason (OPS-FR-004)
   VERIFYING --> CANCELLED : owner cancels with reason (OPS-FR-004)
+  OPEN --> CANCELLED : alert of its needs-visit verdict rejected (EXPERT-FR-003)
+  IN_PROGRESS --> CANCELLED : alert of its needs-visit verdict rejected (EXPERT-FR-003)
+  VERIFYING --> CANCELLED : alert of its needs-visit verdict rejected (EXPERT-FR-003)
   OPEN --> OPEN : not started within escalation_min of its assignment, escalated (OPS-FR-004, 006, BR-40)
   CLOSED --> [*]
   CANCELLED --> [*]
@@ -1910,6 +1914,7 @@ The staging files are `deploy/docker-compose.staging.yml`, the Dockerfiles of th
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2.2.37 | 29/11/2026 | Section 8.19 and the WORK_ORDER entity follow Report 3 4.2.37: `device_left` set when the device of an open repair Work Order is removed, replaced or moved; cancellation when the alert of a needs-visit verdict is rejected; the technician who works a Work Order becomes its assignee |
 | 2.2.36 | 28/11/2026 | The device pages show the open device alerts and Work Orders of each device and what to do for its state (Report 3 4.2.36, FARM-FR-015): `GET /alerts` and `GET /work-orders` take `nodeId`; the web and mobile technician client follow |
 | 2.2.35 | 27/11/2026 | Header baseline SRS 4.2.28 (BR-36 lists the Work Orders, maintenance and recommendations kept for good); the privacy policy page of the web has a table of contents and is rewritten as version 1.2 |
 | 2.2.34 | 27/11/2026 | Maintenance: the 07:00 run also reminds each due or overdue plan once a day (Report 3 4.2.27, OPS-FR-006); a preventive Work Order needs one photo to be reported done (OPS-FR-008) |
