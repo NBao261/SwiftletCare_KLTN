@@ -1,6 +1,6 @@
 # Spec trang Thiết bị theo công việc thực tế của từng vai (28/11/2026)
 
-Bản nháp để nhóm duyệt. Chưa sửa Report 3, Report 4 hay code; mọi thay đổi nằm ở §9 theo thứ tự "tài liệu trước, code sau" như G-34. Mã yêu cầu lấy từ Report 3 (4.2.35).
+Bản nháp để nhóm duyệt. Report 3 4.2.36 và Report 4 2.2.36 đã sửa ở bước D-1 của chính PR này (§9, "tài liệu trước, code sau" như G-34); code làm ở B-1 (#296) và W-1 (#297), đang review, và M-1 (Len) chưa làm. Mã yêu cầu lấy từ Report 3 (4.2.36).
 
 ## 1. Vì sao có spec này
 
@@ -41,7 +41,7 @@ Công việc đến theo hai kiểu, cả hai đều bắt đầu từ **cảnh 
 
 ## 3. Hiện trạng và khoảng trống
 
-Sau `79c54d96` (đã commit, chưa push):
+Sau `79c54d96` (có trong #294):
 
 | Có | Thiếu so với §2 |
 | --- | --- |
@@ -49,7 +49,7 @@ Sau `79c54d96` (đã commit, chưa push):
 | Trang chi tiết nhà: thẻ thiết bị với trạng thái, heartbeat, mạng, thời gian chạy, bộ nhớ | **Không thấy cảnh báo mở của thiết bị** và **không thấy phiếu việc của nó**: thiết bị và cảnh báo là hai thế giới tách nhau |
 | Nút Khởi động lại khi thiết bị online | Thiết bị **mất kết nối** thì nút biến mất, không giải thích; hàm `restartBlockReason` còn đó nhưng không còn dùng |
 | Thẻ camera có trạng thái và nút "Cài đặt camera" | Gợi ý sửa lỗi chỉ nằm trong cửa sổ cài đặt, không nằm trên thẻ |
-| Lý do khởi động lại gần nhất (`reset_reason`) có ở model | Trang riêng cũ của kỹ thuật viên có hiện, thẻ của Chủ nhà yến chưa từng có; commit `79c54d96` xoá cùng trang cũ. **Đã khôi phục trên thẻ chung ở #294 (commit `8878f9fc`)**, bước W-1 không phải làm lại (D5) |
+| Lý do khởi động lại gần nhất (`reset_reason`) có ở model | Trang riêng cũ của kỹ thuật viên có hiện, thẻ của Chủ nhà yến chưa từng có; commit `79c54d96` xoá cùng trang cũ. **Khôi phục trên thẻ chung ở #294 (commit `8878f9fc`, đang review)**, bước W-1 không phải làm lại (D5) |
 | Dời, thay, gỡ trong menu "Thao tác khác" | Đúng quyền, nhưng không nói rõ "nhà này chưa được giao cho bạn" khi bị 403 |
 
 Hai thiếu sót cần backend: lọc **cảnh báo** theo thiết bị (`GET /alerts` chỉ lọc `farmId`, `zoneId`, `houseId`, `type`) và lọc **phiếu việc** theo thiết bị (`GET /work-orders` chỉ lọc `houseId`, `alertId`...). Cả `Alert` và `WorkOrder` đã có `node_id`, nên không cần đổi dữ liệu.
@@ -107,7 +107,7 @@ Chuyên gia: trang ở chế độ chỉ đọc đã có chữ "chỉ xem" (DE-1
 Giữ cửa sổ thay hiện tại (FARM-FR-008): quét hoặc dán nhãn thiết bị mới, thiết bị cũ chuyển `DECOMMISSIONED` giữ lịch sử, thiết bị mới nhận cấu hình của Zone. Thêm hai điều:
 
 - Sau khi thay, thẻ thiết bị mới hiện dải "Đang chờ kết nối lần đầu" với đếm ngược 15 phút (BR-27); quá thì báo theo FARM-FR-012 (đã có thông báo cho người đăng ký).
-- Nếu thiết bị cũ có phiếu việc `NODE_OFFLINE` đang mở, ghi vào phiếu một dòng "đã thay máy" để chủ nhà thấy lý do. Thay máy đóng cảnh báo của máy cũ nên phiếu `OPEN` chưa ai bắt đầu tự đóng `SELF_RECOVERED` sau 10 phút, còn phiếu `IN_PROGRESS` chờ kỹ thuật viên báo xong rồi qua kiểm phục hồi (luồng sẵn có, không đổi). Dòng ghi chú do backend ghi (§8, đã làm ở #296).
+- Nếu thiết bị cũ có phiếu việc `NODE_OFFLINE` đang mở, ghi vào phiếu một dòng "đã thay máy" để chủ nhà thấy lý do. Thay máy đóng cảnh báo của máy cũ nên phiếu `OPEN` chưa ai bắt đầu tự đóng `SELF_RECOVERED` sau 10 phút, còn phiếu `IN_PROGRESS` chờ kỹ thuật viên báo xong rồi qua kiểm phục hồi (luồng sẵn có, không đổi). Dòng ghi chú do backend ghi (§8, làm ở #296, đang review).
 
 ## 6. Việc cần làm theo tình trạng thiết bị
 
@@ -115,7 +115,7 @@ Câu hiển thị ở dải trạng thái. Nguồn: ngưỡng và trạng thái 
 
 | Tình trạng | Câu hiển thị (vi) | Có nút gì |
 | --- | --- | --- |
-| Bộ điều khiển `OFFLINE` | "Mất kết nối {thời gian}. Kiểm nguồn điện và Wi-Fi tại nhà, rồi bật lại nguồn." | Không có khởi động lại (không gửi lệnh được); có "Xem cảnh báo" |
+| Bộ điều khiển `OFFLINE` | "Mất kết nối {thời gian}. Kiểm nguồn điện và Wi-Fi tại nhà, rồi bật lại nguồn." | Nút khởi động lại khoá kèm lý do (không gửi lệnh được); cảnh báo mở nằm ở "Việc đang mở" |
 | Bộ điều khiển `OFFLINE` ngay sau khi khởi động lại từ xa | "Đã gửi lệnh khởi động lại, đang chờ kết nối lại." | – |
 | Bộ điều khiển `PENDING` dưới 15 phút | "Đang chờ kết nối lần đầu." | – |
 | Bộ điều khiển `PENDING` quá 15 phút | "Chưa kết nối sau 15 phút. Kiểm mật khẩu Wi-Fi và sóng tại tầng." | "Thiết lập lại" (mở `/devices/onboarding`) |
@@ -155,8 +155,8 @@ Số cảnh báo mở của từng thiết bị cho danh sách (tab "Cần xử 
 | PR | Việc | Nơi sửa | Người |
 | --- | --- | --- | --- |
 | D-1 | Tài liệu: Report 3 thêm Kỹ thuật viên vào FARM-FR-005 và FARM-FR-006 (hiện chỉ Farm Owner, Domain Expert / Farm Owner, Administrator), thêm yêu cầu "cảnh báo và phiếu việc đang mở của thiết bị" (FARM-FR-015 mới), nhắc BR-27 và BR-10 trong tiêu chí; Report 4 cập nhật mô tả trang; `report5/tc.py` thêm ca (TC thiết bị vai kỹ thuật viên); dòng mới ở `project-tracking.md` §6 (G-36) | `docs/reports/` | Bảo |
-| B-1 | `GET /alerts?nodeId=`, `GET /work-orders?nodeId=`, ghi chú khi thay thiết bị; spec; test. **Xong: PR #296** | `backend/` | Bảo |
-| W-1 | Web: tab "Cần xử lý", khối "Việc đang mở", dải trạng thái §6, `reset_reason`, nút khởi động lại khoá kèm lý do; test thuần cho hàm "cần xử lý" và "việc cần làm"; e2e T4 cập nhật. **Xong: PR #297** (không dùng `nodeId` của #296: một lượt gọi mỗi nhà rồi gom theo `node_id`; `reset_reason` đã làm ở #294) | `frontend/` (Nhi duyệt `farm-owner/`) | Bảo |
+| B-1 | `GET /alerts?nodeId=`, `GET /work-orders?nodeId=`, ghi chú khi thay thiết bị; spec; test. Làm ở PR #296 (đang review) | `backend/` | Bảo |
+| W-1 | Web: tab "Cần xử lý", khối "Việc đang mở", dải trạng thái §6, `reset_reason`, nút khởi động lại khoá kèm lý do; test thuần cho hàm "cần xử lý" và "việc cần làm"; e2e T4 cập nhật. Làm ở PR #297 (đang review) (không dùng `nodeId` của #296: một lượt gọi mỗi nhà rồi gom theo `node_id`; `reset_reason` làm ở #294, đang review) | `frontend/` (Nhi duyệt `farm-owner/`) | Bảo |
 | M-1 | Mobile: cùng tab, khối và câu §6 | `mobile/` | Len |
 | X-1 | Xoá dòng G-36 khỏi §6 khi xong; cập nhật `CLAUDE.md` các module | docs | Bảo |
 
@@ -167,7 +167,7 @@ Thứ tự: D-1 → B-1 → W-1 và M-1 song song. W-1 chưa làm được trư�
 Với dữ liệu demo (nhà A có kỹ thuật viên, nhà B không):
 
 1. Kỹ thuật viên đăng nhập, mở `/devices`: rơi vào "Cần xử lý" khi có thiết bị lỗi; không thấy thiết bị nhà chưa được giao.
-2. Mở chi tiết một bộ điều khiển `OFFLINE`: thấy dải "Mất kết nối …", cảnh báo `NODE_OFFLINE` mở và phiếu việc (nếu đã quá 30 phút); không có nút khởi động lại; có lý do.
+2. Mở chi tiết một bộ điều khiển `OFFLINE`: thấy dải "Mất kết nối …", cảnh báo `NODE_OFFLINE` mở và phiếu việc (nếu đã quá 30 phút); nút khởi động lại bị khoá, có lý do.
 3. Thiết bị online: bấm khởi động lại → thông báo gửi lệnh; Chủ nhà yến nhận thông báo "kỹ thuật viên đã thao tác" như hiện nay.
 4. Camera `AUTH_FAILED`: thẻ nói sai mật khẩu, "Cài đặt camera" mở; lưu xong, khi nút AI báo `OK` thì dải biến mất.
 5. Thay một bộ điều khiển có phiếu `NODE_OFFLINE` mở: phiếu có dòng "đã thay máy"; phiếu chưa ai bắt đầu tự đóng sau 10 phút, phiếu đang làm thì kỹ thuật viên báo xong và qua kiểm phục hồi như thường.
