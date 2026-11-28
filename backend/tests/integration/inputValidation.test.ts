@@ -273,6 +273,16 @@ describe('bộ lọc query lặp lại hoặc là object → 422', () => {
     await request(app).get(`${path}?${query}`).set(bearer(token)).expect(422)
   })
 
+  it('page, limit lặp lại → 422 (danh sách lời mời, chu kỳ thu hoạch, người dùng của Admin)', async () => {
+    const { token, farm } = await seedOwnerFarm()
+    await request(app).get(`/farms/${farm._id}/invitations?${twice('page', '1')}`).set(bearer(token)).expect(422)
+    await request(app).get(`/harvests/cycles?${twice('limit', '5')}`).set(bearer(token)).expect(422)
+    const admin = await User.create({ email: `admin-p-${Date.now()}@test.vn`, password_hash: 'password123', full_name: 'A', role: 'ADMIN' })
+    const adminToken = jwt.sign({ sub: String(admin._id), role: 'ADMIN' }, process.env.JWT_ACCESS_SECRET!, { expiresIn: '15m' })
+    await request(app).get(`/admin/users?${twice('page', '1')}`).set(bearer(adminToken)).expect(422)
+    await request(app).get('/admin/users?page=1&limit=5').set(bearer(adminToken)).expect(200)
+  })
+
   it('một giá trị thì vẫn qua kiểm tra', async () => {
     const { token, zone } = await seedOwnerFarm()
     await request(app).get(`/analytics/env/summary?zoneId=${zone._id}`).set(bearer(token)).expect(200)
