@@ -13,7 +13,7 @@ import { findAlertHouse, ESCALATION_MS } from '@/services/alertRouting.service'
 import { logAction } from '@/services/auditLog.service'
 import { findRecipients, notifyUser } from '@/services/notification.service'
 import { recordMaintenance } from '@/services/maintenanceRecord.service'
-import { presignedGetUrl, putObject } from '@/config/minio.config'
+import { presignedGetUrl, putObject, removeObject } from '@/config/minio.config'
 import { AppError, BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@/utils/appError.util'
 import {
   activeHouseTechnicianIds, activeTechnicianOnDuty, assertFarmAccess, assertHouseAccess, assertNodeHouseAccess, listAccessibleFarmIds,
@@ -57,6 +57,22 @@ export async function storePhotos(files: UploadedPhoto[], prefix: string): Promi
 }
 
 export const photoUrls = (keys: string[] | undefined): Promise<string[]> => Promise.all((keys ?? []).map(k => presignedGetUrl(k)))
+
+// Ảnh đã lưu mà lần ghi bị từ chối (409) thì xoá, kẻo nằm lại kho không bản ghi nào trỏ tới. Xoá lỗi chỉ ghi log
+export async function discardPhotos(keys: Array<string | undefined>): Promise<void> {
+  await Promise.all(keys.filter((key): key is string => !!key).map(key => removeObject(key).catch((err: Error) =>
+    logger.warn('Không xoá được ảnh của lần ghi bị từ chối', { key, err: err.message }))))
+}
+
+// Chạy lần ghi; lỗi thì xoá ảnh vừa lưu rồi ném lại
+export async function withStoredPhotos<T>(keys: Array<string | undefined>, write: () => Promise<T>): Promise<T> {
+  try {
+    return await write()
+  } catch (err) {
+    await discardPhotos(keys)
+    throw err
+  }
+}
 
 async function ownerIdsOf(farmId: unknown): Promise<string[]> {
   return (await findRecipients(String(farmId))).map(u => String(u._id))
@@ -430,7 +446,6 @@ export async function updateChecklistItem(
   const current = wo.checklist[input.item_index]
   if (!current) throw BadRequestError('Mục checklist không tồn tại')
 
-  const [photoKey] = photo ? await storePhotos([photo], `work-orders/${wo._id}/checklist`) : []
   const prefix = `checklist.${input.item_index}`
   let repairId = current.repair_work_order_id
   if (input.result === 'DEFECT' && !repairId) {
@@ -465,23 +480,28 @@ export async function updateChecklistItem(
     }
   }
   const note = input.note?.trim()
-  const updated = await WorkOrder.findOneAndUpdate(
-    { _id: wo._id, status: 'IN_PROGRESS' },
-    {
-      $set: {
-        [`${prefix}.result`]: input.result,
-        [`${prefix}.by`]: user._id,
-        [`${prefix}.at`]: new Date(),
-        ...(note && { [`${prefix}.note`]: note }),
-        ...(photoKey && { [`${prefix}.photo`]: photoKey }),
-        ...(repairId && { [`${prefix}.repair_work_order_id`]: repairId }),
+  // Lưu ảnh ngay trước lần ghi dùng nó: lỗi ở các bước trên không để lại ảnh
+  const [photoKey] = photo ? await storePhotos([photo], `work-orders/${wo._id}/checklist`) : []
+  const updated = await withStoredPhotos([photoKey], async () => {
+    const result = await WorkOrder.findOneAndUpdate(
+      { _id: wo._id, status: 'IN_PROGRESS' },
+      {
+        $set: {
+          [`${prefix}.result`]: input.result,
+          [`${prefix}.by`]: user._id,
+          [`${prefix}.at`]: new Date(),
+          ...(note && { [`${prefix}.note`]: note }),
+          ...(photoKey && { [`${prefix}.photo`]: photoKey }),
+          ...(repairId && { [`${prefix}.repair_work_order_id`]: repairId }),
+        },
+        // Mongoose bỏ qua key undefined trong $set
+        ...(!note && { $unset: { [`${prefix}.note`]: 1 } }),
       },
-      // Mongoose bỏ qua key undefined trong $set
-      ...(!note && { $unset: { [`${prefix}.note`]: 1 } }),
-    },
-    { new: true },
-  )
-  if (!updated) throw ConflictError('Work Order vừa được người khác cập nhật, hãy tải lại')
+      { new: true },
+    )
+    if (!result) throw ConflictError('Work Order vừa được người khác cập nhật, hãy tải lại')
+    return result
+  })
   return presentWorkOrder(updated, true)
 }
 
@@ -511,10 +531,10 @@ export async function completeWorkOrder(
   const now = new Date()
   const to: WorkOrderStatus = wo.alert_id && !preventive ? 'VERIFYING' : 'AWAITING_APPROVAL'
   const claim = await takeOverBy(wo, user)
-  const updated = await transition(wo, ['IN_PROGRESS'], to, {
+  const updated = await withStoredPhotos(photos, () => transition(wo, ['IN_PROGRESS'], to, {
     done_at: now, cause: input.cause, work_note: input.work_note?.trim() || undefined,
     photos: [...wo.photos, ...photos], ...(to === 'AWAITING_APPROVAL' && { verified_at: now }), ...claim.set,
-  }, user._id, claim.note)
+  }, user._id, claim.note))
   await afterTakeOver(updated, user, claim)
   if (wo.alert_id && input.cause) {
     await Alert.updateOne({ _id: wo.alert_id }, {

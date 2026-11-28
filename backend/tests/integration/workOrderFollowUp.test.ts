@@ -13,6 +13,7 @@ import { WorkOrder } from '@/models/workOrder.model'
 import { createAlert } from '@/services/alert.service'
 import { decommissionDevice, reassignZone } from '@/services/device.service'
 import { notifyUser } from '@/services/notification.service'
+import { putObject, removeObject } from '@/config/minio.config'
 import { openWorkOrderForAlert, verifyWorkOrders } from '@/services/workOrder.service'
 import type { AlertType, CurrentUser, Role } from '@/types'
 import { seedOwnerFarm, useTestDb } from '../helpers/ownerFarm'
@@ -24,6 +25,7 @@ jest.mock('@/socket', () => ({
 jest.mock('@/mqtt/mqtt.client', () => ({ publishDeviceCommand: jest.fn().mockReturnValue(true), publishDeviceConfig: jest.fn().mockReturnValue(true) }))
 jest.mock('@/config/minio.config', () => ({
   putObject: jest.fn().mockResolvedValue(undefined),
+  removeObject: jest.fn().mockResolvedValue(undefined),
   presignedGetUrl: jest.fn(async (key: string) => `http://minio.test/${key}`),
 }))
 jest.mock('@/services/notification.service', () => ({
@@ -53,6 +55,7 @@ async function account(role: Role) {
 const as = (token: string) => ({
   post: (path: string, body: object = {}) => request(app).post(path).set('Authorization', `Bearer ${token}`).send(body),
   put: (path: string, body: object = {}) => request(app).put(path).set('Authorization', `Bearer ${token}`).send(body),
+  upload: (method: 'post' | 'put', path: string) => request(app)[method](path).set('Authorization', `Bearer ${token}`),
 })
 
 // Nhà H có thợ chính T và thợ phụ T2, farm có 1 chuyên gia
@@ -356,5 +359,62 @@ describe('kỹ thuật viên làm phiếu thì thành người nhận phiếu', 
     await owner$.post(`/work-orders/${_id}/reopen`, { note: 'Loa còn rè' }).expect(200)
     expect(notifiedIds()).toContain(String(tech2.user._id))
     expect(notifiedIds()).not.toContain(String(tech.user._id))
+  })
+})
+
+describe('ảnh đã lưu mà lần ghi bị từ chối thì được xoá', () => {
+  const jpeg = Buffer.from('jpeg')
+  const photo = { filename: 'a.jpg', contentType: 'image/jpeg' }
+  // Khoá đã lưu lên kho trong lần gọi này
+  const storedKeys = () => (putObject as jest.Mock).mock.calls.map(([key]) => key as string)
+
+  it('báo xong gặp 409 (người khác vừa đổi trạng thái): ảnh vừa lưu bị xoá, phiếu không đổi', async () => {
+    const { tech$, raise } = await seed()
+    await raise('SPEAKER_FAILURE')
+    const { _id } = await workOrder()
+    await tech$.post(`/work-orders/${_id}/start`).expect(200)
+    jest.spyOn(WorkOrder, 'findOneAndUpdate').mockResolvedValueOnce(null)
+
+    await tech$.upload('post', `/work-orders/${_id}/done`).field('cause', 'SPEAKER').attach('photos', jpeg, photo).expect(409)
+
+    expect(storedKeys()).toHaveLength(1)
+    expect(removeObject).toHaveBeenCalledWith(storedKeys()[0])
+    expect(await workOrder()).toMatchObject({ status: 'IN_PROGRESS', photos: [] })
+  })
+
+  it('báo xong thành công thì không xoá ảnh nào', async () => {
+    const { tech$, raise } = await seed()
+    await raise('SPEAKER_FAILURE')
+    const { _id } = await workOrder()
+    await tech$.post(`/work-orders/${_id}/start`).expect(200)
+    await tech$.upload('post', `/work-orders/${_id}/done`).field('cause', 'SPEAKER').attach('photos', jpeg, photo).expect(200)
+    expect(removeObject).not.toHaveBeenCalled()
+  })
+
+  it('ghi mục checklist gặp 409: ảnh của mục bị xoá', async () => {
+    const { tech$, farm, house, tech } = await seed()
+    const wo = await WorkOrder.create({
+      farm_id: farm._id, house_id: house._id, kind: 'PREVENTIVE', origin: 'PLAN', title: 'Bảo trì bơm', status: 'IN_PROGRESS',
+      assignee_id: tech.user._id, checklist: [{ item: 'Bồn nước' }], history: [{ to: 'IN_PROGRESS', at: new Date() }],
+    })
+    jest.spyOn(WorkOrder, 'findOneAndUpdate').mockResolvedValueOnce(null)
+
+    await tech$.upload('put', `/work-orders/${wo._id}/checklist`).field('item_index', '0').field('result', 'OK').attach('photo', jpeg, photo)
+      .expect(409)
+
+    expect(storedKeys()).toHaveLength(1)
+    expect(removeObject).toHaveBeenCalledWith(storedKeys()[0])
+  })
+
+  it('trả lời kiểm tra tại chỗ khi lần trả lời khác vừa ghi trước: ảnh bị xoá', async () => {
+    const { tech$, raise } = await seed()
+    const alert = (await raise('NOISE_ANOMALY'))!
+    expect((await Alert.findById(alert._id).lean())!.onsite_checks).toHaveLength(1)
+    jest.spyOn(Alert, 'updateOne').mockResolvedValueOnce({ modifiedCount: 0 } as never)
+
+    await tech$.upload('post', `/alerts/${alert._id}/onsite-check`).field('observation', 'RAIN').attach('photo', jpeg, photo).expect(409)
+
+    expect(storedKeys()).toHaveLength(1)
+    expect(removeObject).toHaveBeenCalledWith(storedKeys()[0])
   })
 })
