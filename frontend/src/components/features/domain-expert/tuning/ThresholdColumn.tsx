@@ -1,10 +1,10 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { Button, LoadingSkeleton, SectionCard } from '@/components/ui'
 import TuningStepperInput from './TuningStepperInput'
 import { TuningRangeList } from './TuningRangeTip'
-import type { TuningBlockHandle } from './tuning.utils'
+import TuningSaveBar from './TuningSaveBar'
 import type { ExpertThresholds } from '@/types/expert.types'
 import { t } from '@/i18n'
 import { FACTORY_DEFAULT_THRESHOLDS } from '@/constants/thresholds'
@@ -17,9 +17,8 @@ interface Props {
   isSaving: boolean
   isResetting: boolean
   onSave: (v: Partial<ExpertThresholds>) => void
-  onReset: () => void
-  // Báo số ngưỡng đang khác bản đã lưu lên thanh lưu dính đáy của trang
-  onDirtyChange?: (count: number) => void
+  // Trả về true khi khôi phục được: ô đang sửa dở cũng về mặc định theo
+  onReset: () => Promise<boolean> | undefined
 }
 
 // 7 ngưỡng của Zone; khoảng giá trị là khoảng đo cảm biến của backend (THRESHOLD_LIMITS), không tự chọn
@@ -34,20 +33,26 @@ const FIELDS: Array<{ key: keyof ExpertThresholds; label: string; subLabel?: str
 ]
 
 // Ngưỡng vi khí hậu và khí độc của Zone: kiểm cùng luật với backend trước khi lưu, khôi phục về mặc định của hệ thống
-const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdColumn(
-  { data, isLoading, isSaving, isResetting, onSave, onReset, onDirtyChange }, ref,
-) {
+export default function ThresholdColumn({ data, isLoading, isSaving, isResetting, onSave, onReset }: Props) {
   const [form, setForm] = useState<ExpertThresholds>(FACTORY_DEFAULT_THRESHOLDS)
   const [resetOpen, setResetOpen] = useState(false)
-  // Đã bấm Lưu khi còn ô sai: hiện câu nhắc cuối khối, vì thanh Lưu nằm xa các ô
+  // Đã bấm Lưu khi còn ô sai: hiện câu nhắc ngay trên nút Lưu
   const [saveAttempted, setSaveAttempted] = useState(false)
 
-  useEffect(() => { if (data) setForm(data) }, [data])
+  // Khôi phục mặc định xong thì ô đang sửa dở về đúng số đang áp dụng, kể cả khi số đang áp dụng không đổi (đã là mặc định)
+  const [resetCount, setResetCount] = useState(0)
+  useEffect(() => { if (data) setForm(data) }, [data, resetCount])
+  const handleReset = () => {
+    void onReset()?.then(succeeded => {
+      if (!succeeded) return
+      setSaveAttempted(false)
+      setResetCount(count => count + 1)
+    })
+  }
 
   const base = data ?? FACTORY_DEFAULT_THRESHOLDS
   // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
   const dirtyCount = !data ? 0 : FIELDS.filter(field => form[field.key] !== base[field.key]).length
-  useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
   // Kiểm ngay khi gõ: ô sai có viền đỏ và câu lỗi dưới ô, không đợi bấm Lưu
   const errors = validateThresholds(form)
@@ -65,10 +70,7 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
     onSave(form)
   }
 
-  useImperativeHandle(ref, () => ({
-    save: handleSave,
-    cancel: () => { setForm(base); setSaveAttempted(false) },
-  }))
+  const handleCancel = () => { setForm(base); setSaveAttempted(false) }
 
   if (isLoading) return <LoadingSkeleton count={7} className="h-12 w-full" />
 
@@ -97,8 +99,8 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
           })}
         </fieldset>
 
-        {/* Nút Lưu chung ở thanh dính đáy của trang: bấm khi còn ô sai thì nhắc ở đây */}
-        {saveAttempted && hasErrors && <ErrorNotice className="mt-3">{t('Sửa các ô báo lỗi rồi lưu lại')}</ErrorNotice>}
+        {saveAttempted && hasErrors && <ErrorNotice>{t('Sửa các ô báo lỗi rồi lưu lại')}</ErrorNotice>}
+        <TuningSaveBar changedCount={dirtyCount} isSaving={isSaving} onSave={handleSave} onCancel={handleCancel} />
       </SectionCard>
 
       <ConfirmModal
@@ -108,11 +110,9 @@ const ThresholdColumn = forwardRef<TuningBlockHandle, Props>(function ThresholdC
         confirmLabel={t('Xác nhận khôi phục')}
         danger
         loading={isResetting}
-        onConfirm={() => { onReset(); setResetOpen(false) }}
+        onConfirm={() => { handleReset(); setResetOpen(false) }}
         onCancel={() => setResetOpen(false)}
       />
     </>
   )
-})
-
-export default ThresholdColumn
+}

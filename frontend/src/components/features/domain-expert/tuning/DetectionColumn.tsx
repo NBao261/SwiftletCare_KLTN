@@ -1,8 +1,9 @@
 // Cột tham số phát hiện bất thường
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react'
 import { Badge, Button, LoadingSkeleton, SectionCard } from '@/components/ui'
-import { detectionTuningPayload, type TuningBlockHandle } from '@/components/features/domain-expert/tuning/tuning.utils'
+import { detectionTuningPayload } from '@/components/features/domain-expert/tuning/tuning.utils'
+import TuningSaveBar from './TuningSaveBar'
 import TuningStepperInput from './TuningStepperInput'
 import { TuningRangeList } from './TuningRangeTip'
 import type { ExpertDetectionTuning, ExpertVerdictStats } from '@/types/expert.types'
@@ -27,10 +28,9 @@ interface Props {
   isSaving: boolean
   isResetting: boolean
   onSave: (v: Partial<ExpertDetectionTuning>) => void
-  onReset: () => void
+  // Trả về true khi khôi phục được: ô đang sửa dở cũng về mặc định theo
+  onReset: () => Promise<boolean> | undefined
   updatedAt?: string
-  // Báo số tham số đang khác bản đã lưu lên thanh lưu dính đáy của trang
-  onDirtyChange?: (count: number) => void
 }
 
 const DEFAULT_DETECTION: ExpertDetectionTuning = {
@@ -81,23 +81,22 @@ function VerdictStatsHint({ stats }: { stats: ExpertVerdictStats[] }) {
   )
 }
 
-const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionColumn(
-  { data, verdictStats, isLoading, isSaving, isResetting, onSave, onReset, updatedAt, onDirtyChange }, ref,
-) {
+export default function DetectionColumn({ data, verdictStats, isLoading, isSaving, isResetting, onSave, onReset, updatedAt }: Props) {
   const [form, setForm] = useState<ExpertDetectionTuning>(DEFAULT_DETECTION)
 
-  useEffect(() => { if (data) setForm(data) }, [data])
+  // Khôi phục mặc định xong thì ô đang sửa dở về đúng số đang áp dụng, kể cả khi số đang áp dụng không đổi (đã là mặc định)
+  const [resetCount, setResetCount] = useState(0)
+  useEffect(() => { if (data) setForm(data) }, [data, resetCount])
+  const handleReset = () => {
+    void onReset()?.then(succeeded => { if (succeeded) setResetCount(count => count + 1) })
+  }
   const set = (key: keyof ExpertDetectionTuning) => (v: number) => setForm(f => ({ ...f, [key]: v }))
 
   const base = data ?? DEFAULT_DETECTION
   // Số của Zone đang chọn chưa tải xong thì không có gì để lưu: lúc đó base là bộ mặc định, form có thể còn số của Zone trước
   const dirtyCount = !data ? 0 : FIELDS.filter(field => form[field.key] !== base[field.key]).length
-  useEffect(() => { onDirtyChange?.(dirtyCount) }, [dirtyCount, onDirtyChange])
 
-  useImperativeHandle(ref, () => ({
-    save: () => { if (data) onSave(detectionTuningPayload(form)) },
-    cancel: () => setForm(base),
-  }))
+  const handleSave = () => { if (data) onSave(detectionTuningPayload(form)) }
 
   if (isLoading) return <LoadingSkeleton count={6} className="h-12 w-full" />
 
@@ -107,14 +106,13 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
       description={t('Ngưỡng để hệ thống nhận ra sự cố thiết bị và tiếng ồn')}
       help={<TuningRangeList hints={FIELDS.map(field => ({ label: t(field.label), range: field.range, defaultValue: field.defaultHint }))} />}
       action={(
-        <Button variant="icon" size="sm" onClick={onReset} disabled={isResetting} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>
+        <Button variant="icon" size="sm" onClick={handleReset} disabled={isResetting} aria-label={t('Khôi phục mặc định')} title={t('Khôi phục mặc định')}>
             <ArrowCounterClockwiseIcon size={16} weight="bold" />
           </Button>
       )}
     >
       <VerdictStatsHint stats={verdictStats} />
 
-      {/* Nút Lưu chung ở thanh dính đáy của trang */}
       <fieldset disabled={isSaving} className="divide-y divide-warmGray/10">
         {FIELDS.map(field => (
           <TuningStepperInput key={field.key} label={t(field.label)} value={form[field.key] ?? DEFAULT_DETECTION[field.key]}
@@ -123,8 +121,7 @@ const DetectionColumn = forwardRef<TuningBlockHandle, Props>(function DetectionC
       </fieldset>
 
       {updatedAt && <p className="text-small text-warmGray">{t('Cập nhật gần nhất: {{time}}', { time: updatedAt })}</p>}
+      <TuningSaveBar changedCount={dirtyCount} isSaving={isSaving} onSave={handleSave} onCancel={() => setForm(base)} />
     </SectionCard>
   )
-})
-
-export default DetectionColumn
+}

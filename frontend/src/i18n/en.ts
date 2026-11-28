@@ -790,6 +790,21 @@ const en: Record<string, string> = {
   'Mở một báo cáo để viết kết luận gửi chủ nhà yến': 'Open a report to write a conclusion for the farm owner',
   'Đối chiếu đánh giá tại nhà yến với trạng thái hệ thống và chỉnh mức chỉ số của nhà': 'Compare on-site ratings with the system status and tune the indicator levels of each house',
   'Dữ liệu thời tiết:': 'Weather data:',
+  'Đang nắng': 'Sunny',
+  'Trời quang': 'Clear sky',
+  'Có mây': 'Partly cloudy',
+  'Nhiều mây': 'Cloudy',
+  'Có sương mù': 'Foggy',
+  'Đang mưa phùn': 'Drizzling',
+  'Đang mưa': 'Raining',
+  'Đang mưa dông': 'Thunderstorm',
+  'Chưa rõ tình trạng trời': 'Sky condition unknown',
+  'Ngoài nhà yến': 'Outside the house',
+  'Độ ẩm ngoài trời': 'Outdoor humidity',
+  'Mưa': 'Rain',
+  'Cập nhật {{time}}': 'Updated {{time}}',
+  'Trang trại chưa có toạ độ nên chưa biết trời đang nắng hay mưa.': 'The farm has no coordinates yet, so the weather outside is unknown.',
+  'Chưa lấy được thời tiết ngoài trời. Thử lại sau ít phút.': 'Could not get the weather outside. Try again in a few minutes.',
 }
 
 export default en

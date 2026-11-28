@@ -97,9 +97,9 @@ test('B3 — sửa ngưỡng khí CO2 của Zone rồi khôi phục, quyền s�
   const crashes = await openAsExpert(page, '/domain-expert/tuning', { farmId, houseId: houseA, zoneId: zoneA });
   await expect(page.getByRole('heading', { name: 'Ngưỡng môi trường' })).toBeVisible();
 
-  // Cả 4 khối dùng một thanh lưu dính đáy, chỉ hiện khi có thay đổi
-  const saveBar = page.getByRole('button', { name: 'Lưu', exact: true });
-  await expect(saveBar).toBeHidden();
+  // Mỗi khối có nút Lưu riêng: lấy nút của khối chứa tiêu đề Ngưỡng môi trường, khoá khi chưa có thay đổi
+  const saveBar = page.getByRole('heading', { name: 'Ngưỡng môi trường' }).locator('xpath=ancestor::*[.//button[normalize-space()="Lưu"]][1]').getByRole('button', { name: 'Lưu', exact: true });
+  await expect(saveBar).toBeDisabled();
 
   // Mốc chờ là phản hồi của máy chủ: nút "Lưu" đang quay thì mất tên, còn lời nhắn "Đã lưu" cũ vẫn trên màn hình
   const savingThresholds = () => page.waitForResponse(
@@ -121,7 +121,7 @@ test('B3 — sửa ngưỡng khí CO2 của Zone rồi khôi phục, quyền s�
   await expect(page.getByRole('button', { name: 'Tăng Mức ồn vượt nền' })).toBeEnabled();
 
   // Trả ngưỡng về giá trị của seed để lần chạy sau không bị trôi
-  await expect(saveBar).toBeHidden();
+  await expect(saveBar).toBeDisabled();
   await page.getByRole('button', { name: 'Giảm Ngưỡng cảnh báo khí CO2' }).click();
   const secondSave = savingThresholds();
   await saveBar.click();
